@@ -7,7 +7,7 @@ import roqse
 ENERGY = 50 # MeV
 V0R = 200
 V0S = -91.85
-_, u_pg = np.loadtxt('/Users/danielodell/u_mn_test.txt', unpack=True)
+_, u_pg = np.loadtxt('u_mn_test.txt', unpack=True)
 u_pg /= np.max(u_pg) # This is a very hacky way to handle normalization.
 
 class TestSchrEq(unittest.TestCase):

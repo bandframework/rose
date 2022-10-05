@@ -7,7 +7,6 @@ import numpy.typing as npt
 from scipy.integrate import odeint
 
 from .interaction import Interaction
-from .constants import HBARC
 
 # Default values for solving the SE.
 DEFAULT_R_MIN = 1e-6 # fm
@@ -33,8 +32,8 @@ class SchroedingerEquation:
         l: int = 0, # angular momentum
         u_0: float = DEFAULT_U_0, # u(r=0)
         up_0:float = DEFAULT_UPRIME_0, # du/dr(r=0)
-        r_min: float = DEFAULT_R_MIN, # Starting r values in the shooting method.
-        r_max: float = DEFAULT_R_MAX, # Largest r value to "integrate out" to.
+        s_min: float = DEFAULT_R_MIN, # Starting s = pr/hbar values in the shooting method.
+        s_max: float = DEFAULT_R_MAX, # Largest s = pr/hbar value to "integrate out" to.
         num_pts: int = DEFAULT_NUM_PTS,
         max_steps:int = MAX_STEPS, # see scipy.integrate.odeint documentation
         return_uprime:bool = False # Return u'(r) as well as u(r)
@@ -45,7 +44,7 @@ class SchroedingerEquation:
         reduced radial wavefunction, u(r). (The optional third - based on
         return_uprime - is u'(r).)
         '''
-        s_values = np.linspace(r_min, r_max, num_pts) * np.sqrt(2*self.interaction.mu*energy/HBARC)
+        s_values = np.linspace(s_min, s_max, num_pts) # * np.sqrt(2*self.interaction.mu*energy/HBARC)
         initial_conditions = np.array([u_0, up_0]) # initial u and u' conditions
 
         sol = odeint(

@@ -35,8 +35,8 @@ class ReducedBasisEmulator:
 
         self.basis = Basis(
             np.array([
-                self.se.true_phi_solver(self.energy, theta, self.s_mesh, self.l, s_0, **kwargs) for theta in theta_train
-            ]),
+                self.se.true_phi_solver(self.energy, theta, self.s_mesh, self.l, **kwargs) for theta in theta_train
+            ]).T,
             self.s_mesh
         )
     
@@ -46,18 +46,14 @@ class ReducedBasisEmulator:
         use_svd: bool = True,
         n_basis: int = 4
     ):
+        n = n_basis if use_svd else self.basis.phi_train.shape[1]
         utilde = self.se.interaction.tilde(self.s_mesh, theta, self.energy)[:, np.newaxis]
         phi_basis = self.basis.vectors(use_svd=use_svd, n_basis=n_basis)
-        d2 = np.copy(self.basis.d2_svd if use_svd else self.basis.d2_train)
+        d2 = np.copy(self.basis.d2_svd[:, :n_basis] if use_svd else self.basis.d2_train)
 
         A_right = -d2 + utilde * phi_basis - phi_basis
         A = phi_basis.T @ A_right
-        A += np.vstack((
-            phi_basis[0, :],
-            phi_basis[0, :],
-            phi_basis[0, :],
-            phi_basis[0, :]
-        ))
-        b = self.s_mesh[0]*np.ones(4)
+        A += np.vstack([phi_basis[0, :] for _ in range(n)])
+        b = self.s_mesh[0]*np.ones(n)
         x = np.linalg.solve(A, b)
         return np.sum(x * phi_basis, axis=1)

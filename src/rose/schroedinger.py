@@ -9,9 +9,7 @@ from scipy.interpolate import interp1d
 from scipy.misc import derivative
 
 from .interaction import Interaction
-from .constants import HBARC
 from .free_solutions import phase_shift
-from .basis import Basis
 
 # Default values for solving the SE.
 DEFAULT_R_MIN = 1e-6 # fm
@@ -83,17 +81,7 @@ class SchroedingerEquation:
         args: npt.ArrayLike, # interaction parameters
         s_mesh: npt.ArrayLike, # s where phi(s) in calculated
         l: int, # angular momentum
-        s_0: float, # phaseshift is extracted at phi(s_0)
-        **kwargs
+        **kwargs # passed to solve_se
     ):
         solution = self.solve_se(energy, args, s_mesh, l, **kwargs)
         return solution[:, 1]
-    
-
-    def project(self,
-        basis: Basis,
-        args: npt.ArrayLike,
-        use_svd: bool
-    ):
-        utilde = self.interaction.tilde(basis.s_values, args, basis.energy)[:, np.newaxis]
-        d2 = np.gradient(np.gradient(basis, basis.s_values, axis=0), basis.s_values, axis=0)

@@ -1,37 +1,48 @@
+'''
+Defines a ReducedBasisEmulator.
+'''
+import pickle
+
 import numpy as np
 
 from .interaction import Interaction
-from .schroedinger import SchroedingerEquation
+from .schroedinger import *
 from .basis import Basis
 from .constants import HBARC
+from .free_solutions import phase_shift
 import numpy.typing as npt
 
-DEFAULT_R_0 = 50.0 # fm
-S_MIN = 1e-6
-S_MAX = 50.0
-NS = 2000
-
 class ReducedBasisEmulator:
+    '''
+    A ReducedBasisEmulator (RBE) uses the specified interaction and theta_train
+    to generate solutions to the Schrödinger equation at a specific energy
+    (energy) and partial wave (l).
+
+    Using the Galerkin projection method, a linear combination of those
+    solutions (or a PCA basis of them) is found at some "arbitrary" point in
+    parameter space, theta.
+    '''
     def __init__(self,
         interaction: Interaction, # desired local interaction
         theta_train: npt.ArrayLike, # training points in parameter space
         energy: float, # center-of-mass energy (MeV)
         l: int, # angular momentum
-        s_mesh: npt.ArrayLike = None,
-        s_0: float = None,
+        s_mesh: npt.ArrayLike = None, # s = kr; solutions are u(s)
+        s_0: float = None, # phase shift is "extracted" at s_0
         **kwargs # passed to SchroedingerEquation.solve_se
     ):
         self.energy = energy
+        k = np.sqrt(2*interaction.mu*energy/HBARC)
         self.l = l
         self.se = SchroedingerEquation(interaction)
 
         if s_mesh is None:
-            self.s_mesh = np.linspace(S_MIN, S_MAX, NS)
+            self.s_mesh = np.linspace(k*DEFAULT_R_MIN, k*DEFAULT_R_MAX, DEFAULT_NUM_PTS)
         else:
             self.s_mesh = np.copy(s_mesh)
 
         if s_0 is None:
-            s_0 = np.sqrt(2*interaction.mu*energy/HBARC) * DEFAULT_R_0
+            self.s_0 =  k * DEFAULT_R_0
 
         self.basis = Basis(
             np.array([
@@ -54,7 +65,8 @@ class ReducedBasisEmulator:
         A += np.vstack([phi_basis[0, :] for _ in range(n_basis)])
         b = self.s_mesh[0]*np.ones(n_basis)
         x = np.linalg.solve(A, b)
-        return np.sum(x * phi_basis, axis=1)
+        u = np.sum(x * phi_basis, axis=1)
+        return u / np.max(np.abs(u)) # normalized to 1
 
 
     def emulate_no_svd(self,
@@ -70,4 +82,52 @@ class ReducedBasisEmulator:
         A += np.vstack([phi_basis[0, :] for _ in range(n)])
         b = self.s_mesh[0]*np.ones(n)
         x = np.linalg.solve(A, b)
-        return np.sum(x * phi_basis, axis=1)
+        u = np.sum(x * phi_basis, axis=1)
+        return u / np.max(np.abs(u)) # normalized to 1
+    
+    def wave_function_metric(self,
+        filename: str,
+        n_basis: int = 4
+    ):
+        with open(filename, 'rb') as f:
+            benchmark_data = pickle.load(f)
+        
+        thetas = np.array([bd.theta for bd in benchmark_data])
+        wave_functions = np.array([bd.u for bd in benchmark_data])
+        emulated_wave_functions = np.array([self.emulate(theta) for theta in thetas])
+        abs_residuals = np.abs(emulated_wave_functions - wave_functions)
+        norm = np.sqrt(np.sum(abs_residuals**2, axis=1))
+        return np.quantile(norm, [0.5, 0.95])
+
+
+    def phase_shift_metric(self,
+        filename: str,
+        n_basis: int = 4
+    ):
+        with open(filename, 'rb') as f:
+            benchmark_data = pickle.load(f)
+        
+        thetas = np.array([bd.theta for bd in benchmark_data])
+        wave_functions = np.array([bd.u for bd in benchmark_data])
+        phase_shifts = np.array([phase_shift(u, self.s_mesh, self.l, self.s_0) for u in wave_functions])
+        emulated_wave_functions = np.array([self.emulate(theta) for theta in thetas])
+        emulated_phase_shifts = np.array([phase_shift(u, self.s_mesh, self.l, self.s_0) for u in emulated_wave_functions])
+        rel_diff = np.abs((emulated_phase_shifts - phase_shifts) / emulated_phase_shifts)
+        return np.quantile(rel_diff, [0.5, 0.95])
+
+
+    def run_metrics(self,
+        filename: str,
+        n_basis: int = 4,
+        verbose: bool = False
+    ):
+        wave_function_results = self.wave_function_metric(filename, n_basis)
+        phase_shift_results = self.phase_shift_metric(filename, n_basis)
+
+        if verbose:
+            print('Wave function residuals (root of sum of squares):\n50% and 95% quantiles')
+            print(f'{wave_function_results[0]:.4e}  {wave_function_results[1]:.4e}')
+            print('Phase shift residuals (relative difference):\n50\% and 95% quantiles')
+            print(f'{phase_shift_results[0]:.4e}  {phase_shift_results[1]:.4e}')
+
+        return wave_function_results, phase_shift_results

@@ -26,7 +26,7 @@ class BenchmarkData():
         theta: npt.ArrayLike, # interaction parameters; not related to cos(theta)
         n: int = 10000, # number of point in r to calculate u(r)
         l_max: int = 3, # maximum angular momentum
-        r_0: float = 20.0, # fm, delta <- u(r_0)
+        r_0: float = rose.schroedinger.DEFAULT_R_0, # fm, delta <- u(r_0)
         costheta: npt.ArrayLike = COSTHETA # angles at which P_l(cos(theta)) are calculated
     ):
         self.theta = np.copy(theta)
@@ -34,11 +34,11 @@ class BenchmarkData():
         k = np.sqrt(2*rose.MN_Potential.mu*energy/rose.constants.HBARC)
         r_mesh = np.linspace(rose.schroedinger.DEFAULT_R_MIN,
                              rose.schroedinger.DEFAULT_R_MAX, n)
-        s_mesh = k*r_mesh
+        s_mesh = k * r_mesh
             
         self.l_max = l_max
-        self.costheta = np.copy(costheta)
         l_values = np.arange(self.l_max+1)
+        self.costheta = np.copy(costheta)
         self.deltas_l = np.array(
             [schrodeq.delta(energy, theta, s_mesh, l, k*r_0) for l in l_values]
         )

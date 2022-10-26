@@ -46,7 +46,7 @@ class ReducedBasisEmulator:
 
         self.basis = Basis(
             np.array([
-                self.se.true_phi_solver(self.energy, theta, self.s_mesh, self.l, **kwargs) for theta in theta_train
+                self.se.phi(self.energy, theta, self.s_mesh, self.l, **kwargs) for theta in theta_train
             ]).T,
             self.s_mesh
         )
@@ -85,6 +85,7 @@ class ReducedBasisEmulator:
         u = np.sum(x * phi_basis, axis=1)
         return u / np.max(np.abs(u)) # normalized to 1
     
+
     def wave_function_metric(self,
         filename: str,
         n_basis: int = 4
@@ -93,7 +94,7 @@ class ReducedBasisEmulator:
             benchmark_data = pickle.load(f)
         
         thetas = np.array([bd.theta for bd in benchmark_data])
-        wave_functions = np.array([bd.u for bd in benchmark_data])
+        wave_functions = np.array([bd.phi for bd in benchmark_data])
         emulated_wave_functions = np.array([self.emulate(theta) for theta in thetas])
         abs_residuals = np.abs(emulated_wave_functions - wave_functions)
         norm = np.sqrt(np.sum(abs_residuals**2, axis=1))
@@ -108,10 +109,13 @@ class ReducedBasisEmulator:
             benchmark_data = pickle.load(f)
         
         thetas = np.array([bd.theta for bd in benchmark_data])
-        wave_functions = np.array([bd.u for bd in benchmark_data])
+
+        wave_functions = np.array([bd.phi for bd in benchmark_data])
         phase_shifts = np.array([phase_shift(u, self.s_mesh, self.l, self.s_0) for u in wave_functions])
+
         emulated_wave_functions = np.array([self.emulate(theta) for theta in thetas])
         emulated_phase_shifts = np.array([phase_shift(u, self.s_mesh, self.l, self.s_0) for u in emulated_wave_functions])
+
         rel_diff = np.abs((emulated_phase_shifts - phase_shifts) / emulated_phase_shifts)
         return np.quantile(rel_diff, [0.5, 0.95])
 
@@ -127,7 +131,7 @@ class ReducedBasisEmulator:
         if verbose:
             print('Wave function residuals (root of sum of squares):\n50% and 95% quantiles')
             print(f'{wave_function_results[0]:.4e}  {wave_function_results[1]:.4e}')
-            print('Phase shift residuals (relative difference):\n50\% and 95% quantiles')
+            print('Phase shift residuals (relative difference):\n50% and 95% quantiles')
             print(f'{phase_shift_results[0]:.4e}  {phase_shift_results[1]:.4e}')
 
         return wave_function_results, phase_shift_results

@@ -35,12 +35,13 @@ class BenchmarkData():
         r_mesh = np.linspace(rose.schroedinger.DEFAULT_R_MIN,
                              rose.schroedinger.DEFAULT_R_MAX, n)
         s_mesh = k * r_mesh
+        s_endpts = np.array([s_mesh[0], s_mesh[-1]])
             
         self.l_max = l_max
         l_values = np.arange(self.l_max+1)
         self.costheta = np.copy(costheta)
         self.deltas_l = np.array(
-            [schrodeq.delta(energy, theta, s_mesh, l, k*r_0) for l in l_values]
+            [schrodeq.delta(energy, theta, s_endpts, l, k*r_0) for l in l_values]
         )
         self.fs_l = np.array(
             [1/(k/np.tan(delta_l) - 1j*k) for delta_l in self.deltas_l]
@@ -48,7 +49,8 @@ class BenchmarkData():
         Pl = np.array([eval_legendre(l, self.costheta) for l in l_values]).T
         self.scattering_amplitude = np.sum((2*l_values + 1.0) * self.fs_l * Pl, axis=1)
 
-        sol = schrodeq.solve_se(energy, theta, s_mesh, 0)
-        self.s = np.copy(sol[:, 0])
-        c = np.max(np.abs(sol[:, 1])) # normalize to 1
-        self.u = np.copy(sol[:, 1]/c)
+        sol = schrodeq.solve_se(energy, theta, s_endpts, 0)
+        self.s = np.copy(s_mesh)
+        phi = sol(self.s)[0, :]
+        c = np.max(np.abs(phi)) # normalize to 1
+        self.phi = phi/c

@@ -9,7 +9,7 @@ from scipy.interpolate import interp1d
 from scipy.misc import derivative
 
 from .interaction import Interaction
-from .free_solutions import phase_shift, H_minus, H_plus, H_minus_prime, H_plus_prime
+from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
 
 # Default values for solving the SE.
 DEFAULT_R_MIN = 1e-12 # fm
@@ -79,7 +79,26 @@ class SchroedingerEquation:
         args: npt.ArrayLike, # interaction parameters
         s_mesh: npt.ArrayLike, # s where phi(s) in calculated
         l: int, # angular momentum
+        s_min: float = DEFAULT_R_MIN, # What do we call "zero"?
         **solve_ivp_kwargs # passed to solve_se
     ):
-        solution = self.solve_se(energy, args, s_mesh[[0, -1]], l, **solve_ivp_kwargs)
+        '''
+        Computes phi(s_mesh) 
+        '''
+        solution = self.solve_se(energy, args, [s_min, s_mesh[-1]], l, **solve_ivp_kwargs)
         return solution(s_mesh)[0, :]
+    
+
+    def phi_normalized(self,
+        energy: float, # center-of-mass energy
+        args: npt.ArrayLike, # interaction parameters
+        s_mesh: npt.ArrayLike, # s where phi(s) in calculated
+        l: int, # angular momentum
+        **solve_ivp_kwargs # passed to solve_se
+    ):
+        '''
+        Computes phi(s_mesh), but with max(phi(s_mesh)) = 1.
+        '''
+        phi = self.phi(energy, args, s_mesh, l, **solve_ivp_kwargs)
+        return phi / np.max(np.abs(phi))
+

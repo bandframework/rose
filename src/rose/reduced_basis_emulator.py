@@ -9,7 +9,7 @@ from .interaction import Interaction
 from .schroedinger import *
 from .basis import Basis
 from .constants import HBARC
-from .free_solutions import phase_shift
+from .free_solutions import phi_free, phase_shift
 import numpy.typing as npt
 
 class ReducedBasisEmulator:
@@ -44,9 +44,10 @@ class ReducedBasisEmulator:
         if s_0 is None:
             self.s_0 =  k * DEFAULT_R_0
 
+        self.phi_0 = phi_free(k*self.s_mesh, self.l)
         self.basis = Basis(
             np.array([
-                self.se.phi(self.energy, theta, self.s_mesh, self.l, **kwargs) for theta in theta_train
+                self.se.phi(self.energy, theta, self.s_mesh, self.l, **kwargs) - self.phi_0 for theta in theta_train
             ]).T,
             self.s_mesh
         )
@@ -54,19 +55,27 @@ class ReducedBasisEmulator:
 
     def emulate(self,
         theta: npt.ArrayLike,
-        n_basis: int = 4
+        n_basis: int = 4,
+        ni: int = 2 # How many points should be ignored at the beginning
+                    # and end of the vectors (due to finite-difference
+                    # inaccuracies)?
     ):
         utilde = self.se.interaction.tilde(self.s_mesh, theta, self.energy)[:, np.newaxis]
         phi_basis = self.basis.vectors(use_svd=True, n_basis=n_basis)
         d2 = self.basis.d2_svd[:, :n_basis]
 
-        A_right = -d2 + utilde * phi_basis - phi_basis
-        A = phi_basis.T @ A_right
-        A += np.vstack([phi_basis[0, :] for _ in range(n_basis)])
-        b = self.s_mesh[0]*np.ones(n_basis)
+        A_right = -d2[ni:-ni] + utilde[ni:-ni] * phi_basis[ni:-ni] - phi_basis[ni:-ni]
+        A = phi_basis[ni:-ni].T @ A_right
+
+        d2_phi_0 = self.basis.d2_operator @ self.phi_0
+        b = -phi_basis[ni:-ni].T @ (-d2_phi_0[ni:-ni] + utilde[ni:-ni]*self.phi_0[ni:-ni] - self.phi_0[ni:-ni])
+
+        # A += np.vstack([phi_basis[0, :] for _ in range(n_basis)])
+        # b = self.s_mesh[0]*np.ones(n_basis)
+        # return np.sum(x * phi_basis, axis=1)
+
         x = np.linalg.solve(A, b)
-        u = np.sum(x * phi_basis, axis=1)
-        return u / np.max(np.abs(u)) # normalized to 1
+        return self.phi_0 + np.sum(x * phi_basis, axis=1)
 
 
     def emulate_no_svd(self,

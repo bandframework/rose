@@ -6,10 +6,9 @@ def finite_difference_second_derivative(
     s_mesh: npt.ArrayLike
 ):
     ds = s_mesh[1] - s_mesh[0]
-    assert np.all(s_mesh[1:] - s_mesh[:-1] == ds), '''
+    assert np.all(np.abs(s_mesh[1:] - s_mesh[:-1] - ds) < 1e-14), '''
 Spacing must be consistent throughout the entire mesh.
     '''
-
     ns = s_mesh.size
     D2 = diags([-30, 16, 16, -1, -1], [0, 1, -1, 2, -2], shape=(ns, ns)).toarray() / (12*ds**2)
     D2[0, 0] = -2/ds**2

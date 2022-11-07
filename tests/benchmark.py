@@ -24,7 +24,7 @@ class BenchmarkData():
         schrodeq: rose.SchroedingerEquation,
         energy: float, # MeV, c.m.
         theta: npt.ArrayLike, # interaction parameters; not related to cos(theta)
-        n: int = 10000, # number of point in r to calculate u(r)
+        n: int = 2000, # number of point in r to calculate u(r)
         l_max: int = 3, # maximum angular momentum
         r_0: float = rose.schroedinger.DEFAULT_R_0, # fm, delta <- u(r_0)
         costheta: npt.ArrayLike = COSTHETA # angles at which P_l(cos(theta)) are calculated

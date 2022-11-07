@@ -15,7 +15,7 @@ from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
 DEFAULT_R_MIN = 1e-12 # fm
 DEFAULT_R_MAX = 30.0 # fm
 DEFAULT_R_0 = 20.0 # fm
-DEFAULT_NUM_PTS = 10000
+DEFAULT_NUM_PTS = 2000
 MAX_STEPS = 20000
 
 class SchroedingerEquation:

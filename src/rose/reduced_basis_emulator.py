@@ -60,11 +60,11 @@ class ReducedBasisEmulator:
                     # and end of the vectors (due to finite-difference
                     # inaccuracies)?
     ):
-        utilde = self.se.interaction.tilde(self.s_mesh, theta, self.energy)[:, np.newaxis]
+        utilde = self.se.interaction.tilde(self.s_mesh, theta, self.energy)
         phi_basis = self.basis.vectors(use_svd=True, n_basis=n_basis)
         d2 = self.basis.d2_svd[:, :n_basis]
 
-        A_right = -d2[ni:-ni] + utilde[ni:-ni] * phi_basis[ni:-ni] - phi_basis[ni:-ni]
+        A_right = -d2[ni:-ni] + utilde[ni:-ni, np.newaxis] * phi_basis[ni:-ni] - phi_basis[ni:-ni]
         A = phi_basis[ni:-ni].T @ A_right
 
         d2_phi_0 = self.basis.d2_operator @ self.phi_0

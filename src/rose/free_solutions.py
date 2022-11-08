@@ -64,7 +64,15 @@ def phi_free(rho, ell):
 #     ) / 2j
 
 
-def phase_shift(u, s, ell, x0, dx=1e-6):
+def phase_shift(phi, phi_prime, ell, x0):
+    rl = 1/x0 * (phi/phi_prime)
+    return np.log(
+        (H_minus(x0, ell) - x0*rl*H_minus_prime(x0, ell)) / 
+        (H_plus(x0, ell) - x0*rl*H_plus_prime(x0, ell))
+    ) / 2j
+
+
+def phase_shift_interp(u, s, ell, x0, dx=1e-6):
     '''
     Given the solution, u, on the s grid, return the phase shift (with respect to the free solution).
     '''

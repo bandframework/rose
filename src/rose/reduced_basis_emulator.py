@@ -9,7 +9,7 @@ from .interaction import Interaction
 from .schroedinger import *
 from .basis import Basis
 from .constants import HBARC
-from .free_solutions import phi_free, phase_shift
+from .free_solutions import phi_free, phase_shift, phase_shift_interp
 import numpy.typing as npt
 
 class ReducedBasisEmulator:
@@ -42,7 +42,15 @@ class ReducedBasisEmulator:
             self.s_mesh = np.copy(s_mesh)
 
         if s_0 is None:
-            self.s_0 =  k * DEFAULT_R_0
+            s_0 =  k * DEFAULT_R_0
+
+        # Index of the point in the s mesh that is closest to s_0.
+        self.i_0 = np.argmin(np.abs(self.s_mesh - s_0))
+        # We want to choose a point at which the solution has already been
+        # calculated so we can avoid interpolation.
+        self.s_0 = self.s_mesh[self.i_0]
+        
+        self.i_0 = np.argmin(np.abs(self.s_mesh - self.s_0))
 
         self.phi_0 = phi_free(k*self.s_mesh, self.l)
         self.basis = Basis(
@@ -76,6 +84,17 @@ class ReducedBasisEmulator:
 
         x = np.linalg.solve(A, b)
         return self.phi_0 + np.sum(x * phi_basis, axis=1)
+    
+    # def phase_shift(self,
+    #     theta: npt.ArrayLike,
+    #     n_basis: int = 4,
+    #     ni: int = 2
+    # ):
+    #     coefficients = self.emulate(theta, n_basis, ni)
+    
+
+    # def kohn_correction(self, alpha):
+    #     return 0
 
 
     def emulate_no_svd(self,
@@ -120,13 +139,14 @@ class ReducedBasisEmulator:
         thetas = np.array([bd.theta for bd in benchmark_data])
 
         wave_functions = np.array([bd.phi for bd in benchmark_data])
-        phase_shifts = np.array([phase_shift(u, self.s_mesh, self.l, self.s_0) for u in wave_functions])
+        phase_shifts = np.array([phase_shift_interp(u, self.s_mesh, self.l, self.s_0) for u in wave_functions])
 
         emulated_wave_functions = np.array([self.emulate(theta) for theta in thetas])
-        emulated_phase_shifts = np.array([phase_shift(u, self.s_mesh, self.l, self.s_0) for u in emulated_wave_functions])
+        emulated_phase_shifts = np.array([phase_shift_interp(u, self.s_mesh, self.l, self.s_0) for u in emulated_wave_functions])
 
         rel_diff = np.abs((emulated_phase_shifts - phase_shifts) / emulated_phase_shifts)
-        return np.quantile(rel_diff, [0.5, 0.95])
+        med, upper = np.quantile(rel_diff, [0.5, 0.95])
+        return [med, upper, np.max(np.abs(rel_diff))]
 
 
     def run_metrics(self,
@@ -142,5 +162,7 @@ class ReducedBasisEmulator:
             print(f'{wave_function_results[0]:.4e}  {wave_function_results[1]:.4e}')
             print('Phase shift residuals (relative difference):\n50% and 95% quantiles')
             print(f'{phase_shift_results[0]:.4e}  {phase_shift_results[1]:.4e}')
+            print('Maximum phase shift residuals')
+            print(f'{phase_shift_results[2]:.4e}')
 
         return wave_function_results, phase_shift_results

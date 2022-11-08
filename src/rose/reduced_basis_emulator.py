@@ -59,6 +59,15 @@ class ReducedBasisEmulator:
             ]).T,
             self.s_mesh
         )
+
+        eye = np.diag(theta_train.shape[1])
+        # \tilde{U}_{bare} takes advantage of the linear dependence of \tilde{U}
+        # on the parameters. The first column is multiplied by args[0]. The
+        # second by args[1]. And so on. The "total" potential is the sum across
+        # columns.
+        self.utilde_bare = np.array([
+            self.se.interaction.tilde(self.s_mesh, row, self.energy) for row in eye
+        ]).T
     
 
     def emulate(self,
@@ -68,7 +77,8 @@ class ReducedBasisEmulator:
                     # and end of the vectors (due to finite-difference
                     # inaccuracies)?
     ):
-        utilde = self.se.interaction.tilde(self.s_mesh, theta, self.energy)
+        utilde = np.sum(self.utilde_bare * theta, axis=1)
+        # utilde = self.se.interaction.tilde(self.s_mesh, theta, self.energy)
         phi_basis = self.basis.vectors(use_svd=True, n_basis=n_basis)
         d2 = self.basis.d2_svd[:, :n_basis]
 
@@ -96,23 +106,6 @@ class ReducedBasisEmulator:
     # def kohn_correction(self, alpha):
     #     return 0
 
-
-    def emulate_no_svd(self,
-        theta: npt.ArrayLike
-    ):
-        n = self.basis.phi_train.shape[1]
-        utilde = self.se.interaction.tilde(self.s_mesh, theta, self.energy)[:, np.newaxis]
-        phi_basis = self.basis.vectors(use_svd=False)
-        d2 = np.copy(self.basis.d2_train)
-
-        A_right = -d2 + utilde * phi_basis - phi_basis
-        A = phi_basis.T @ A_right
-        A += np.vstack([phi_basis[0, :] for _ in range(n)])
-        b = self.s_mesh[0]*np.ones(n)
-        x = np.linalg.solve(A, b)
-        u = np.sum(x * phi_basis, axis=1)
-        return u / np.max(np.abs(u)) # normalized to 1
-    
 
     def wave_function_metric(self,
         filename: str,

@@ -15,7 +15,7 @@ class Interaction:
     '''
     def __init__(self,
         coordinate_space_potential: Callable[[float, npt.ArrayLike], float], # V(r, theta)
-        mu:float, # reduced mass (MeV)
+        mu: float # reduced mass (MeV)
     ):
         self.v_r = coordinate_space_potential
         self.mu = mu / HBARC # Go ahead and convert to 1/fm

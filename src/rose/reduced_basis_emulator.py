@@ -60,13 +60,12 @@ class ReducedBasisEmulator:
             self.s_mesh
         )
 
-        eye = np.diag(theta_train.shape[1])
         # \tilde{U}_{bare} takes advantage of the linear dependence of \tilde{U}
         # on the parameters. The first column is multiplied by args[0]. The
         # second by args[1]. And so on. The "total" potential is the sum across
         # columns.
         self.utilde_bare = np.array([
-            self.se.interaction.tilde(self.s_mesh, row, self.energy) for row in eye
+            self.se.interaction.tilde(self.s_mesh, row, self.energy) for row in np.eye(theta_train.shape[1])
         ]).T
     
 
@@ -92,7 +91,16 @@ class ReducedBasisEmulator:
         # b = self.s_mesh[0]*np.ones(n_basis)
         # return np.sum(x * phi_basis, axis=1)
 
-        x = np.linalg.solve(A, b)
+        return np.linalg.solve(A, b)
+
+
+    def emulate_wave_function(self,
+        theta: npt.ArrayLike,
+        n_basis: int = 4,
+        ni: int = 2
+    ):
+        x = self.emulate(theta, n_basis, ni)
+        phi_basis = self.basis.vectors(use_svd=True, n_basis=n_basis)
         return self.phi_0 + np.sum(x * phi_basis, axis=1)
     
     # def phase_shift(self,
@@ -116,7 +124,7 @@ class ReducedBasisEmulator:
         
         thetas = np.array([bd.theta for bd in benchmark_data])
         wave_functions = np.array([bd.phi for bd in benchmark_data])
-        emulated_wave_functions = np.array([self.emulate(theta) for theta in thetas])
+        emulated_wave_functions = np.array([self.emulate_wave_function(theta, n_basis) for theta in thetas])
         abs_residuals = np.abs(emulated_wave_functions - wave_functions)
         norm = np.sqrt(np.sum(abs_residuals**2, axis=1))
         return np.quantile(norm, [0.5, 0.95])
@@ -134,7 +142,7 @@ class ReducedBasisEmulator:
         wave_functions = np.array([bd.phi for bd in benchmark_data])
         phase_shifts = np.array([phase_shift_interp(u, self.s_mesh, self.l, self.s_0) for u in wave_functions])
 
-        emulated_wave_functions = np.array([self.emulate(theta) for theta in thetas])
+        emulated_wave_functions = np.array([self.emulate_wave_function(theta, n_basis) for theta in thetas])
         emulated_phase_shifts = np.array([phase_shift_interp(u, self.s_mesh, self.l, self.s_0) for u in emulated_wave_functions])
 
         rel_diff = np.abs((emulated_phase_shifts - phase_shifts) / emulated_phase_shifts)

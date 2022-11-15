@@ -80,12 +80,13 @@ class SchroedingerEquation:
         s_mesh: npt.ArrayLike, # s where phi(s) in calculated
         l: int, # angular momentum
         s_min: float = DEFAULT_R_MIN, # What do we call "zero"?
+        solve_se_dict: dict = {}, # Options for solve_se: phi_0 and phi_prime_0
         **solve_ivp_kwargs # passed to solve_se
     ):
         '''
         Computes phi(s_mesh)
         '''
-        solution = self.solve_se(energy, args, [s_min, s_mesh[-1]], l, **solve_ivp_kwargs)
+        solution = self.solve_se(energy, args, [s_min, s_mesh[-1]], l, **solve_se_dict, **solve_ivp_kwargs)
         return solution(s_mesh)[0, :]
     
 

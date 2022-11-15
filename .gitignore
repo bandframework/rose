@@ -1,3 +1,4 @@
 dist/rose*.*
 *.pkl
 *.pyc
+*.ipynb

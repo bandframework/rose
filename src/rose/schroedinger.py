@@ -5,8 +5,6 @@ equation (SE) in coordinate space.
 import numpy as np
 import numpy.typing as npt
 from scipy.integrate import solve_ivp
-from scipy.interpolate import interp1d
-from scipy.misc import derivative
 
 from .interaction import Interaction
 from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
@@ -23,7 +21,9 @@ class SchroedingerEquation:
         interaction: Interaction,
     ):
         '''
-        Instantiates an object that stores the Interaction.
+        Instantiates an object that stores the Interaction and makes it easy to
+        compute solutions to the Schrödinger equation and extract phase shifts
+        with that Interaction.
         '''
         self.interaction = interaction
 
@@ -83,7 +83,7 @@ class SchroedingerEquation:
         **solve_ivp_kwargs # passed to solve_se
     ):
         '''
-        Computes phi(s_mesh) 
+        Computes phi(s_mesh)
         '''
         solution = self.solve_se(energy, args, [s_min, s_mesh[-1]], l, **solve_ivp_kwargs)
         return solution(s_mesh)[0, :]

@@ -24,6 +24,7 @@ class Interaction:
     def evaluate(self, r, pars):
         '''
         V(r, pars) where r is relative separation in fm
+        The units returned here must match the units of energy, MeV.
         '''
         return self.v_r(r, pars)
     
@@ -37,10 +38,10 @@ class Interaction:
         tilde{U}(s, alpha, E)
         s = pr/hbar
         alpha are the parameters we are varying
-        E = E_{c.m.}, [E] = MeV
+        E = E_{c.m.}, [E] = MeV = [v_r]
         '''
         p = np.sqrt(2*self.mu*energy/HBARC) # 1/fm
-        return  1/energy * self.v_r(s/p, alpha)
+        return  1.0/energy * self.v_r(s/p, alpha)
 
 
 NUCLEON_MASS = 939.565 # neutron mass (MeV)

@@ -120,6 +120,8 @@ class RelativeBasis(Basis):
     def inhomogeneous_term(self, functional_operator, judges):
         '''
         functional_operator is a matrix
+        This does not currently work. It's a little harder to represent all of F
+        as a matrix that will @ed with the basis than I thought.
         '''
         return -judges.T @ functional_operator @ self.phi_0
 

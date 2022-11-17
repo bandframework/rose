@@ -11,7 +11,26 @@ from .interaction import Interaction
 from .schroedinger import *
 from .basis import StandardBasis, RelativeBasis
 from .constants import HBARC
-from .free_solutions import phi_free, phase_shift, phase_shift_interp
+from .free_solutions import phase_shift, phase_shift_interp
+
+def finite_difference_first_derivative(
+    s_mesh: npt.ArrayLike
+):
+    '''
+    Computes a finite difference matrix that (when applied) represent the first
+    derivative.
+    '''
+    ds = s_mesh[1] - s_mesh[0]
+    assert np.all(np.abs(s_mesh[1:] - s_mesh[:-1] - ds) < 1e-14), '''
+Spacing must be consistent throughout the entire mesh.
+    '''
+    ns = s_mesh.size
+    D1 = diags([1, -8, 8, -1], [-2, -1, 1, 2], shape=(ns, ns)).toarray() / (12*ds)
+    D1[0, 0] = -3/(2*ds)
+    D1[0, 1] = 4/(2*ds)
+    D1[0, 2] = -1/(2*ds)
+    return D1
+
 
 def finite_difference_second_derivative(
     s_mesh: npt.ArrayLike
@@ -109,6 +128,7 @@ class ReducedBasisEmulator:
             self.se.interaction.tilde(self.s_mesh, row, self.energy) for row in np.eye(theta_train.shape[1])
         ]).T
 
+        # Precompute what we can for < psi | F(hat{phi}) >.
         d2_operator = finite_difference_second_derivative(self.s_mesh)
         phi_basis = self.basis.vectors
         self.d2 = -d2_operator @ phi_basis
@@ -118,12 +138,18 @@ class ReducedBasisEmulator:
         ])
         self.A_3 = phi_basis[ni:-ni].T @ -phi_basis[ni:-ni]
 
+        # Precompute what we can for the inhomogeneous term ( -< psi | F(phi_0) > ).
         d2_phi_0 = d2_operator @ self.basis.phi_0
         self.b_1 = phi_basis[ni:-ni].T @ d2_phi_0[ni:-ni]
         self.b_2 = np.array([
             phi_basis[ni:-ni].T @ (-row * self.basis.phi_0[ni:-ni]) for row in self.utilde_bare[ni:-ni].T
         ])
         self.b_3 = phi_basis[ni:-ni].T @ self.basis.phi_0[ni:-ni]
+
+        # Can when extract the phase shift faster?
+        self.phi_components = np.hstack(( self.basis.phi_0[:, np.newaxis], self.basis.vectors ))
+        d1_operator = finite_difference_first_derivative(self.s_mesh)
+        self.phi_prime_components = d1_operator @ self.phi_components
     
 
     def emulate(self,
@@ -148,6 +174,15 @@ class ReducedBasisEmulator:
         x = self.emulate(theta)
         return self.basis.phi_hat(x)
     
+
+    def emulate_phase_shift(self,
+        theta: npt.ArrayLike
+    ):
+        x = self.emulate(theta)
+        phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
+        phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])
+        return phase_shift(phi, phi_prime, self.l, self.s_mesh[self.i_0])
+
 
     def wave_function_metric(self,
         filename: str

@@ -5,51 +5,13 @@ import pickle
 
 import numpy as np
 import numpy.typing as npt
-from scipy.sparse import diags
 
 from .interaction import Interaction
 from .schroedinger import *
-from .basis import StandardBasis, RelativeBasis
+from .basis import RelativeBasis
 from .constants import HBARC
 from .free_solutions import phase_shift, phase_shift_interp
-
-def finite_difference_first_derivative(
-    s_mesh: npt.ArrayLike
-):
-    '''
-    Computes a finite difference matrix that (when applied) represent the first
-    derivative.
-    '''
-    ds = s_mesh[1] - s_mesh[0]
-    assert np.all(np.abs(s_mesh[1:] - s_mesh[:-1] - ds) < 1e-14), '''
-Spacing must be consistent throughout the entire mesh.
-    '''
-    ns = s_mesh.size
-    D1 = diags([1, -8, 8, -1], [-2, -1, 1, 2], shape=(ns, ns)).toarray() / (12*ds)
-    D1[0, 0] = -3/(2*ds)
-    D1[0, 1] = 4/(2*ds)
-    D1[0, 2] = -1/(2*ds)
-    return D1
-
-
-def finite_difference_second_derivative(
-    s_mesh: npt.ArrayLike
-):
-    '''
-    Computes a finite difference matrix that represents the second derivative
-    (w.r.t. s or rho) operator in coordinate space.
-    '''
-    ds = s_mesh[1] - s_mesh[0]
-    assert np.all(np.abs(s_mesh[1:] - s_mesh[:-1] - ds) < 1e-14), '''
-Spacing must be consistent throughout the entire mesh.
-    '''
-    ns = s_mesh.size
-    D2 = diags([-30, 16, 16, -1, -1], [0, 1, -1, 2, -2], shape=(ns, ns)).toarray() / (12*ds**2)
-    D2[0, 0] = -2/ds**2
-    D2[0, 1] = 1/ds**2
-    D2[0, 2] = 0
-    return D2
-
+from .utility import finite_difference_first_derivative, finite_difference_second_derivative
 
 # How many points should be ignored at the beginning
 # and end of the vectors (due to finite-difference
@@ -71,7 +33,6 @@ class ReducedBasisEmulator:
         theta_train: npt.ArrayLike, # training points in parameter space
         energy: float, # center-of-mass energy (MeV)
         l: int, # angular momentum
-        basis_type: str = 'relative', # How is hat{phi} expanded?
         n_basis: int = 4, # How many basis vectors?
         use_svd: bool = True, # Use principal components as basis vectors?
         s_mesh: npt.ArrayLike = None, # s = kr; solutions are u(s)
@@ -99,26 +60,15 @@ class ReducedBasisEmulator:
         
         self.i_0 = np.argmin(np.abs(self.s_mesh - self.s_0))
 
-        if basis_type == 'standard':
-            self.basis = StandardBasis(
-                self.se.interaction,
-                theta_train,
-                self.s_mesh,
-                n_basis,
-                self.energy,
-                self.l,
-                use_svd
-            )
-        elif basis_type == 'relative':
-            self.basis = RelativeBasis(
-                self.se.interaction,
-                theta_train,
-                self.s_mesh,
-                n_basis,
-                self.energy,
-                self.l,
-                use_svd
-            )
+        self.basis = RelativeBasis(
+            self.se.interaction,
+            theta_train,
+            self.s_mesh,
+            n_basis,
+            self.energy,
+            self.l,
+            use_svd
+        )
 
         # \tilde{U}_{bare} takes advantage of the linear dependence of \tilde{U}
         # on the parameters. The first column is multiplied by args[0]. The
@@ -209,8 +159,7 @@ class ReducedBasisEmulator:
         wave_functions = np.array([bd.phi for bd in benchmark_data])
         phase_shifts = np.array([phase_shift_interp(u, self.s_mesh, self.l, self.s_0) for u in wave_functions])
 
-        emulated_wave_functions = np.array([self.emulate_wave_function(theta) for theta in thetas])
-        emulated_phase_shifts = np.array([phase_shift_interp(u, self.s_mesh, self.l, self.s_0) for u in emulated_wave_functions])
+        emulated_phase_shifts = np.array([self.emulate_phase_shift(theta) for theta in thetas])
 
         rel_diff = np.abs((emulated_phase_shifts - phase_shifts) / emulated_phase_shifts)
         med, upper = np.quantile(rel_diff, [0.5, 0.95])

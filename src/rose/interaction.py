@@ -10,15 +10,16 @@ from .constants import HBARC
 
 class Interaction:
     '''
-    Template superclass. All supported interactions will be subclasses of this
-    one.
+    Template class.
     '''
     def __init__(self,
         coordinate_space_potential: Callable[[float, npt.ArrayLike], float], # V(r, theta)
-        mu: float # reduced mass (MeV)
+        mu: float, # reduced mass (MeV)
+        is_complex: bool = False
     ):
         self.v_r = coordinate_space_potential
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
+        self.is_complex = is_complex
     
 
     def evaluate(self, r, pars):
@@ -58,4 +59,15 @@ def mn_potential(r, args):
 MN_Potential = Interaction(
     mn_potential,
     MU_NN
+)
+
+def complex_mn_potential(r, args):
+    vr, vi = args
+    return mn_potential(r, [vr, 1j*vi])
+
+
+Optical_Potential = Interaction(
+    complex_mn_potential,
+    MU_NN,
+    True
 )

@@ -45,12 +45,12 @@ class ReducedBasisEmulator:
         self.se = SchroedingerEquation(interaction)
 
         if s_mesh is None:
-            self.s_mesh = np.linspace(k*DEFAULT_R_MIN, k*DEFAULT_R_MAX, DEFAULT_NUM_PTS)
+            self.s_mesh = np.linspace(1e-6, 8*np.pi, DEFAULT_NUM_PTS)
         else:
             self.s_mesh = np.copy(s_mesh)
 
         if s_0 is None:
-            s_0 =  k * DEFAULT_R_0
+            s_0 =  6*np.pi
 
         # Index of the point in the s mesh that is closest to s_0.
         self.i_0 = np.argmin(np.abs(self.s_mesh - s_0))
@@ -131,4 +131,4 @@ class ReducedBasisEmulator:
         x = self.emulate(theta)
         phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
         phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])
-        return phase_shift(phi, phi_prime, self.l, self.s_mesh[self.i_0])
+        return phase_shift(np.real(phi), np.real(phi_prime), self.l, self.s_mesh[self.i_0])

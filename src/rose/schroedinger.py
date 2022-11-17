@@ -16,9 +16,10 @@ DEFAULT_R_0 = 20.0 # fm
 DEFAULT_NUM_PTS = 2000
 MAX_STEPS = 20000
 
+
 class SchroedingerEquation:
     def __init__(self,
-        interaction: Interaction,
+        interaction: Interaction
     ):
         '''
         Instantiates an object that stores the Interaction and makes it easy to

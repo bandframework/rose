@@ -1,11 +1,11 @@
-import numpy as np 
 from typing import Callable
+
+import numpy as np 
 import numpy.typing as npt
 
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
 from .free_solutions import phi_free
-from .constants import HBARC
 
 class Basis:
     def __init__(self,
@@ -48,12 +48,19 @@ class RelativeBasis(Basis):
         self.phi_0 = phi_free(self.s_mesh, l)
 
         schrodeq = SchroedingerEquation(self.interaction)
-        self.all_vectors = np.array([
-            schrodeq.phi(energy, theta, self.s_mesh, l) - self.phi_0 for theta in theta_train
-        ]).T
+        if self.interaction.is_complex:
+            d = dict(phi_0=0+0j, phi_prime_0=1+1j)
+            self.all_vectors = np.array([
+                schrodeq.phi(energy, theta, self.s_mesh, l, solve_se_dict=d) - self.phi_0 for theta in theta_train
+            ]).T
+        else:
+            self.all_vectors = np.array([
+                schrodeq.phi(energy, theta, self.s_mesh, l) - self.phi_0 for theta in theta_train
+            ]).T
 
         if use_svd:
-            U, _, _ = np.linalg.svd(self.all_vectors, full_matrices=False)
+            U, S, _ = np.linalg.svd(self.all_vectors, full_matrices=False)
+            self.singular_values = np.copy(S)
             self.all_vectors = np.copy(U)
         
         self.vectors = np.copy(self.all_vectors[:, :self.n_basis])

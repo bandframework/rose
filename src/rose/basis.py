@@ -1,41 +1,161 @@
 import numpy as np 
-from scipy.sparse import diags
+from typing import Callable
 import numpy.typing as npt
 
-def finite_difference_second_derivative(
-    s_mesh: npt.ArrayLike
-):
-    ds = s_mesh[1] - s_mesh[0]
-    assert np.all(np.abs(s_mesh[1:] - s_mesh[:-1] - ds) < 1e-14), '''
-Spacing must be consistent throughout the entire mesh.
-    '''
-    ns = s_mesh.size
-    D2 = diags([-30, 16, 16, -1, -1], [0, 1, -1, 2, -2], shape=(ns, ns)).toarray() / (12*ds**2)
-    D2[0, 0] = -2/ds**2
-    D2[0, 1] = 1/ds**2
-    D2[0, 2] = 0
-    return D2
+from .interaction import Interaction
+from .schroedinger import SchroedingerEquation
+from .free_solutions import phi_free
+from .constants import HBARC
 
 class Basis:
     def __init__(self,
-        phi_train: npt.ArrayLike,
-        s_mesh: npt.ArrayLike,
+        interaction: Interaction,
+        theta_train: npt.ArrayLike, # training space
+        s_mesh: npt.ArrayLike, # s = kr; discrete mesh where phi(s) is calculated
+        n_basis: int, # number of basis vectors
+        energy: float, # MeV, c.m.
+        l: int # orbital angular momentum
     ):
-        self.phi_train = np.copy(phi_train)
-        self.d2_operator = finite_difference_second_derivative(s_mesh)
-
-        self.d2_train = self.d2_operator @ self.phi_train
-
-        U, _, _ = np.linalg.svd(phi_train, full_matrices=False)
-        self.phi_svd = np.copy(U)
-        self.d2_svd = self.d2_operator @ self.phi_svd
+        self.interaction = interaction
+        self.theta_train = np.copy(theta_train)
+        self.s_mesh = np.copy(s_mesh)
+        self.n_basis = n_basis
+        self.energy = energy
+        self.l = l
     
 
-    def vectors(self,
-        use_svd: bool = True, # use principal components (PCs) as the basis
-        n_basis: int = 4 # How many PCs? If PCs are not used, all training vectors are used.
+    def phi_hat(self, coefficients):
+        '''
+        Every basis should know how to reconstruct hat{phi} from a set of
+        coefficients. However, this is going to be different for each basis, so
+        we will leave it up to the subclasses to implement this.
+        '''
+        raise NotImplementedError
+    
+
+    def inhomogeneous_term(self, functional_operator, judges):
+        '''
+        Depending on the basis, the inhomogeneous term of our Galerkin equation
+        changes, so we will again leave this up to the subclass to implement.
+        '''
+        raise NotImplementedError
+
+
+class StandardBasis(Basis):
+    def __init__(self,
+        interaction: Interaction,
+        theta_train: npt.ArrayLike, # training space
+        s_mesh: npt.ArrayLike, # s = kr; discrete mesh where phi(s) is calculated
+        n_basis: int, # number of basis vectors
+        energy: float, # MeV, c.m.
+        l: int, # orbital angular momentum
+        use_svd: bool # use principal components?
     ):
+        super().__init__(interaction, theta_train, s_mesh, n_basis, energy, l)
+
+        schrodeq = SchroedingerEquation(self.interaction)
+        self.all_vectors = np.array([
+            schrodeq.phi(energy, theta, self.s_mesh, l) for theta in theta_train
+        ]).T
+
         if use_svd:
-            return self.phi_svd[:, :n_basis]
-        else:
-            return self.phi_train
+            U, _, _ = np.linalg.svd(self.all_vectors, full_matrices=False)
+            self.all_vectors = np.copy(U)
+        
+        self.vectors = np.copy(self.all_vectors[:, :self.n_basis])
+
+
+    def phi_hat(self, coefficients):
+        '''
+        Given the coefficients, presumably from the solution of the Galerkin
+        equation, return hat{phi}.
+        '''
+        return np.sum(coefficients * self.vectors, axis=1)
+    
+        
+    def inhomogeneous_term(self, functional_operator, judges):
+        '''
+        Based on this basis, what should be used as the inhomogeneous term in
+        the Galerkin equation?
+
+        I don't think this is right!!! But I don't think I care because this was
+        an old way of doing things that I am only attempting to keep around for
+        legacy reasons. Note that I'm completely ignoring the functional
+        operator and the judges.
+        '''
+        return self.s_mesh[0]*np.ones(self.n_basis)
+
+
+
+class RelativeBasis(Basis):
+    def __init__(self,
+        interaction: Interaction,
+        theta_train: npt.ArrayLike, # training space
+        s_mesh: npt.ArrayLike, # s = kr; discrete mesh where phi(s) is calculated
+        n_basis: int, # number of basis vectors
+        energy: float, # MeV, c.m.
+        l: int, # orbital angular momentum
+        use_svd: bool # use principal components?
+    ):
+        super().__init__(interaction, theta_train, s_mesh, n_basis, energy, l)
+
+        self.phi_0 = phi_free(self.s_mesh, l)
+
+        schrodeq = SchroedingerEquation(self.interaction)
+        self.all_vectors = np.array([
+            schrodeq.phi(energy, theta, self.s_mesh, l) - self.phi_0 for theta in theta_train
+        ]).T
+
+        if use_svd:
+            U, _, _ = np.linalg.svd(self.all_vectors, full_matrices=False)
+            self.all_vectors = np.copy(U)
+        
+        self.vectors = np.copy(self.all_vectors[:, :self.n_basis])
+    
+
+    def phi_hat(self, coefficients):
+        return self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
+    
+
+    def inhomogeneous_term(self, functional_operator, judges):
+        '''
+        functional_operator is a matrix
+        '''
+        return -judges.T @ functional_operator @ self.phi_0
+
+
+class CustomBasis(Basis):
+    def __init__(self,
+        vectors: npt.ArrayLike, # pre-computed solutions
+        s_mesh: npt.ArrayLike, # s = kr; discrete mesh where phi(s) is calculated
+        n_basis: int, # number of basis vectors
+        energy: float, # MeV, c.m.
+        l: int, # orbital angular momentum
+        use_svd: bool, # use principal components?
+        inh_term_function: Callable[[np.ndarray, np.ndarray, np.ndarray], np.ndarray]
+    ):
+        '''
+        Because the user can specify *any* basis, there is an additional
+        argument required for instantiation. This argument is somewhat more
+        complicated. It is a function that takes the judges (matrix) and functional
+        operator F (matrix) returns the equivalent of < psi | F (phi_0) > in
+        RelativeBasis. Presumably, somewhere in this function the replacement
+        for phi_0 comes in? I'm not sure if this is going to work.
+        '''
+        super().__init__(None, None, s_mesh, n_basis, energy, l)
+
+        self.all_vectors = np.copy(vectors)
+        self.inh_term_function = inh_term_function
+
+        if use_svd:
+            U, _, _ = np.linalg.svd(self.all_vectors, full_matrices=False)
+            self.all_vectors = np.copy(U)
+        
+        self.vectors = np.copy(self.all_vectors[:, :self.n_basis])
+    
+
+    def phi_hat(self, coefficients):
+        return np.sum(coefficients * self.vectors, axis=1)
+
+    def inhomogeneous_term(self, functional_operator, judges):
+        return self.inh_term_function(judges, functional_operator)

@@ -49,7 +49,7 @@ class RelativeBasis(Basis):
 
         schrodeq = SchroedingerEquation(self.interaction)
         if self.interaction.is_complex:
-            d = dict(phi_0=0+0j, phi_prime_0=1+1j)
+            d = dict(phi_0=0+0j, phi_prime_0=1+0j)
             self.all_vectors = np.array([
                 schrodeq.phi(energy, theta, self.s_mesh, l, solve_se_dict=d) - self.phi_0 for theta in theta_train
             ]).T

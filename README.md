@@ -12,7 +12,7 @@ import rose
 energy = 50 # MeV
 ell = 0 # S waves
 
-# The we are varying two parameters of the Minnesota potential, so the training
+# We are varying two parameters of the Minnesota potential, so the training
 # space is an array of 2-component arrays
 training_points = np.array([
     [119.51219512195122, -14.634146341463415],
@@ -38,7 +38,7 @@ rbe = rose.ReducedBasisEmulator(
 
 # Now, to get a the wave function or phase shift at a new point in parameter
 # space, we simply call...
-theta = np.array([200,-91.85])
+theta = np.array([200, -91.85])
 phi = rbe.emulate_wave_function(theta)
 # or...
 delta = rbe.emulate_phase_shift(theta)

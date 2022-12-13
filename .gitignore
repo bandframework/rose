@@ -1,4 +1,5 @@
 dist/rose*.*
 *.pkl
 *.pyc
-*.ipynb
+tests/*.ipynb
+tests/.ipynb_checkpoints

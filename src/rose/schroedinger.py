@@ -47,7 +47,7 @@ class SchroedingerEquation:
         initial_conditions = np.array([phi_0, phi_prime_0]) # initial phi(0) and phi'(0) conditions
         sol = solve_ivp(
             lambda s, phi: np.array([phi[1],
-                (self.interaction.tilde(s, args, energy) + l*(l+1)/s**2 - 1.0) * phi[0]]),
+                (self.interaction.tilde(s, args) + l*(l+1)/s**2 - 1.0) * phi[0]]),
             s_endpts, initial_conditions, rtol=1e-12, atol=1e-12,
             dense_output=True, **solve_ivp_kwargs
         )
@@ -64,7 +64,7 @@ class SchroedingerEquation:
     ):
         '''
         Calculates the lth partial wave phase shift at the specified energy.
-        kwargs are passed to solve_se
+        solve_ivp_kwargs are passed to solve_se
         '''
         solution = self.solve_se(energy, args, s_endpts, l=l, **solve_ivp_kwargs)
         u = solution(s_0)

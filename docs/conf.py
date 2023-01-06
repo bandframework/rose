@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'ROSE'
+project = 'ROSE🌹'
 copyright = '2023, D. Odell, P. Giuliani'
 author = 'D. Odell, P. Giuliani'
 

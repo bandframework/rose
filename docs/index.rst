@@ -15,6 +15,7 @@ potentials.
    :caption: Contents:
 
    overview.md
+   api.md
 
 
 Indices and tables

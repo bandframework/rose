@@ -1,4 +1,6 @@
-# Modules
+# Overview
+
+In principle, the user should be able to train, build, and store a reduced-basis emulator (RBE) using the `ReducedBasisEmulator` and `Interaction` classes. That's it.
 
 ## `ReducedBasisEmulator`
 
@@ -16,5 +18,3 @@ V(r,\alpha)
 $$
 
 ### `InteractionEIM`
-
-## `Schroedinger`

@@ -10,7 +10,7 @@ Welcome to ROSE's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   myfile
+   myfile.md
 
 
 Indices and tables

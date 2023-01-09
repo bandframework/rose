@@ -6,9 +6,9 @@
 Welcome to ROSE's documentation!
 ================================
 
-ROSE stands for **R**educed **O**rder **S**cattering **E**mulator. It is a
-Python library for building and training 2-body scattering emulators. It
-supports real and complex potentials.
+ROSE stands for Reduced Order Scattering Emulator. It is a Python library for
+building and training 2-body scattering emulators. It supports real and complex
+potentials.
 
 .. toctree::
    :maxdepth: 2

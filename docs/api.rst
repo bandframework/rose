@@ -1,5 +1,5 @@
-`rose`
-======
+``rose``
+========
 
 .. autosummary::
    :toctree: generated

@@ -2,7 +2,6 @@
 Defines a ReducedBasisEmulator.
 '''
 import numpy as np
-import numpy.typing as npt
 
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation, DEFAULT_NUM_PTS
@@ -25,18 +24,35 @@ class ReducedBasisEmulator:
     Using the Galerkin projection method, a linear combination of those
     solutions (or a PCA basis of them) is found at some arbitrary point in
     parameter space, theta.
+
     '''
     def __init__(self,
-        interaction: Interaction, # desired local interaction
-        theta_train: npt.ArrayLike, # training points in parameter space
-        energy: float, # center-of-mass energy (MeV)
-        l: int, # angular momentum
-        n_basis: int = 4, # How many basis vectors?
-        use_svd: bool = True, # Use principal components as basis vectors?
-        s_mesh: npt.ArrayLike = DEFAULT_RHO_MESH, # s = rho = kr; solutions are phi(s)
-        s_0: float = None, # phase shift is "extracted" at s_0
-        **kwargs # passed to SchroedingerEquation.solve_se
+        interaction: Interaction,
+        theta_train: np.ndarray,
+        energy: float,
+        l: int,
+        n_basis: int = 4,
+        use_svd: bool = True,
+        s_mesh: np.ndarray = DEFAULT_RHO_MESH,
+        s_0: float = None,
+        **kwargs
     ):
+        '''
+        Instantiates an object that enables the efficient calculation of the phase shift.
+
+        :param interaction: local Interaction
+        :param theta_train: training points in parameter space
+        :param energy: center-of-mass energy (MeV)
+        :param l: angular momentum
+        :param n_basis: (optional) number of basis vectors used to approximate hat{phi}
+        :param use_svd: (optional) Use principal components as basis vectors?
+        :param s_mesh: (optional) s = rho = kr; solutions are phi(s)
+        :param s_0: (optional) phase shift is extracted at s_0
+        :param kwargs: (optional) passed to SchroedingerEquation.solve_se
+        :return: 2-body scattering emulator
+        :rtype: ReducedBasisEmulator
+
+        '''
         self.energy = energy
         self.l = l
         self.se = SchroedingerEquation(interaction)
@@ -96,8 +112,16 @@ class ReducedBasisEmulator:
     
 
     def coefficients(self,
-        theta: npt.ArrayLike
+        theta: np.ndarray
     ):
+        '''
+        Computes the expansion coefficients used to approximate phi.
+
+        :param theta: Interaction parameters at which phi is to be approximated.
+        :return: Array of coefficients.
+        :rtype: numpy.ndarray
+
+        '''
         A_utilde = np.sum([
             xi * Ai for (xi, Ai) in zip(self.se.interaction.coefficients(theta), self.A_2)
         ], axis=0)
@@ -112,15 +136,31 @@ class ReducedBasisEmulator:
 
 
     def emulate_wave_function(self,
-        theta: npt.ArrayLike
+        theta: np.ndarray
     ):
+        '''
+        Computes the wave function (solution) at the interaction parameters, theta.
+
+        :param theta: interaction parameters
+        :return: phi(s;theta)
+        :rtype: numpy.ndarray
+
+        '''
         x = self.coefficients(theta)
         return self.basis.phi_hat(x)
     
 
     def emulate_phase_shift(self,
-        theta: npt.ArrayLike
+        theta: np.ndarray
     ):
+        '''
+        Computes the phase shift at the interaction parameters, theta.
+
+        :param theta: interaction parameters
+        :return: delta(E;theta)
+        :rtype: float
+
+        '''
         x = self.coefficients(theta)
         phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
         phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])

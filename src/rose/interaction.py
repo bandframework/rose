@@ -4,21 +4,33 @@ Includes some "hard-coded" interactions.
 '''
 from typing import Callable
 import numpy as np
-import numpy.typing as npt
 
 from .constants import HBARC
 
 class Interaction:
     '''
-    Template class.
+    Defines a local interaction.
+
     '''
     def __init__(self,
-        coordinate_space_potential: Callable[[float, npt.ArrayLike], float], # V(r, theta)
-        n_theta: int, # How many parameters does the interaction have?
-        mu: float, # reduced mass (MeV)
-        energy: float, # E_{c.m.}
+        coordinate_space_potential: Callable[[float, np.ndarray], float],
+        n_theta: int,
+        mu: float,
+        energy: float,
         is_complex: bool = False
     ):
+        '''
+        Instantiates a local interaction.
+
+        :param coordinate_space_potential: V(r, theta)
+        :param n_theta: How many parameters does the interaction have? (size of theta)
+        :param mu: reduced mass (MeV)
+        :param energy: center-of-mass energy
+        :param is_complex: Is the interaction complex?
+        :return: local interaction object
+        :rtype: Interaction
+
+        '''
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
@@ -28,29 +40,51 @@ class Interaction:
 
     def tilde(self,
         s: float,
-        alpha: npt.ArrayLike
+        alpha: np.ndarray
     ):
         '''
-        tilde{U}(s, alpha, E)
-        s = pr/hbar
-        alpha are the parameters we are varying
+        Computes tilde{U}(s, alpha, E) = V(s, alpha) / E
         E = E_{c.m.}, [E] = MeV = [v_r]
+
+        :param s: s = rho = kr (dimensionless)
+        :param alpha: interaction parameters
+        :return: value of interaction at parameter point alpha on grid point s
+        :rtype: float
+
         '''
         p = np.sqrt(2*self.mu*self.energy/HBARC) # 1/fm
         return  1.0/self.energy * self.v_r(s/p, alpha)
 
 
     def basis_functions(self,
-        rho_mesh: npt.ArrayLike
+        rho_mesh: np.ndarray
     ):
+        '''
+        Computes the "bare" potential.
+        Assumes tilde{U}(s, alpha) is affine in "all" of the alpha components.
+
+        :param rho_mesh: rho = s = kr (dimensionless)
+        :return: matrix of columns; each corresponding to the "bare" component (alpha[column] = 1)
+        :rtype: numpy.ndarray
+
+        '''
         return np.array([
             self.tilde(rho_mesh, row) for row in np.eye(self.n_theta)
         ]).T
     
 
     def coefficients(self,
-        alpha: npt.ArrayLike # interaction parameters
+        alpha: np.ndarray # interaction parameters
     ):
+        '''
+        Basis function coefficients.
+        For affine potentials, this is just the interaction parameters.
+
+        :param alpha: interaction parameters
+        :return: basis function coefficients
+        :rtype: numpy.ndarray
+
+        '''
         return alpha
 
 

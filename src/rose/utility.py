@@ -2,14 +2,13 @@
 Useful utility functions that I don't want to clutter up other modules with.
 '''
 import numpy as np
-import numpy.typing as npt
 from scipy.sparse import diags
 
 def finite_difference_first_derivative(
-    s_mesh: npt.NDArray
+    s_mesh: np.ndarray
 ):
     '''
-    Computes a finite difference matrix that (when applied) represent the first
+    Computes a finite difference matrix that (when applied) represents the first
     derivative.
 
     :param s_mesh: Array of s points used to generate the matrix.
@@ -30,11 +29,16 @@ Spacing must be consistent throughout the entire mesh.
 
 
 def finite_difference_second_derivative(
-    s_mesh: npt.ArrayLike
+    s_mesh: np.ndarray
 ):
     '''
-    Computes a finite difference matrix that represents the second derivative
-    (w.r.t. s or rho) operator in coordinate space.
+    Computes a finite difference matrix that (when applied) represents the second
+    derivative.
+
+    :param s_mesh: Array of s points used to generate the matrix.
+    :return: Matrix that generates the second derivative.
+    :rtype: np.array
+
     '''
     ds = s_mesh[1] - s_mesh[0]
     assert np.all(np.abs(s_mesh[1:] - s_mesh[:-1] - ds) < 1e-14), '''

@@ -3,3 +3,6 @@ dist/rose*.*
 *.pyc
 tests/*.ipynb
 tests/.ipynb_checkpoints
+docs/html
+docs/generated
+docs/_*/

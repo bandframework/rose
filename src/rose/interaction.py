@@ -6,7 +6,7 @@ from typing import Callable
 import numpy as np
 import numpy.typing as npt
 
-from .constants import HBARC, DEFAULT_RHO_MESH
+from .constants import HBARC
 
 class Interaction:
     '''

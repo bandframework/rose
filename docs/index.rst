@@ -14,8 +14,8 @@ potentials.
    :maxdepth: 2
    :caption: Contents:
 
-   overview.md
-   api.md
+   overview.rst
+   api.rst
 
 
 Indices and tables

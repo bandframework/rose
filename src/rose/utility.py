@@ -6,11 +6,16 @@ import numpy.typing as npt
 from scipy.sparse import diags
 
 def finite_difference_first_derivative(
-    s_mesh: npt.ArrayLike
+    s_mesh: npt.NDArray
 ):
     '''
     Computes a finite difference matrix that (when applied) represent the first
     derivative.
+
+    :param s_mesh: Array of s points used to generate the matrix.
+    :return: Matrix that generates the first derivative.
+    :rtype: np.array
+
     '''
     ds = s_mesh[1] - s_mesh[0]
     assert np.all(np.abs(s_mesh[1:] - s_mesh[:-1] - ds) < 1e-14), '''

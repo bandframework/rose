@@ -14,8 +14,8 @@ potentials.
    :maxdepth: 2
    :caption: Contents:
 
-   overview.rst
-   api.rst
+   overview
+   api
 
 
 Indices and tables

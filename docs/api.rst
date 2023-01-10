@@ -4,4 +4,4 @@
 .. autosummary::
    :toctree: generated
 
-   rose
+   rose.utility.finite_difference_first_derivative

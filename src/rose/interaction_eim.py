@@ -11,6 +11,39 @@ from scipy.stats import qmc
 from .interaction import Interaction
 from .constants import HBARC, DEFAULT_RHO_MESH
 
+def max_vol(basis, indxGuess):
+    # basis looks like a long matrix, the columns are the "pillars" V_i(x):
+    #     [   V_1(x)
+    #         V_2(x)
+    #         .
+    #         .
+    #         .
+    #     ]
+    # indxGuess is a first guess of where we should "measure", or ask the questions
+    nbases = basis.shape[1]
+    interpBasis = np.copy(basis)
+
+    for ij in range(len(indxGuess)):
+        interpBasis[[ij,indxGuess[ij]],:] = interpBasis[[indxGuess[ij],ij],:]
+    indexing = np.array(range(len(interpBasis)))
+
+    for ij in range(len(indxGuess)):
+        indexing[[ ij,indxGuess[ij] ]] = indexing[[ indxGuess[ij],ij ]]
+    
+    for iIn in range(1, 100):
+        B = np.dot(interpBasis, np.linalg.inv(interpBasis[:nbases]))
+        b = np.max(B)
+        if b > 1:
+            
+            p1, p2 = np.where(B == b)[0][0], np.where(B == b)[1][0]
+            interpBasis[[p1,p2],:] = interpBasis[[p2,p1],:]
+            indexing[[p1,p2]] = indexing[[p2,p1]]
+        else:
+            break
+        #this thing returns the indexes of where we should measure
+    return np.sort(indexing[:nbases])
+
+
 class InteractionEIM(Interaction):
     def __init__(self,
         coordinate_space_potential: Callable[[float, npt.ArrayLike], float], # V(r, theta)
@@ -19,6 +52,7 @@ class InteractionEIM(Interaction):
         energy: float, # E_{c.m.}
         training_info: npt.ArrayLike,
         is_complex: bool = False,
+        n_basis: int = None,
         explicit_training: bool = False,
         n_train: int = 20,
         rho_mesh: npt.ArrayLike = DEFAULT_RHO_MESH,
@@ -29,6 +63,7 @@ class InteractionEIM(Interaction):
         :param n_theta: number of interaction parameters
         :param mu: reduced mass (MeV); converted to 1/fm
         :param is_complex: Is the interaction complex (e.g. optical potentials)?
+        :param n_basis: How many "columns" do we need?
         :param training_info: either (1) parameters bounds or (2) explicit training points
         if (1):
         This is a 2-column matrix. The first column are the lower
@@ -46,54 +81,40 @@ class InteractionEIM(Interaction):
 
         super().__init__(coordinate_space_potential, n_theta, mu, energy, is_complex=is_complex)
 
-        if match_points is None:
-            # random r points between 0 and 2π fm
-            n_svd = self.n_theta
-            match_points = np.random.rand(n_svd) * 2*np.pi
-        else:
-            n_svd = match_points.size
-
         self.energy = energy
 
-        self.singular_values = None
-        self.snapshots = None
-        self.r_i = None
-        self.match_points = None
-        self.match_indices = None
-        self.Ainv = None
-        self.generate_basis(rho_mesh, n_svd, match_points, training_info,
-            explicit_training=explicit_training, n_train=n_train)
-
-
-    def generate_basis(self,
-        rho: npt.ArrayLike,
-        n_svd: int,
-        match_points: npt.ArrayLike,
-        training_info: npt.ArrayLike,
-        explicit_training: bool = False,
-        n_train: int = 20
-
-    ):
         '''
         Generate a basis used to approximate the potential.
         '''
         # Did the user specify the training points?
         if explicit_training:
-            snapshots = np.array([self.tilde(rho, theta) for theta in training_info]).T
+            snapshots = np.array([self.tilde(rho_mesh, theta) for theta in training_info]).T
         else:
             # Generate training points using the user-provided bounds.
             sampler = qmc.LatinHypercube(d=len(training_info))
             sample = sampler.random(n_train)
             train = qmc.scale(sample, training_info[:, 0], training_info[:, 1])
-            snapshots = np.array([self.tilde(rho, theta) for theta in train]).T
+            snapshots = np.array([self.tilde(rho_mesh, theta) for theta in train]).T
         
         U, S, _ = np.linalg.svd(snapshots, full_matrices=False)
         self.singular_values = np.copy(S)
-        self.snapshots = np.copy(U[:, :n_svd])
+        
+        if match_points is None:
+            if n_basis is None:
+                n_basis = n_theta
+            self.snapshots = np.copy(U[:, :n_basis])
+            # random r points between 0 and 2π fm
+            self.match_indices = max_vol(self.snapshots,
+                np.random.randint(0, self.snapshots.shape[0], size=self.snapshots.shape[1]))
+            self.match_points = rho_mesh[self.match_indices]
+            self.r_i = np.copy(self.match_points)
+        else:
+            n_basis = match_points.size
+            self.snapshots = np.copy(U[:, :n_basis])
+            self.match_points = np.copy(match_points)
+            self.match_indices = np.array([np.argmin(np.abs(rho_mesh - ri)) for ri in self.match_points])
+            self.r_i = rho_mesh[self.match_indices]
 
-        self.match_points = np.copy(match_points)
-        self.match_indices = np.array([np.argmin(np.abs(rho - x)) for x in self.match_points])
-        self.r_i = rho[self.match_indices]
         self.Ainv = np.linalg.inv(self.snapshots[self.match_indices])
 
 

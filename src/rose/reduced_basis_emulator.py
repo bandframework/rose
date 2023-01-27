@@ -36,21 +36,14 @@ class ReducedBasisEmulator:
         n_basis: int = 4, # How many basis vectors?
         use_svd: bool = True, # Use principal components as basis vectors?
         s_mesh: npt.ArrayLike = DEFAULT_RHO_MESH, # s = rho = kr; solutions are phi(s)
-        s_0: float = None, # phase shift is "extracted" at s_0
+        s_0: float = 6*np.pi, # phase shift is "extracted" at s_0
         **kwargs # passed to SchroedingerEquation.solve_se
     ):
         self.energy = energy
         k = np.sqrt(2*interaction.mu*energy/HBARC)
         self.l = l
         self.se = SchroedingerEquation(interaction)
-
-        if s_mesh is None:
-            self.s_mesh = np.linspace(1e-6, 8*np.pi, DEFAULT_NUM_PTS)
-        else:
-            self.s_mesh = np.copy(s_mesh)
-
-        if s_0 is None:
-            s_0 =  6*np.pi
+        self.s_mesh = np.copy(s_mesh)
 
         # Index of the point in the s mesh that is closest to s_0.
         self.i_0 = np.argmin(np.abs(self.s_mesh - s_0))
@@ -92,7 +85,7 @@ class ReducedBasisEmulator:
         ])
         self.b_3 = phi_basis[ni:-ni].T @ self.basis.phi_0[ni:-ni]
 
-        # Can when extract the phase shift faster?
+        # Can we extract the phase shift faster?
         self.phi_components = np.hstack(( self.basis.phi_0[:, np.newaxis], self.basis.vectors ))
         d1_operator = finite_difference_first_derivative(self.s_mesh)
         self.phi_prime_components = d1_operator @ self.phi_components
@@ -107,7 +100,7 @@ class ReducedBasisEmulator:
         A = self.A_1 + A_utilde + self.A_3 # I should go ahead and store A_1 + A_3
 
         b_utilde = np.sum([
-            xi * Ai for (xi, Ai) in zip(theta, self.b_2)
+            xi * Ai for (xi, Ai) in zip(self.se.interaction.coefficients(theta), self.b_2)
         ], axis=0)
         b = self.b_1 + b_utilde + self.b_3 # I should store b_1 + b_3.
 
@@ -127,4 +120,4 @@ class ReducedBasisEmulator:
         x = self.coefficients(theta)
         phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
         phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])
-        return phase_shift(np.real(phi), np.real(phi_prime), self.l, self.s_mesh[self.i_0])
+        return phase_shift(phi, phi_prime, self.l, self.s_mesh[self.i_0])

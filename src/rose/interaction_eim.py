@@ -21,32 +21,38 @@ class InteractionEIM(Interaction):
         is_complex: bool = False,
         explicit_training: bool = False,
         n_train: int = 20,
-        rho_mesh: npt.ArrayLike = DEFAULT_RHO_MESH
+        rho_mesh: npt.ArrayLike = DEFAULT_RHO_MESH,
+        match_points: np.array = None
     ):
         '''
-        coordinate_space_potential: V(r, theta) where theta are the interaction parameters
-        n_theta: number of interaction parameters
-        mu: reduced mass (MeV); converted to 1/fm
-        is_complex: Is the interaction complex (e.g. optical potentials)?
-        training_info: either (1) parameters bounds or (2) explicit training points
-            if (1):
-                This is a 2-column matrix. The first column are the lower
-                bounds. The second are the upper bounds. Each row maps to a
-                single parameter.
-            if (2):
-                This is MxN matrix. N is the number of parameters. M is the
-                number of samples.
+        :param coordinate_space_potential: V(r, theta) where theta are the interaction parameters
+        :param n_theta: number of interaction parameters
+        :param mu: reduced mass (MeV); converted to 1/fm
+        :param is_complex: Is the interaction complex (e.g. optical potentials)?
+        :param training_info: either (1) parameters bounds or (2) explicit training points
+        if (1):
+        This is a 2-column matrix. The first column are the lower
+        bounds. The second are the upper bounds. Each row maps to a
+        single parameter.
+        if (2):
+        This is MxN matrix. N is the number of parameters. M is the
+        number of samples.
         explicit_training: Is training_info (1) or (2)? (1) is default
-        n_train: How many snapshots to generate? Ignored if explicit_training is True.
-        r: coordinate-space points at which the interaction is generated (used
-           for training)
+        :param n_train: How many snapshots to generate? Ignored if explicit_training is True.
+        :param r: coordinate-space points at which the interaction is generated (used
+        for training)
+
         '''
 
         super().__init__(coordinate_space_potential, n_theta, mu, energy, is_complex=is_complex)
 
-        # random r points between 0 and 2π fm
-        n_svd = self.n_theta
-        match_points = np.random.rand(n_svd) * 2*np.pi
+        if match_points is None:
+            # random r points between 0 and 2π fm
+            n_svd = self.n_theta
+            match_points = np.random.rand(n_svd) * 2*np.pi
+        else:
+            n_svd = match_points.size
+
         self.energy = energy
 
         self.singular_values = None
@@ -107,6 +113,7 @@ class InteractionEIM(Interaction):
         s = pr/hbar
         alpha are the parameters we are varying
         E = E_{c.m.}, [E] = MeV = [v_r]
+
         '''
         x = self.coefficients(alpha)
         emu = np.sum(x * self.snapshots, axis=1)

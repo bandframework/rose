@@ -94,14 +94,12 @@ class ReducedBasisEmulator:
     def coefficients(self,
         theta: npt.ArrayLike
     ):
-        A_utilde = np.sum([
-            xi * Ai for (xi, Ai) in zip(self.se.interaction.coefficients(theta), self.A_2)
-        ], axis=0)
+        beta = self.se.interaction.coefficients(theta)
+
+        A_utilde = np.einsum('i,ijk', beta, self.A_2)
         A = self.A_1 + A_utilde + self.A_3 # I should go ahead and store A_1 + A_3
 
-        b_utilde = np.sum([
-            xi * Ai for (xi, Ai) in zip(self.se.interaction.coefficients(theta), self.b_2)
-        ], axis=0)
+        b_utilde = beta @ self.b_2
         b = self.b_1 + b_utilde + self.b_3 # I should store b_1 + b_3.
 
         return np.linalg.solve(A, b)

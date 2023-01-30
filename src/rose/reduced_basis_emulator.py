@@ -1,13 +1,11 @@
 '''
 Defines a ReducedBasisEmulator.
 '''
-import pickle
-
 import numpy as np
 import numpy.typing as npt
 
 from .interaction import Interaction
-from .schroedinger import SchroedingerEquation, DEFAULT_R_MIN, DEFAULT_R_MAX, DEFAULT_R_0, DEFAULT_NUM_PTS
+from .schroedinger import SchroedingerEquation
 from .basis import RelativeBasis
 from .constants import HBARC, DEFAULT_RHO_MESH
 from .free_solutions import phase_shift
@@ -40,7 +38,6 @@ class ReducedBasisEmulator:
         **kwargs # passed to SchroedingerEquation.solve_se
     ):
         self.energy = energy
-        k = np.sqrt(2*interaction.mu*energy/HBARC)
         self.l = l
         self.se = SchroedingerEquation(interaction)
         self.s_mesh = np.copy(s_mesh)
@@ -97,10 +94,10 @@ class ReducedBasisEmulator:
         beta = self.se.interaction.coefficients(theta)
 
         A_utilde = np.einsum('i,ijk', beta, self.A_2)
-        A = self.A_1 + A_utilde + self.A_3 # I should go ahead and store A_1 + A_3
+        A = self.A_1 + A_utilde + self.A_3
 
         b_utilde = beta @ self.b_2
-        b = self.b_1 + b_utilde + self.b_3 # I should store b_1 + b_3.
+        b = self.b_1 + b_utilde + self.b_3
 
         return np.linalg.solve(A, b)
 

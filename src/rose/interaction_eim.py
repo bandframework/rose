@@ -104,8 +104,11 @@ class InteractionEIM(Interaction):
                 n_basis = n_theta
             self.snapshots = np.copy(U[:, :n_basis])
             # random r points between 0 and 2π fm
-            self.match_indices = max_vol(self.snapshots,
-                np.random.randint(0, self.snapshots.shape[0], size=self.snapshots.shape[1]))
+            i_max = self.snapshots.shape[0] // 2
+            di = i_max // (n_basis - 1)
+            i_init = np.arange(0, i_max + 1, di)
+            self.match_indices = max_vol(self.snapshots, i_init)
+                # np.random.randint(0, self.snapshots.shape[0], size=self.snapshots.shape[1]))
             self.match_points = rho_mesh[self.match_indices]
             self.r_i = np.copy(self.match_points)
         else:

@@ -72,7 +72,7 @@ class InteractionEIM(Interaction):
         if (2):
         This is MxN matrix. N is the number of parameters. M is the
         number of samples.
-        explicit_training: Is training_info (1) or (2)? (1) is default
+        :param explicit_training: Is training_info (1) or (2)? (1) is default
         :param n_train: How many snapshots to generate? Ignored if explicit_training is True.
         :param r: coordinate-space points at which the interaction is generated (used
         for training)

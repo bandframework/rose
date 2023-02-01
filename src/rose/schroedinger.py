@@ -44,7 +44,10 @@ class SchroedingerEquation:
         reduced radial wavefunction, u(r). (The optional third - based on
         return_uprime - is u'(r).)
         '''
-        initial_conditions = np.array([phi_0, phi_prime_0]) # initial phi(0) and phi'(0) conditions
+        if self.interaction.is_complex:
+            initial_conditions = np.array([0+0j, 1+0j])
+        else:
+            initial_conditions = np.array([0, 1])
         sol = solve_ivp(
             lambda s, phi: np.array([phi[1],
                 (self.interaction.tilde(s, args) + l*(l+1)/s**2 - 1.0) * phi[0]]),

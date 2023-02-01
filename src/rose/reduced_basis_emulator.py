@@ -67,12 +67,15 @@ class ReducedBasisEmulator:
         # Precompute what we can for < psi | F(hat{phi}) >.
         d2_operator = finite_difference_second_derivative(self.s_mesh)
         phi_basis = self.basis.vectors
+        ang_mom = self.l*(self.l+1) / self.s_mesh**2
+
         self.d2 = -d2_operator @ phi_basis
         self.A_1 = phi_basis[ni:-ni].T @ self.d2[ni:-ni]
         self.A_2 = np.array([
             phi_basis[ni:-ni].T @ (row[:, np.newaxis] * phi_basis[ni:-ni]) for row in self.utilde_basis_functions[ni:-ni, :].T
         ])
-        self.A_3 = phi_basis[ni:-ni].T @ -phi_basis[ni:-ni]
+        self.A_3 = np.einsum('ij,j,jk', phi_basis[ni:-ni].T, ang_mom[ni:-ni] - 1, phi_basis[ni:-ni])
+        # self.A_3 = phi_basis[ni:-ni].T @ -phi_basis[ni:-ni]
 
         # Precompute what we can for the inhomogeneous term ( -< psi | F(phi_0) > ).
         d2_phi_0 = d2_operator @ self.basis.phi_0
@@ -80,7 +83,7 @@ class ReducedBasisEmulator:
         self.b_2 = np.array([
             phi_basis[ni:-ni].T @ (-row * self.basis.phi_0[ni:-ni]) for row in self.utilde_basis_functions[ni:-ni].T
         ])
-        self.b_3 = phi_basis[ni:-ni].T @ self.basis.phi_0[ni:-ni]
+        self.b_3 = phi_basis[ni:-ni].T @ ((1 - ang_mom[ni:-ni]) * self.basis.phi_0[ni:-ni])
 
         # Can we extract the phase shift faster?
         self.phi_components = np.hstack(( self.basis.phi_0[:, np.newaxis], self.basis.vectors ))
@@ -116,3 +119,7 @@ class ReducedBasisEmulator:
         phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
         phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])
         return phase_shift(phi, phi_prime, self.l, self.s_mesh[self.i_0])
+    
+    
+    def exact_phase_shift(self, theta: np.array):
+        return self.se.delta(self.energy, theta, self.s_mesh[[0, -1]], self.l, self.s_0)

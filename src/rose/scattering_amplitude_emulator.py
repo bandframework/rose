@@ -19,7 +19,7 @@ class ScatteringAmplitudeEmulator:
         **kwargs
     ):
         '''
-        :param interaction: 
+        :param interaction:
         '''
         self.l_max = l_max
         self.angles = angles.copy()
@@ -35,7 +35,18 @@ class ScatteringAmplitudeEmulator:
             rbe.emulate_phase_shift(alpha) for rbe in self.rbes
         ])
         tl = np.exp(1j*phase_shifts) * np.sin(phase_shifts)
-        dsdo = np.array([
+        f = np.array([
             1/self.k * (2*l+1) * eval_legendre(l, np.cos(self.angles)) * t for (l, t) in enumerate(tl)
         ])
-        return np.sum(dsdo, axis=0)
+        return np.sum(f, axis=0)
+    
+
+    def exact(self, alpha: np.array):
+        phase_shifts = np.array([
+            rbe.exact_phase_shift(alpha) for rbe in self.rbes
+        ])
+        tl = np.exp(1j*phase_shifts) * np.sin(phase_shifts)
+        f = np.array([
+            1/self.k * (2*l+1) * eval_legendre(l, np.cos(self.angles)) * t for (l, t) in enumerate(tl)
+        ])
+        return np.sum(f, axis=0)

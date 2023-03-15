@@ -2,6 +2,7 @@ from typing import Callable
 
 import numpy as np 
 import numpy.typing as npt
+from mpmath import coulombf
 
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
@@ -45,7 +46,8 @@ class RelativeBasis(Basis):
     ):
         super().__init__(interaction, theta_train, s_mesh, n_basis, energy, l)
 
-        self.phi_0 = phi_free(self.s_mesh, l)
+        # Returns Bessel functions when eta = 0.
+        self.phi_0 = np.array([coulombf(self.l, self.interaction.eta, rho) for rho in self.s_mesh])
 
         schrodeq = SchroedingerEquation(self.interaction)
         if self.interaction.is_complex:

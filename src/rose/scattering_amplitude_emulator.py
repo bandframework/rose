@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.special import eval_legendre
+from tqdm import tqdm 
 
 from .interaction import Interaction
 from .reduced_basis_emulator import ReducedBasisEmulator
@@ -23,11 +24,13 @@ class ScatteringAmplitudeEmulator:
         '''
         self.l_max = l_max
         self.angles = angles.copy()
-        self.rbes = [
-            ReducedBasisEmulator(interaction, theta_train, energy, l,
-                n_basis=n_basis, use_svd=use_svd, s_mesh=s_mesh, s_0=s_0,
-                **kwargs) for l in range(self.l_max+1)
-        ]
+        self.rbes = []
+        for l in tqdm(range(self.l_max + 1)):
+            self.rbes.append(
+                ReducedBasisEmulator(interaction, theta_train, energy, l,
+                    n_basis=n_basis, use_svd=use_svd, s_mesh=s_mesh, s_0=s_0,
+                    **kwargs)
+            )
         self.k = np.sqrt(2*interaction.mu*energy/HBARC)
 
     def predict(self, alpha):
@@ -50,3 +53,14 @@ class ScatteringAmplitudeEmulator:
             1/self.k * (2*l+1) * eval_legendre(l, np.cos(self.angles)) * t for (l, t) in enumerate(tl)
         ])
         return np.sum(f, axis=0)
+    
+
+    def emulate_dsdo(self,
+        theta: np.array
+    ):
+        Sls = np.array([rbe.S_matrix_element(theta) for rbe in self.rbes])
+        f = np.array([
+            -1j/(2*self.k) * (2*l + 1) * eval_legendre(l, np.cos(self.angles)) * (Sl - 1) for (l, Sl) in enumerate(Sls)
+        ])
+        f = np.sum(f, axis=0)
+        return np.conj(f) * f

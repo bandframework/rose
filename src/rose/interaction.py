@@ -6,7 +6,7 @@ from typing import Callable
 import numpy as np
 import numpy.typing as npt
 
-from .constants import HBARC, DEFAULT_RHO_MESH
+from .constants import HBARC, DEFAULT_RHO_MESH, ALPHA
 
 class Interaction:
     '''
@@ -17,12 +17,16 @@ class Interaction:
         n_theta: int, # How many parameters does the interaction have?
         mu: float, # reduced mass (MeV)
         energy: float, # E_{c.m.}
+        Z_1: int = 0, # atomic number of particle 1
+        Z_2: int = 0, # atomic number of particle 2
         is_complex: bool = False
     ):
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
         self.energy = energy
+        k = np.sqrt(2 * self.mu * self.energy/HBARC)
+        self.eta = ALPHA * Z_1 * Z_2 * self.mu / k
         self.is_complex = is_complex
 
 
@@ -32,6 +36,7 @@ class Interaction:
     ):
         '''
         tilde{U}(s, alpha, E)
+        Does not include the Coulomb term.
         s = pr/hbar
         alpha are the parameters we are varying
         E = E_{c.m.}, [E] = MeV = [v_r]

@@ -5,7 +5,6 @@ Method (EIM).
 
 from typing import Callable
 import numpy as np
-import numpy.typing as npt
 from scipy.stats import qmc
 
 from .interaction import Interaction
@@ -46,16 +45,18 @@ def max_vol(basis, indxGuess):
 
 class InteractionEIM(Interaction):
     def __init__(self,
-        coordinate_space_potential: Callable[[float, npt.ArrayLike], float], # V(r, theta)
+        coordinate_space_potential: Callable[[float, np.array], float], # V(r, theta)
         n_theta: int, # How many parameters does the interaction have?
         mu: float, # reduced mass (MeV)
         energy: float, # E_{c.m.}
-        training_info: npt.ArrayLike,
+        training_info: np.array,
+        Z_1: int = 0, # atomic number of particle 1
+        Z_2: int = 0, # atomic number of particle 2
         is_complex: bool = False,
         n_basis: int = None,
         explicit_training: bool = False,
         n_train: int = 20,
-        rho_mesh: npt.ArrayLike = DEFAULT_RHO_MESH,
+        rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None
     ):
         '''
@@ -70,7 +71,7 @@ class InteractionEIM(Interaction):
         bounds. The second are the upper bounds. Each row maps to a
         single parameter.
         if (2):
-        This is MxN matrix. N is the number of parameters. M is the
+        This is an MxN matrix. N is the number of parameters. M is the
         number of samples.
         :param explicit_training: Is training_info (1) or (2)? (1) is default
         :param n_train: How many snapshots to generate? Ignored if explicit_training is True.
@@ -79,13 +80,10 @@ class InteractionEIM(Interaction):
 
         '''
 
-        super().__init__(coordinate_space_potential, n_theta, mu, energy, is_complex=is_complex)
+        super().__init__(coordinate_space_potential, n_theta, mu, energy,
+            Z_1=Z_1, Z_2=Z_2, is_complex=is_complex)
 
-        self.energy = energy
-
-        '''
-        Generate a basis used to approximate the potential.
-        '''
+        # Generate a basis used to approximate the potential.
         # Did the user specify the training points?
         if explicit_training:
             snapshots = np.array([self.tilde(rho_mesh, theta) for theta in training_info]).T
@@ -122,7 +120,7 @@ class InteractionEIM(Interaction):
 
 
     def coefficients(self,
-        alpha: npt.ArrayLike
+        alpha: np.array
     ):
         u_true = self.tilde(self.r_i, alpha)
         return self.Ainv @ u_true
@@ -130,10 +128,11 @@ class InteractionEIM(Interaction):
 
     def tilde_emu(self,
         s: float,
-        alpha: npt.ArrayLike
+        alpha: np.array
     ):
         '''
         tilde{U}(s, alpha, E)
+        Does not include the Coulomb term.
         s = pr/hbar
         alpha are the parameters we are varying
         E = E_{c.m.}, [E] = MeV = [v_r]
@@ -144,7 +143,7 @@ class InteractionEIM(Interaction):
         return emu
     
 
-    def basis_functions(self, rho_mesh: npt.ArrayLike):
+    def basis_functions(self, rho_mesh: np.array):
         return np.copy(self.snapshots)
 
 

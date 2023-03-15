@@ -28,12 +28,12 @@ class ReducedBasisEmulator:
     '''
     def __init__(self,
         interaction: Interaction, # desired local interaction
-        theta_train: npt.ArrayLike, # training points in parameter space
+        theta_train: np.array, # training points in parameter space
         energy: float, # center-of-mass energy (MeV)
         l: int, # angular momentum
         n_basis: int = 4, # How many basis vectors?
         use_svd: bool = True, # Use principal components as basis vectors?
-        s_mesh: npt.ArrayLike = DEFAULT_RHO_MESH, # s = rho = kr; solutions are phi(s)
+        s_mesh: np.array = DEFAULT_RHO_MESH, # s = rho = kr; solutions are phi(s)
         s_0: float = 6*np.pi, # phase shift is "extracted" at s_0
         **kwargs # passed to SchroedingerEquation.solve_se
     ):
@@ -68,13 +68,17 @@ class ReducedBasisEmulator:
         d2_operator = finite_difference_second_derivative(self.s_mesh)
         phi_basis = self.basis.vectors
         ang_mom = self.l*(self.l+1) / self.s_mesh**2
+        coulomb = 2*self.se.interaction.eta / self.s_mesh
 
         self.d2 = -d2_operator @ phi_basis
         self.A_1 = phi_basis[ni:-ni].T @ self.d2[ni:-ni]
         self.A_2 = np.array([
             phi_basis[ni:-ni].T @ (row[:, np.newaxis] * phi_basis[ni:-ni]) for row in self.utilde_basis_functions[ni:-ni, :].T
         ])
-        self.A_3 = np.einsum('ij,j,jk', phi_basis[ni:-ni].T, ang_mom[ni:-ni] - 1, phi_basis[ni:-ni])
+        self.A_3 = np.einsum('ij,j,jk',
+                             phi_basis[ni:-ni].T,
+                             coulomb[ni:-ni] + ang_mom[ni:-ni] - 1,
+                             phi_basis[ni:-ni])
         # self.A_3 = phi_basis[ni:-ni].T @ -phi_basis[ni:-ni]
 
         # Precompute what we can for the inhomogeneous term ( -< psi | F(phi_0) > ).
@@ -83,7 +87,7 @@ class ReducedBasisEmulator:
         self.b_2 = np.array([
             phi_basis[ni:-ni].T @ (-row * self.basis.phi_0[ni:-ni]) for row in self.utilde_basis_functions[ni:-ni].T
         ])
-        self.b_3 = phi_basis[ni:-ni].T @ ((1 - ang_mom[ni:-ni]) * self.basis.phi_0[ni:-ni])
+        self.b_3 = phi_basis[ni:-ni].T @ ((1 - ang_mom[ni:-ni] - coulomb[ni:-ni]) * self.basis.phi_0[ni:-ni])
 
         # Can we extract the phase shift faster?
         self.phi_components = np.hstack(( self.basis.phi_0[:, np.newaxis], self.basis.vectors ))
@@ -92,7 +96,7 @@ class ReducedBasisEmulator:
     
 
     def coefficients(self,
-        theta: npt.ArrayLike
+        theta: np.array
     ):
         beta = self.se.interaction.coefficients(theta)
 
@@ -106,14 +110,14 @@ class ReducedBasisEmulator:
 
 
     def emulate_wave_function(self,
-        theta: npt.ArrayLike
+        theta: np.array
     ):
         x = self.coefficients(theta)
         return self.basis.phi_hat(x)
     
 
     def emulate_phase_shift(self,
-        theta: npt.ArrayLike
+        theta: np.array
     ):
         x = self.coefficients(theta)
         phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])

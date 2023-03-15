@@ -32,7 +32,7 @@ class SchroedingerEquation:
     def solve_se(self,
         energy: float, # E_{c.m.} (MeV)
         args: npt.ArrayLike, # interaction parameters
-        s_endpts: npt.ArrayLike, # s where phi(s) is calculated
+        s_endpts: np.array, # s where phi(s) is calculated
         l: int = 0, # angular momentum
         phi_0: float = 0.0, # phi(r=0)
         phi_prime_0: float = 1.0, # dphi/dr(r=0)
@@ -69,6 +69,7 @@ class SchroedingerEquation:
         Calculates the lth partial wave phase shift at the specified energy.
         solve_ivp_kwargs are passed to solve_se
         '''
+        # Should s_endpts be [s_min, s_endpts[1]]?
         solution = self.solve_se(energy, args, s_endpts, l=l, **solve_ivp_kwargs)
         u = solution(s_0)
         rl = 1/s_0 * (u[0]/u[1])

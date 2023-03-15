@@ -8,7 +8,7 @@ from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
 from .basis import RelativeBasis
 from .constants import HBARC, DEFAULT_RHO_MESH
-from .free_solutions import phase_shift
+from .free_solutions import phase_shift, H_minus, H_plus, H_minus_prime, H_plus_prime
 from .utility import finite_difference_first_derivative, finite_difference_second_derivative
 
 # How many points should be ignored at the beginning
@@ -121,5 +121,24 @@ class ReducedBasisEmulator:
         return phase_shift(phi, phi_prime, self.l, self.s_mesh[self.i_0])
     
     
+    def logarithmic_derivative(self,
+        theta: np.array
+    ):
+        a = self.s_mesh[self.i_0]
+        x = self.coefficients(theta)
+        phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
+        phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])
+        return 1/a * phi / phi_prime
+    
+    
+    def S_matrix_element(self,
+        theta: np.array
+    ):
+        a = self.s_mesh[self.i_0]
+        Rl = self.logarithmic_derivative(theta)
+        return (H_minus(a, self.l) - a*Rl*H_minus_prime(a, self.l)) / \
+            (H_plus(a, self.l) - a*Rl*H_plus_prime(a, self.l))
+
+
     def exact_phase_shift(self, theta: np.array):
         return self.se.delta(self.energy, theta, self.s_mesh[[0, -1]], self.l, self.s_0)

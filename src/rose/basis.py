@@ -50,15 +50,9 @@ class RelativeBasis(Basis):
         self.phi_0 = np.array([coulombf(self.l, self.interaction.eta, rho) for rho in self.s_mesh], dtype=np.float64)
 
         schrodeq = SchroedingerEquation(self.interaction)
-        if self.interaction.is_complex:
-            d = dict(phi_0=0+0j, phi_prime_0=1+0j)
-            self.all_vectors = np.array([
-                schrodeq.phi(energy, theta, self.s_mesh, l, solve_se_dict=d) - self.phi_0 for theta in theta_train
-            ]).T
-        else:
-            self.all_vectors = np.array([
-                schrodeq.phi(energy, theta, self.s_mesh, l) - self.phi_0 for theta in theta_train
-            ]).T
+        self.all_vectors = np.array([
+            schrodeq.phi(energy, theta, self.s_mesh, l) - self.phi_0 for theta in theta_train
+        ]).T
 
         if use_svd:
             U, S, _ = np.linalg.svd(self.all_vectors, full_matrices=False)

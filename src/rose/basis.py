@@ -11,8 +11,8 @@ from .free_solutions import phi_free
 class Basis:
     def __init__(self,
         interaction: Interaction,
-        theta_train: npt.ArrayLike, # training space
-        s_mesh: npt.ArrayLike, # s = kr; discrete mesh where phi(s) is calculated
+        theta_train: np.array, # training space
+        s_mesh: np.array, # s = kr; discrete mesh where phi(s) is calculated
         n_basis: int, # number of basis vectors
         energy: float, # MeV, c.m.
         l: int # orbital angular momentum
@@ -37,8 +37,8 @@ class Basis:
 class RelativeBasis(Basis):
     def __init__(self,
         interaction: Interaction,
-        theta_train: npt.ArrayLike, # training space
-        s_mesh: npt.ArrayLike, # s = kr; discrete mesh where phi(s) is calculated
+        theta_train: np.array, # training space
+        s_mesh: np.array, # s = kr; discrete mesh where phi(s) is calculated
         n_basis: int, # number of basis vectors
         energy: float, # MeV, c.m.
         l: int, # orbital angular momentum

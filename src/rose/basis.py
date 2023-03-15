@@ -47,7 +47,7 @@ class RelativeBasis(Basis):
         super().__init__(interaction, theta_train, s_mesh, n_basis, energy, l)
 
         # Returns Bessel functions when eta = 0.
-        self.phi_0 = np.array([coulombf(self.l, self.interaction.eta, rho) for rho in self.s_mesh])
+        self.phi_0 = np.array([coulombf(self.l, self.interaction.eta, rho) for rho in self.s_mesh], dtype=np.float64)
 
         schrodeq = SchroedingerEquation(self.interaction)
         if self.interaction.is_complex:

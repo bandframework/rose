@@ -54,8 +54,7 @@ class SchroedingerEquation:
 
         C_l = Gamow_factor(l, self.interaction.eta)
         if rho_0 is None:
-            rho_0 = (phi_threshold / Gamow_factor(l, self.interaction.eta)) ** (1/(l+1))
-
+            rho_0 = (phi_threshold / C_l) ** (1/(l+1))
         phi_0 = C_l * rho_0**(l+1)
         phi_prime_0 = C_l * (l+1) * rho_0**l
         
@@ -101,15 +100,23 @@ class SchroedingerEquation:
         args: np.array, # interaction parameters
         s_mesh: np.array, # s where phi(s) in calculated
         l: int, # angular momentum
-        s_min: float = DEFAULT_R_MIN, # What do we call "zero"?
-        solve_se_dict: dict = {}, # Options for solve_se: phi_0 and phi_prime_0
+        rho_0: float = None, # What do we call "zero"?
+        phi_threshold: float = PHI_THRESHOLD,
         **solve_ivp_kwargs # passed to solve_se
     ):
         '''
         Computes phi(s_mesh)
         '''
-        solution = self.solve_se(energy, args, [s_min, s_mesh[-1]], l, **solve_se_dict, **solve_ivp_kwargs)
-        return solution(s_mesh)[0, :]
+        if rho_0 is None:
+            rho_0 = (phi_threshold / Gamow_factor(l, self.interaction.eta)) ** (1/(l+1))
+
+        solution = self.solve_se(energy, args, [rho_0, s_mesh[-1]], l, rho_0=rho_0,
+                                 phi_threshold=phi_threshold, **solve_ivp_kwargs)
+
+        ii_0 = np.where(s_mesh < rho_0)[0]
+        y = solution(s_mesh)[0]
+        y[ii_0] = 0
+        return y
     
 
     def phi_normalized(self,

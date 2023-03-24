@@ -1,0 +1,145 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>ROSE &#8212; rose  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="rose">
+<h1>ROSE<a class="headerlink" href="#rose" title="Permalink to this headline">¶</a></h1>
+<p><strong>R</strong>educed-<strong>O</strong>rder <strong>S</strong>cattering <strong>E</strong>mulator</p>
+<p>ROSE makes it easy to build and train a scattering emulator.</p>
+<p>The primary class is <code class="docutils literal notranslate"><span class="pre">ReducedBasisEmulator</span></code>. To create an instance, minimally, an instance of the <code class="docutils literal notranslate"><span class="pre">Interaction</span></code> class, a set of training points, the energy, and angular momentum need to be specified. For example,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">rose</span>
+
+<span class="n">energy</span> <span class="o">=</span> <span class="mi">50</span> <span class="c1"># MeV</span>
+<span class="n">ell</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1"># S waves</span>
+
+<span class="c1"># The we are varying two parameters of the Minnesota potential, so the training</span>
+<span class="c1"># space is an array of 2-component arrays</span>
+<span class="n">training_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="p">[</span><span class="mf">119.51219512195122</span><span class="p">,</span> <span class="o">-</span><span class="mf">14.634146341463415</span><span class="p">],</span>
+    <span class="p">[</span><span class="mf">139.02439024390245</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.878048780487805</span><span class="p">],</span>
+    <span class="p">[</span><span class="mf">158.53658536585365</span><span class="p">,</span> <span class="o">-</span><span class="mf">48.78048780487805</span><span class="p">],</span>
+    <span class="p">[</span><span class="mf">178.0487804878049</span><span class="p">,</span> <span class="o">-</span><span class="mf">117.07317073170732</span><span class="p">],</span>
+    <span class="p">[</span><span class="mf">197.5609756097561</span><span class="p">,</span> <span class="o">-</span><span class="mf">131.70731707317074</span><span class="p">],</span>
+    <span class="p">[</span><span class="mf">217.0731707317073</span><span class="p">,</span> <span class="o">-</span><span class="mf">126.82926829268293</span><span class="p">],</span>
+    <span class="p">[</span><span class="mf">236.58536585365854</span><span class="p">,</span> <span class="o">-</span><span class="mf">82.92682926829268</span><span class="p">],</span>
+    <span class="p">[</span><span class="mf">256.0975609756098</span><span class="p">,</span> <span class="o">-</span><span class="mf">175.609756097561</span><span class="p">],</span>
+    <span class="p">[</span><span class="mf">275.609756097561</span><span class="p">,</span> <span class="o">-</span><span class="mf">19.51219512195122</span><span class="p">],</span>
+    <span class="p">[</span><span class="mf">295.1219512195122</span><span class="p">,</span> <span class="o">-</span><span class="mf">170.73170731707316</span><span class="p">]</span>
+<span class="p">])</span>
+
+<span class="c1"># The Minnesota potential has already been hard-coded in ROSE as</span>
+<span class="c1"># rose.MN_Potential.</span>
+<span class="n">rbe</span> <span class="o">=</span> <span class="n">rose</span><span class="o">.</span><span class="n">ReducedBasisEmulator</span><span class="p">(</span>
+    <span class="n">rose</span><span class="o">.</span><span class="n">MN_Potential</span><span class="p">,</span>
+    <span class="n">training_points</span><span class="p">,</span>
+    <span class="n">energy</span><span class="p">,</span>
+    <span class="n">ell</span>
+<span class="p">)</span>
+
+<span class="c1"># Now, to get a the wave function or phase shift at a new point in parameter</span>
+<span class="c1"># space, we simply call...</span>
+<span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">200</span><span class="p">,</span><span class="o">-</span><span class="mf">91.85</span><span class="p">])</span>
+<span class="n">phi</span> <span class="o">=</span> <span class="n">rbe</span><span class="o">.</span><span class="n">emulate_wave_function</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+<span class="c1"># or...</span>
+<span class="n">delta</span> <span class="o">=</span> <span class="n">rbe</span><span class="o">.</span><span class="n">emulate_phase_shift</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">rose</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="myfile.html">Title</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, D. Odell, P. Giuliani.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.3.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/README.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

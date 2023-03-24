@@ -2,6 +2,7 @@ from typing import Callable
 
 import numpy as np 
 import numpy.typing as npt
+from mpmath import coulombf
 
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
@@ -10,8 +11,8 @@ from .free_solutions import phi_free
 class Basis:
     def __init__(self,
         interaction: Interaction,
-        theta_train: npt.ArrayLike, # training space
-        s_mesh: npt.ArrayLike, # s = kr; discrete mesh where phi(s) is calculated
+        theta_train: np.array, # training space
+        s_mesh: np.array, # s = kr; discrete mesh where phi(s) is calculated
         n_basis: int, # number of basis vectors
         energy: float, # MeV, c.m.
         l: int # orbital angular momentum
@@ -36,8 +37,8 @@ class Basis:
 class RelativeBasis(Basis):
     def __init__(self,
         interaction: Interaction,
-        theta_train: npt.ArrayLike, # training space
-        s_mesh: npt.ArrayLike, # s = kr; discrete mesh where phi(s) is calculated
+        theta_train: np.array, # training space
+        s_mesh: np.array, # s = kr; discrete mesh where phi(s) is calculated
         n_basis: int, # number of basis vectors
         energy: float, # MeV, c.m.
         l: int, # orbital angular momentum
@@ -45,18 +46,13 @@ class RelativeBasis(Basis):
     ):
         super().__init__(interaction, theta_train, s_mesh, n_basis, energy, l)
 
-        self.phi_0 = phi_free(self.s_mesh, l)
+        # Returns Bessel functions when eta = 0.
+        self.phi_0 = np.array([coulombf(self.l, self.interaction.eta, rho) for rho in self.s_mesh], dtype=np.float64)
 
         schrodeq = SchroedingerEquation(self.interaction)
-        if self.interaction.is_complex:
-            d = dict(phi_0=0+0j, phi_prime_0=1+0j)
-            self.all_vectors = np.array([
-                schrodeq.phi(energy, theta, self.s_mesh, l, solve_se_dict=d) - self.phi_0 for theta in theta_train
-            ]).T
-        else:
-            self.all_vectors = np.array([
-                schrodeq.phi(energy, theta, self.s_mesh, l) - self.phi_0 for theta in theta_train
-            ]).T
+        self.all_vectors = np.array([
+            schrodeq.phi(energy, theta, self.s_mesh, l) - self.phi_0 for theta in theta_train
+        ]).T
 
         if use_svd:
             U, S, _ = np.linalg.svd(self.all_vectors, full_matrices=False)

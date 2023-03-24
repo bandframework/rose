@@ -6,8 +6,10 @@ src/rose/basis.py
 src/rose/constants.py
 src/rose/free_solutions.py
 src/rose/interaction.py
+src/rose/interaction_eim.py
 src/rose/metrics.py
 src/rose/reduced_basis_emulator.py
+src/rose/scattering_amplitude_emulator.py
 src/rose/schroedinger.py
 src/rose/utility.py
 src/rose.egg-info/PKG-INFO

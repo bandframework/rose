@@ -1,12 +1,12 @@
 '''
-Defines a general template for interactions and specific, supported
-interactions.
+Defines a general template for interactions.
+Includes some "hard-coded" interactions.
 '''
 from typing import Callable
 import numpy as np
 import numpy.typing as npt
 
-from .constants import HBARC
+from .constants import HBARC, DEFAULT_RHO_MESH, ALPHA
 
 class Interaction:
     '''
@@ -14,35 +14,49 @@ class Interaction:
     '''
     def __init__(self,
         coordinate_space_potential: Callable[[float, npt.ArrayLike], float], # V(r, theta)
+        n_theta: int, # How many parameters does the interaction have?
         mu: float, # reduced mass (MeV)
+        energy: float, # E_{c.m.}
+        Z_1: int = 0, # atomic number of particle 1
+        Z_2: int = 0, # atomic number of particle 2
         is_complex: bool = False
     ):
         self.v_r = coordinate_space_potential
+        self.n_theta = n_theta
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
+        self.energy = energy
+        k = np.sqrt(2 * self.mu * self.energy/HBARC)
+        self.eta = ALPHA * Z_1 * Z_2 * self.mu / k
         self.is_complex = is_complex
-    
 
-    def evaluate(self, r, pars):
-        '''
-        V(r, pars) where r is relative separation in fm
-        The units returned here must match the units of energy, MeV.
-        '''
-        return self.v_r(r, pars)
-    
 
     def tilde(self,
         s: float,
-        alpha: npt.ArrayLike,
-        energy: float
+        alpha: npt.ArrayLike
     ):
         '''
         tilde{U}(s, alpha, E)
+        Does not include the Coulomb term.
         s = pr/hbar
         alpha are the parameters we are varying
         E = E_{c.m.}, [E] = MeV = [v_r]
         '''
-        p = np.sqrt(2*self.mu*energy/HBARC) # 1/fm
-        return  1.0/energy * self.v_r(s/p, alpha)
+        p = np.sqrt(2*self.mu*self.energy/HBARC) # 1/fm
+        return  1.0/self.energy * self.v_r(s/p, alpha)
+
+
+    def basis_functions(self,
+        rho_mesh: npt.ArrayLike
+    ):
+        return np.array([
+            self.tilde(rho_mesh, row) for row in np.eye(self.n_theta)
+        ]).T
+    
+
+    def coefficients(self,
+        alpha: npt.ArrayLike # interaction parameters
+    ):
+        return alpha
 
 
 NUCLEON_MASS = 939.565 # neutron mass (MeV)
@@ -56,9 +70,12 @@ def mn_potential(r, args):
     return v_0r * np.exp(-1.487*r**2) + v_0s*np.exp(-0.465*r**2)
 
 # Stored instances of the Minnesota interaction for testing.
+# Fixed at E_{c.m.} = 50 MeV.
 MN_Potential = Interaction(
     mn_potential,
-    MU_NN
+    2,
+    MU_NN,
+    50
 )
 
 def complex_mn_potential(r, args):
@@ -66,8 +83,10 @@ def complex_mn_potential(r, args):
     return mn_potential(r, [vr, 1j*vi])
 
 
-Optical_Potential = Interaction(
+Complex_MN_Potential = Interaction(
     complex_mn_potential,
+    2,
     MU_NN,
+    50,
     True
 )

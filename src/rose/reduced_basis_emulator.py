@@ -1,6 +1,7 @@
 '''
 Defines a ReducedBasisEmulator.
 '''
+import pickle
 import numpy as np
 import numpy.typing as npt
 
@@ -26,6 +27,13 @@ class ReducedBasisEmulator:
     solutions (or a PCA basis of them) is found at some arbitrary point in
     parameter space, theta.
     '''
+    @classmethod
+    def load(obj, filename):
+        with open(filename, 'rb') as f:
+            rbe = pickle.load(f)
+        return rbe
+
+
     def __init__(self,
         interaction: Interaction, # desired local interaction
         theta_train: np.array, # training points in parameter space
@@ -146,3 +154,8 @@ class ReducedBasisEmulator:
 
     def exact_phase_shift(self, theta: np.array):
         return self.se.delta(self.energy, theta, self.s_mesh[[0, -1]], self.l, self.s_0)
+    
+
+    def save(self, filename):
+        with open(filename, 'wb') as f:
+            pickle.dump(self, f)

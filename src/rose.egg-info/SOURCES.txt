@@ -16,3 +16,5 @@ src/rose.egg-info/PKG-INFO
 src/rose.egg-info/SOURCES.txt
 src/rose.egg-info/dependency_links.txt
 src/rose.egg-info/top_level.txt
+tests/test_interactions.py
+tests/test_schroedinger_equation.py

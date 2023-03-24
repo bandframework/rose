@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 from scipy.special import eval_legendre
 from tqdm import tqdm 
@@ -7,6 +8,14 @@ from .reduced_basis_emulator import ReducedBasisEmulator
 from .constants import DEFAULT_RHO_MESH, DEFAULT_ANGLE_MESH, HBARC
 
 class ScatteringAmplitudeEmulator:
+
+    @classmethod
+    def load(obj, filename):
+        with open(filename, 'rb') as f:
+            sae = pickle.load(f)
+        return sae
+
+
     def __init__(self,
         interaction: Interaction,
         theta_train: np.array,
@@ -64,3 +73,8 @@ class ScatteringAmplitudeEmulator:
         ])
         f = np.sum(f, axis=0)
         return np.conj(f) * f
+
+
+    def save(self, filename):
+        with open(filename, 'wb') as f:
+            pickle.dump(self, f)

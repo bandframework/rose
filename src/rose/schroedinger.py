@@ -18,15 +18,15 @@ MAX_STEPS = 20000
 PHI_THRESHOLD = 1e-12
 
 def Gamow_factor(l, eta):
-
     if eta == 0.0:
-        return 1.0
+        if l == 0:
+            return 1
+        else:
+            return 1 / (2*l + 1) * Gamow_factor(l-1, 0)
     elif l == 0:
         return np.sqrt(2*np.pi*eta / (np.exp(2*np.pi*eta)-1))
     else:
         return np.sqrt(l**2 + eta**2) / (l*(2*l+1)) * Gamow_factor(l-1, eta)
-    
-
 
 class SchroedingerEquation:
     def __init__(self,

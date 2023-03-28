@@ -42,11 +42,12 @@ class ReducedBasisEmulator:
         n_basis: int = 4, # How many basis vectors?
         use_svd: bool = True, # Use principal components as basis vectors?
         s_mesh: np.array = DEFAULT_RHO_MESH, # s = rho = kr; solutions are phi(s)
-        s_0: float = 6*np.pi # phase shift is "extracted" at s_0
+        s_0: float = 6*np.pi, # phase shift is "extracted" at s_0
+        hf_tols: list = None # 2 numbers: high-fidelity solver tolerances, relative and absolute
     ):
         self.energy = energy
         self.l = l
-        self.se = SchroedingerEquation(interaction)
+        self.se = SchroedingerEquation(interaction, hifi_tolerances=hf_tols)
         self.s_mesh = np.copy(s_mesh)
 
         # Index of the point in the s mesh that is closest to s_0.

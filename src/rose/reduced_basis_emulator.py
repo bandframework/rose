@@ -7,7 +7,7 @@ import numpy.typing as npt
 
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
-from .basis import RelativeBasis
+from .basis import RelativeBasis, Basis
 from .constants import HBARC, DEFAULT_RHO_MESH
 from .free_solutions import phase_shift, H_minus, H_plus, H_minus_prime, H_plus_prime
 from .utility import finite_difference_first_derivative, finite_difference_second_derivative
@@ -43,7 +43,8 @@ class ReducedBasisEmulator:
         use_svd: bool = True, # Use principal components as basis vectors?
         s_mesh: np.array = DEFAULT_RHO_MESH, # s = rho = kr; solutions are phi(s)
         s_0: float = 6*np.pi, # phase shift is "extracted" at s_0
-        hf_tols: list = None # 2 numbers: high-fidelity solver tolerances, relative and absolute
+        hf_tols: list = None, # 2 numbers: high-fidelity solver tolerances, relative and absolute
+        basis: Basis = None # user-supplied basis; ignores theta_train, n_basis, and use_svd if given
     ):
         self.energy = energy
         self.l = l
@@ -56,15 +57,18 @@ class ReducedBasisEmulator:
         # calculated so we can avoid interpolation.
         self.s_0 = self.s_mesh[self.i_0]
 
-        self.basis = RelativeBasis(
-            self.se,
-            theta_train,
-            self.s_mesh,
-            n_basis,
-            self.energy,
-            self.l,
-            use_svd
-        )
+        if basis is None:
+            self.basis = RelativeBasis(
+                self.se,
+                theta_train,
+                self.s_mesh,
+                n_basis,
+                self.energy,
+                self.l,
+                use_svd
+            )
+        else:
+            self.basis = basis
 
         # \tilde{U}_{bare} takes advantage of the linear dependence of \tilde{U}
         # on the parameters. The first column is multiplied by args[0]. The

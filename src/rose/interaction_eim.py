@@ -55,7 +55,7 @@ class InteractionEIM(Interaction):
         is_complex: bool = False,
         n_basis: int = None,
         explicit_training: bool = False,
-        n_train: int = 20,
+        n_train: int = 1000,
         rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None
     ):

@@ -56,7 +56,7 @@ class ReducedBasisEmulator:
         self.s_0 = self.s_mesh[self.i_0]
 
         self.basis = RelativeBasis(
-            self.se.interaction,
+            self.se,
             theta_train,
             self.s_mesh,
             n_basis,

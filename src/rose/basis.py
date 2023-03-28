@@ -62,3 +62,36 @@ class RelativeBasis(Basis):
 
     def phi_hat(self, coefficients):
         return self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
+
+
+class CustomBasis(Basis):
+    def __init__(self,
+        solutions: np.array, # HF solutions
+        theta_train: np.array, # parameters corresponding to solutions (by column)
+        rho_mesh: np.array, # rho mesh
+        n_basis: int,
+        energy: float,
+        l: int,
+        use_svd: bool
+    ):
+        self.solutions = solutions.copy()
+        self.theta_train = theta_train.copy()
+        self.rho_mesh = rho_mesh.copy()
+        self.n_basis = n_basis
+        self.energy = energy
+        self.ell = l
+
+        self.phi_0 = np.array([coulombf(self.l, self.solver.interaction.eta, rho) for rho in self.s_mesh], dtype=np.float64)
+
+        if use_svd:
+            U, S, _ = np.linalg.svd(self.solutions, full_matrices=False)
+            self.singular_values = S.copy()
+            self.solutions = U.copy()
+        else:
+            self.singular_values = None
+        
+        self.vectors = self.solutions[:, :self.n_basis].copy()
+    
+
+    def phi_hat(self, coefficients):
+        return self.phi_0 + np.sum(coefficients * self.vectors, axis=1)

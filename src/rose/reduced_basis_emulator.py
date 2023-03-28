@@ -42,8 +42,7 @@ class ReducedBasisEmulator:
         n_basis: int = 4, # How many basis vectors?
         use_svd: bool = True, # Use principal components as basis vectors?
         s_mesh: np.array = DEFAULT_RHO_MESH, # s = rho = kr; solutions are phi(s)
-        s_0: float = 6*np.pi, # phase shift is "extracted" at s_0
-        **kwargs # passed to SchroedingerEquation.solve_se
+        s_0: float = 6*np.pi # phase shift is "extracted" at s_0
     ):
         self.energy = energy
         self.l = l

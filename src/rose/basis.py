@@ -12,13 +12,13 @@ class Basis:
     def __init__(self,
         solver: SchroedingerEquation,
         theta_train: np.array, # training space
-        s_mesh: np.array, # s = kr; discrete mesh where phi(s) is calculated
+        rho_mesh: np.array, # s = kr; discrete mesh where phi(s) is calculated
         n_basis: int, # number of basis vectors
         l: int # orbital angular momentum
     ):
         self.solver = solver
         self.theta_train = np.copy(theta_train)
-        self.s_mesh = np.copy(s_mesh)
+        self.rho_mesh = np.copy(rho_mesh)
         self.n_basis = n_basis
         self.l = l
     
@@ -36,18 +36,18 @@ class RelativeBasis(Basis):
     def __init__(self,
         solver: SchroedingerEquation,
         theta_train: np.array, # training space
-        s_mesh: np.array, # s = kr; discrete mesh where phi(s) is calculated
+        rho_mesh: np.array, # s = kr; discrete mesh where phi(s) is calculated
         n_basis: int, # number of basis vectors
         l: int, # orbital angular momentum
         use_svd: bool # use principal components?
     ):
-        super().__init__(solver, theta_train, s_mesh, n_basis, l)
+        super().__init__(solver, theta_train, rho_mesh, n_basis, l)
 
         # Returns Bessel functions when eta = 0.
-        self.phi_0 = np.array([coulombf(self.l, self.solver.interaction.eta, rho) for rho in self.s_mesh], dtype=np.float64)
+        self.phi_0 = np.array([coulombf(self.l, self.solver.interaction.eta, rho) for rho in self.rho_mesh], dtype=np.float64)
 
         self.all_vectors = np.array([
-            self.solver.phi(solver.interaction.energy, theta, self.s_mesh, l) - self.phi_0 for theta in theta_train
+            self.solver.phi(solver.interaction.energy, theta, self.rho_mesh, l) - self.phi_0 for theta in theta_train
         ]).T
 
         if use_svd:

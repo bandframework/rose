@@ -53,14 +53,16 @@ class ReducedBasisEmulator:
             ell,
             use_svd
         )
-        return cls(basis, ell, s_0=s_0)
+        return cls(interaction, basis, ell, s_0=s_0)
 
 
     def __init__(self,
+        interaction: Interaction,
         basis: Basis,
         ell: int,
         s_0: float = 6*np.pi # phase shift is "extracted" at s_0
     ):
+        self.interaction = interaction
         self.basis = basis
         self.l = ell
         self.se = self.basis.solver
@@ -77,13 +79,13 @@ class ReducedBasisEmulator:
         # on the parameters. The first column is multiplied by args[0]. The
         # second by args[1]. And so on. The "total" potential is the sum across
         # columns.
-        self.utilde_basis_functions = self.se.interaction.basis_functions(self.s_mesh)
+        self.utilde_basis_functions = self.interaction.basis_functions(self.s_mesh)
 
         # Precompute what we can for < psi | F(hat{phi}) >.
         d2_operator = finite_difference_second_derivative(self.s_mesh)
         phi_basis = self.basis.vectors
         ang_mom = self.l*(self.l+1) / self.s_mesh**2
-        coulomb = 2*self.se.interaction.eta / self.s_mesh
+        coulomb = 2*self.interaction.eta / self.s_mesh
 
         self.d2 = -d2_operator @ phi_basis
         self.A_1 = phi_basis[ni:-ni].T @ self.d2[ni:-ni]
@@ -113,7 +115,7 @@ class ReducedBasisEmulator:
     def coefficients(self,
         theta: np.array
     ):
-        beta = self.se.interaction.coefficients(theta)
+        beta = self.interaction.coefficients(theta)
 
         A_utilde = np.einsum('i,ijk', beta, self.A_2)
         A = self.A_1 + A_utilde + self.A_3

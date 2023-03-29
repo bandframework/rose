@@ -71,15 +71,18 @@ class CustomBasis(Basis):
         phi_0: np.array, # "offset", generates inhomogeneous term
         rho_mesh: np.array, # rho mesh; MUST BE EQUALLY SPACED POINTS!!!
         n_basis: int,
-        # energy: float,
-        # l: int,
+        energy: float,
+        ell: int, # angular momentum, l
         use_svd: bool
     ):
         self.solutions = solutions.copy()
         self.rho_mesh = rho_mesh.copy()
         self.n_basis = n_basis
-        # self.energy = energy
-        # self.ell = l
+        # Energy and angular momentum are not actually used, but it may be
+        # useful to store them here to help the user keep track of which
+        # CustomBasis this is.
+        self.energy = energy
+        self.ell = ell
 
         self.phi_0 = phi_0.copy()
 

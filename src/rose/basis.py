@@ -87,7 +87,7 @@ class CustomBasis(Basis):
         self.phi_0 = phi_0.copy()
 
         if use_svd:
-            U, S, _ = np.linalg.svd(self.solutions, full_matrices=False)
+            U, S, _ = np.linalg.svd(self.solutions - self.phi_0[:, np.newaxis], full_matrices=False)
             self.singular_values = S.copy()
             self.solutions = U.copy()
         else:

@@ -7,7 +7,7 @@ import numpy.typing as npt
 
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
-from .basis import RelativeBasis, CustomBasis
+from .basis import RelativeBasis, CustomBasis, Basis
 from .constants import HBARC, DEFAULT_RHO_MESH
 from .free_solutions import phase_shift, H_minus, H_plus, H_minus_prime, H_plus_prime
 from .utility import finite_difference_first_derivative, finite_difference_second_derivative
@@ -34,41 +34,38 @@ class ReducedBasisEmulator:
         return rbe
 
 
-    def __init__(self,
-        interaction: Interaction, # desired local interaction
+    @classmethod
+    def from_train(cls,
+        interaction: Interaction,
         theta_train: np.array, # training points in parameter space
-        energy: float, # center-of-mass energy (MeV)
-        l: int, # angular momentum
+        ell: int, # angular momentum
         n_basis: int = 4, # How many basis vectors?
         use_svd: bool = True, # Use principal components as basis vectors?
         s_mesh: np.array = DEFAULT_RHO_MESH, # s = rho = kr; solutions are phi(s)
         s_0: float = 6*np.pi, # phase shift is "extracted" at s_0
         hf_tols: list = None, # 2 numbers: high-fidelity solver tolerances, relative and absolute
-        basis: CustomBasis = None # user-supplied basis; ignores theta_train, n_basis, and use_svd if given
     ):
-        self.energy = energy
-        self.l = l
-        self.se = SchroedingerEquation(interaction, hifi_tolerances=hf_tols)
+        basis = RelativeBasis(
+            SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
+            theta_train,
+            s_mesh,
+            n_basis,
+            ell,
+            use_svd
+        )
+        return cls(basis, ell, s_0=s_0)
 
-        if basis is None:
-            # User wants to use the ROSE high-fidelity solver.
-            self.s_mesh = np.copy(s_mesh)
-            self.basis = RelativeBasis(
-                self.se,
-                theta_train,
-                self.s_mesh,
-                n_basis,
-                self.energy,
-                self.l,
-                use_svd
-            )
-        else:
-            # User provides their own basis.
-            # Note: The interaction supplied by the user MUST match the
-            # interaction used to generate the user-generated, high-fidelity
-            # solutions used to consturct the CustomBasis.
-            self.basis = basis
-            self.s_mesh = np.copy(basis.rho_mesh)
+
+    def __init__(self,
+        basis: Basis,
+        ell: int,
+        s_0: float = 6*np.pi # phase shift is "extracted" at s_0
+    ):
+        self.basis = basis
+        self.l = ell
+        self.se = self.basis.solver
+
+        self.s_mesh = np.copy(basis.rho_mesh)
 
         # Index of the point in the s mesh that is closest to s_0.
         self.i_0 = np.argmin(np.abs(self.s_mesh - s_0))
@@ -163,7 +160,8 @@ class ReducedBasisEmulator:
 
 
     def exact_phase_shift(self, theta: np.array):
-        return self.se.delta(self.energy, theta, self.s_mesh[[0, -1]], self.l, self.s_0)
+        return self.se.delta(self.basis.solver.interaction.energy,
+            theta, self.s_mesh[[0, -1]], self.l, self.s_0)
     
 
     def save(self, filename):

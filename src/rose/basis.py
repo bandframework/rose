@@ -2,6 +2,7 @@ from typing import Callable
 
 import numpy as np 
 import numpy.typing as npt
+from scipy.interpolate import interp1d
 from mpmath import coulombf
 
 from .schroedinger import SchroedingerEquation
@@ -66,22 +67,21 @@ class RelativeBasis(Basis):
 
 class CustomBasis(Basis):
     def __init__(self,
-        solutions: np.array, # HF solutions
-        theta_train: np.array, # parameters corresponding to solutions (by column)
+        solutions: np.array, # HF solutions, columns
+        phi_0: np.array, # "offset", generates inhomogeneous term
         rho_mesh: np.array, # rho mesh
         n_basis: int,
-        energy: float,
-        l: int,
+        # energy: float,
+        # l: int,
         use_svd: bool
     ):
         self.solutions = solutions.copy()
-        self.theta_train = theta_train.copy()
         self.rho_mesh = rho_mesh.copy()
         self.n_basis = n_basis
-        self.energy = energy
-        self.ell = l
+        # self.energy = energy
+        # self.ell = l
 
-        self.phi_0 = np.array([coulombf(self.l, self.solver.interaction.eta, rho) for rho in self.s_mesh], dtype=np.float64)
+        self.phi_0 = phi_0.copy()
 
         if use_svd:
             U, S, _ = np.linalg.svd(self.solutions, full_matrices=False)
@@ -91,6 +91,11 @@ class CustomBasis(Basis):
             self.singular_values = None
         
         self.vectors = self.solutions[:, :self.n_basis].copy()
+        
+        # interpolating functions
+        # To extrapolate or not to extrapolate?
+        self.phi_0_interp = interp1d(self.rho_mesh, self.phi_0, kind='cubic')
+        self.vectors_interp = [interp1d(self.rho_mesh, row, kind='cubic') for row in self.vectors.T]
     
 
     def phi_hat(self, coefficients):

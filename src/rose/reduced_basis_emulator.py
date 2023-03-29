@@ -7,7 +7,7 @@ import numpy.typing as npt
 
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
-from .basis import RelativeBasis, Basis
+from .basis import RelativeBasis, CustomBasis
 from .constants import HBARC, DEFAULT_RHO_MESH
 from .free_solutions import phase_shift, H_minus, H_plus, H_minus_prime, H_plus_prime
 from .utility import finite_difference_first_derivative, finite_difference_second_derivative
@@ -44,20 +44,15 @@ class ReducedBasisEmulator:
         s_mesh: np.array = DEFAULT_RHO_MESH, # s = rho = kr; solutions are phi(s)
         s_0: float = 6*np.pi, # phase shift is "extracted" at s_0
         hf_tols: list = None, # 2 numbers: high-fidelity solver tolerances, relative and absolute
-        basis: Basis = None # user-supplied basis; ignores theta_train, n_basis, and use_svd if given
+        basis: CustomBasis = None # user-supplied basis; ignores theta_train, n_basis, and use_svd if given
     ):
         self.energy = energy
         self.l = l
         self.se = SchroedingerEquation(interaction, hifi_tolerances=hf_tols)
-        self.s_mesh = np.copy(s_mesh)
-
-        # Index of the point in the s mesh that is closest to s_0.
-        self.i_0 = np.argmin(np.abs(self.s_mesh - s_0))
-        # We want to choose a point at which the solution has already been
-        # calculated so we can avoid interpolation.
-        self.s_0 = self.s_mesh[self.i_0]
 
         if basis is None:
+            # User wants to use the ROSE high-fidelity solver.
+            self.s_mesh = np.copy(s_mesh)
             self.basis = RelativeBasis(
                 self.se,
                 theta_train,
@@ -68,7 +63,18 @@ class ReducedBasisEmulator:
                 use_svd
             )
         else:
+            # User provides their own basis.
+            # Note: The interaction supplied by the user MUST match the
+            # interaction used to generate the user-generated, high-fidelity
+            # solutions used to consturct the CustomBasis.
             self.basis = basis
+            self.s_mesh = np.copy(basis.rho_mesh)
+
+        # Index of the point in the s mesh that is closest to s_0.
+        self.i_0 = np.argmin(np.abs(self.s_mesh - s_0))
+        # We want to choose a point at which the solution has already been
+        # calculated so we can avoid interpolation.
+        self.s_0 = self.s_mesh[self.i_0]
 
         # \tilde{U}_{bare} takes advantage of the linear dependence of \tilde{U}
         # on the parameters. The first column is multiplied by args[0]. The

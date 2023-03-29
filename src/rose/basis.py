@@ -69,7 +69,7 @@ class CustomBasis(Basis):
     def __init__(self,
         solutions: np.array, # HF solutions, columns
         phi_0: np.array, # "offset", generates inhomogeneous term
-        rho_mesh: np.array, # rho mesh
+        rho_mesh: np.array, # rho mesh; MUST BE EQUALLY SPACED POINTS!!!
         n_basis: int,
         # energy: float,
         # l: int,
@@ -100,3 +100,13 @@ class CustomBasis(Basis):
 
     def phi_hat(self, coefficients):
         return self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
+    
+
+    def interpolate_phi_0(self, rho):
+        return self.phi_0_interp(rho)
+    
+
+    def interpolate_vectors(self, rho):
+        return np.array(
+            [f(rho) for f in self.vectors_interp]
+        )

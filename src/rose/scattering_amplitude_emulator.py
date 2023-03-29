@@ -26,7 +26,6 @@ class ScatteringAmplitudeEmulator:
         use_svd: bool = True,
         s_mesh: np.array = DEFAULT_RHO_MESH,
         s_0: float = 6*np.pi,
-        **kwargs
     ):
         '''
         :param interaction:
@@ -37,8 +36,7 @@ class ScatteringAmplitudeEmulator:
         for l in tqdm(range(self.l_max + 1)):
             self.rbes.append(
                 ReducedBasisEmulator(interaction, theta_train, energy, l,
-                    n_basis=n_basis, use_svd=use_svd, s_mesh=s_mesh, s_0=s_0,
-                    **kwargs)
+                    n_basis=n_basis, use_svd=use_svd, s_mesh=s_mesh, s_0=s_0)
             )
         self.k = np.sqrt(2*interaction.mu*energy/HBARC)
 

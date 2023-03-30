@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: rose
-Version: 1.0
+Version: 0.9
 Summary: Emulator for quantum scattering.
 Author-email: Daniel Odell <dodell@ohio.edo>, Pablo Giuliani <giulia27@msu.edu>
 License: Copyright (c) 2018 The Python Packaging Authority

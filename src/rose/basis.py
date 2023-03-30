@@ -1,3 +1,4 @@
+import pickle
 from typing import Callable
 
 import numpy as np 
@@ -9,6 +10,14 @@ from .schroedinger import SchroedingerEquation
 from .free_solutions import phi_free
 
 class Basis:
+
+    @classmethod
+    def load(cls, filename):
+        with open(filename, 'rb') as f:
+            basis = pickle.load(f)
+        return basis
+
+
     def __init__(self,
         solver: SchroedingerEquation,
         theta_train: np.array, # training space
@@ -30,6 +39,11 @@ class Basis:
         we will leave it up to the subclasses to implement this.
         '''
         raise NotImplementedError
+    
+
+    def save(self, filename):
+        with open(filename, 'wb') as f:
+            pickle.dump(self, f)
     
 
 class RelativeBasis(Basis):

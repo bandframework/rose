@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rose"
-version = "1.0"
+dynamic = ["version"]
 authors = [
   {name="Daniel Odell", email="dodell@ohio.edo"},
   {name="Pablo Giuliani", email="giulia27@msu.edu"}
@@ -18,3 +18,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "rose.__version__"}

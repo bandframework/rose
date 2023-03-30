@@ -8,4 +8,4 @@ from .free_solutions import phase_shift
 from .basis import CustomBasis, RelativeBasis
 
 
-__version__ = '0.9'
+__version__ = '0.9.0'

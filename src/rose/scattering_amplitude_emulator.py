@@ -31,16 +31,17 @@ class ScatteringAmplitudeEmulator:
         hf_tols: list = None
     ):
         solver = SchroedingerEquation(interaction, hifi_tolerances=hf_tols)
-        bases = [
-            RelativeBasis(
+        
+        bases = []
+        for l in tqdm(range(l_max+1)):
+            bases.append(RelativeBasis(
                 solver,
                 theta_train,
                 s_mesh,
                 n_basis,
                 l,
                 use_svd
-            ) for l in range(l_max+1)
-        ]
+            ))
         return cls(interaction, bases, l_max, angles=angles, s_0=s_0, hf_tols=hf_tols)
 
 
@@ -58,7 +59,7 @@ class ScatteringAmplitudeEmulator:
         self.l_max = l_max
         self.angles = angles.copy()
         self.rbes = []
-        for l in tqdm(range(self.l_max + 1)):
+        for l in range(self.l_max + 1):
             self.rbes.append(
                 ReducedBasisEmulator(
                     interaction, bases[l], l, s_0=s_0

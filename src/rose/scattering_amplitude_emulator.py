@@ -6,6 +6,8 @@ from tqdm import tqdm
 from .interaction import Interaction
 from .reduced_basis_emulator import ReducedBasisEmulator
 from .constants import DEFAULT_RHO_MESH, DEFAULT_ANGLE_MESH, HBARC
+from .schroedinger import SchroedingerEquation
+from .basis import RelativeBasis
 
 class ScatteringAmplitudeEmulator:
 
@@ -16,15 +18,37 @@ class ScatteringAmplitudeEmulator:
         return sae
 
 
-    def __init__(self,
+    @classmethod
+    def from_train(cls,
         interaction: Interaction,
         theta_train: np.array,
-        energy: float,
         l_max: int,
         angles: np.array = DEFAULT_ANGLE_MESH,
         n_basis: int = 4,
         use_svd: bool = True,
         s_mesh: np.array = DEFAULT_RHO_MESH,
+        s_0: float = 6*np.pi,
+        hf_tols: list = None
+    ):
+        solver = SchroedingerEquation(interaction, hifi_tolerances=hf_tols)
+        bases = [
+            RelativeBasis(
+                solver,
+                theta_train,
+                s_mesh,
+                n_basis,
+                l,
+                use_svd
+            ) for l in range(l_max+1)
+        ]
+        return cls(interaction, bases, l_max, angles=angles, s_0=s_0, hf_tols=hf_tols)
+
+
+    def __init__(self,
+        interaction: Interaction,
+        bases: list,
+        l_max: int,
+        angles: np.array = DEFAULT_ANGLE_MESH,
         s_0: float = 6*np.pi,
         hf_tols: list = None
     ):
@@ -37,15 +61,10 @@ class ScatteringAmplitudeEmulator:
         for l in tqdm(range(self.l_max + 1)):
             self.rbes.append(
                 ReducedBasisEmulator(
-                    interaction, theta_train, energy, l,
-                    n_basis=n_basis,
-                    use_svd=use_svd,
-                    s_mesh=s_mesh,
-                    s_0=s_0,
-                    hf_tols=hf_tols
+                    interaction, bases[l], l, s_0=s_0
                 )
             )
-        self.k = np.sqrt(2*interaction.mu*energy/HBARC)
+        self.k = np.sqrt(2*interaction.mu*interaction.energy/HBARC)
 
     def predict(self, alpha):
         phase_shifts = np.array([

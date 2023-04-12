@@ -50,8 +50,7 @@ class ScatteringAmplitudeEmulator:
         bases: list,
         l_max: int,
         angles: np.array = DEFAULT_ANGLE_MESH,
-        s_0: float = 6*np.pi,
-        hf_tols: list = None
+        s_0: float = 6*np.pi
     ):
         '''
         :param interaction:

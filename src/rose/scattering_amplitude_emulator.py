@@ -42,7 +42,7 @@ class ScatteringAmplitudeEmulator:
                 l,
                 use_svd
             ))
-        return cls(interaction, bases, l_max, angles=angles, s_0=s_0, hf_tols=hf_tols)
+        return cls(interaction, bases, l_max, angles=angles, s_0=s_0)
 
 
     def __init__(self,

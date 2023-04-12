@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-import roqse
+import rose
 
 def relative_difference(a, b):
     return np.abs((a-b)/b)

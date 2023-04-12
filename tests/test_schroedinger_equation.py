@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-import roqse
+import rose
 
 # Values used in Pablo's notebook.
 ENERGY = 50 # MeV

@@ -101,8 +101,8 @@ class SchroedingerEquation:
         u = solution(s_0)
         rl = 1/s_0 * (u[0]/u[1])
         return np.log(
-            (H_minus(s_0, l) - s_0*rl*H_minus_prime(s_0, l)) / 
-            (H_plus(s_0, l) - s_0*rl*H_plus_prime(s_0, l))
+            (H_minus(s_0, l, self.interaction.eta) - s_0*rl*H_minus_prime(s_0, l, self.interaction.eta)) / 
+            (H_plus(s_0, l, self.interaction.eta) - s_0*rl*H_plus_prime(s_0, l, self.interaction.eta))
         ) / 2j
 
 

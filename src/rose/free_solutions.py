@@ -13,7 +13,7 @@ def F(rho, ell, eta):
     Bessel function of the first kind.
     '''
     # return rho*spherical_jn(ell, rho)
-    return coulombf(ell, eta, rho)
+    return np.complex128(coulombf(ell, eta, rho))
 
 
 def G(rho, ell, eta):
@@ -21,7 +21,7 @@ def G(rho, ell, eta):
     Bessel function of the second kind.
     '''
     # return -rho*spherical_yn(ell, rho)
-    return coulombg(ell, eta, rho)
+    return np.complex128(coulombg(ell, eta, rho))
 
 
 def H_plus(rho, ell, eta):

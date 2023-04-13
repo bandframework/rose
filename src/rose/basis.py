@@ -7,7 +7,6 @@ from scipy.interpolate import interp1d
 from mpmath import coulombf
 
 from .schroedinger import SchroedingerEquation
-from .free_solutions import phi_free
 
 class Basis:
 

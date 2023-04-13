@@ -91,12 +91,49 @@ class ScatteringAmplitudeEmulator:
     def emulate_dsdo(self,
         theta: np.array
     ):
+        '''
+        Gives the differential cross section (dsigma/dOmega = dsdo).
+        '''
         Sls = np.array([rbe.S_matrix_element(theta) for rbe in self.rbes])
         f = np.array([
-            -1j/(2*self.k) * (2*l + 1) * eval_legendre(l, np.cos(self.angles)) * (Sl - 1) for (l, Sl) in enumerate(Sls)
+            -1j/(2*self.k) * (2*l + 1) * \
+                eval_legendre(l, np.cos(self.angles)) * (Sl - 1) for (l, Sl) in enumerate(Sls)
         ])
         f = np.sum(f, axis=0)
         return np.conj(f) * f
+
+
+    def emulate_wave_functions(self,
+        theta: np.array
+    ):
+        '''
+        Gives the wave functions for each partial wave.
+        Returns a list of arrays.
+        Order is [l=0, l=1, ..., l=l_max-1].
+        '''
+        return [rbe.emulate_wave_function(theta) for rbe in self.rbes]
+
+
+    def emulate_phase_shifts(self,
+        theta: np.array
+    ):
+        '''
+        Gives the phase shifts for each partial wave.
+        Order is [l=0, l=1, ..., l=l_max-1].
+        '''
+        return [rbe.emulate_phase_shift(theta) for rbe in self.rbes]
+
+
+    def emulate_total_cross_section(self,
+        theta: np.array
+    ):
+        '''
+        Gives the "total" (angle-integrated) cross section.
+        See Eq. (3.1.50) in Thompson and Nunes.
+        '''
+        phase_shifts = self.emulate_phase_shifts(theta)
+        return 4*np.pi/self.k**2 * \
+            np.sum(np.array([(2*l + 1) * np.sin(d)**2 for (l, d) in enumerate(phase_shifts)]))
 
 
     def save(self, filename):

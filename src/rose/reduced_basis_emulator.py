@@ -139,7 +139,7 @@ class ReducedBasisEmulator:
         x = self.coefficients(theta)
         phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
         phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])
-        return phase_shift(phi, phi_prime, self.l, self.s_mesh[self.i_0])
+        return phase_shift(phi, phi_prime, self.l, self.interaction.eta, self.s_mesh[self.i_0])
     
     
     def logarithmic_derivative(self,
@@ -157,8 +157,8 @@ class ReducedBasisEmulator:
     ):
         a = self.s_mesh[self.i_0]
         Rl = self.logarithmic_derivative(theta)
-        return (H_minus(a, self.l) - a*Rl*H_minus_prime(a, self.l)) / \
-            (H_plus(a, self.l) - a*Rl*H_plus_prime(a, self.l))
+        return (H_minus(a, self.l, self.interaction.eta) - a*Rl*H_minus_prime(a, self.l, self.interaction.eta)) / \
+            (H_plus(a, self.l, self.interaction.eta) - a*Rl*H_plus_prime(a, self.l, self.interaction.eta))
 
 
     def exact_phase_shift(self, theta: np.array):

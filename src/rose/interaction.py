@@ -25,7 +25,7 @@ class Interaction:
         self.n_theta = n_theta
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
         self.energy = energy
-        k = np.sqrt(2 * self.mu * self.energy/HBARC)
+        self.k = np.sqrt(2 * self.mu * self.energy/HBARC)
         self.eta = ALPHA * Z_1 * Z_2 * self.mu / k
         self.is_complex = is_complex
 
@@ -41,8 +41,7 @@ class Interaction:
         alpha are the parameters we are varying
         E = E_{c.m.}, [E] = MeV = [v_r]
         '''
-        p = np.sqrt(2*self.mu*self.energy/HBARC) # 1/fm
-        return  1.0/self.energy * self.v_r(s/p, alpha)
+        return  1.0/self.energy * self.v_r(s/self.k, alpha)
 
 
     def basis_functions(self,

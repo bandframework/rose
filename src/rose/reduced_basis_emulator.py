@@ -3,19 +3,18 @@ Defines a ReducedBasisEmulator.
 '''
 import pickle
 import numpy as np
-import numpy.typing as npt
 
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
-from .basis import RelativeBasis, CustomBasis, Basis
-from .constants import HBARC, DEFAULT_RHO_MESH
+from .basis import RelativeBasis, Basis
+from .constants import DEFAULT_RHO_MESH
 from .free_solutions import phase_shift, H_minus, H_plus, H_minus_prime, H_plus_prime
 from .utility import finite_difference_first_derivative, finite_difference_second_derivative
 
 # How many points should be ignored at the beginning
 # and end of the vectors (due to finite-difference
 # inaccuracies)?
-ni = 2
+# ni = 2
 
 class ReducedBasisEmulator:
     '''
@@ -88,23 +87,23 @@ class ReducedBasisEmulator:
         coulomb = 2*self.interaction.eta / self.s_mesh
 
         self.d2 = -d2_operator @ phi_basis
-        self.A_1 = phi_basis[ni:-ni].T @ self.d2[ni:-ni]
+        self.A_1 = phi_basis.T @ self.d2
         self.A_2 = np.array([
-            phi_basis[ni:-ni].T @ (row[:, np.newaxis] * phi_basis[ni:-ni]) for row in self.utilde_basis_functions[ni:-ni, :].T
+            phi_basis.T @ (row[:, np.newaxis] * phi_basis) for row in self.utilde_basis_functions.T
         ])
         self.A_3 = np.einsum('ij,j,jk',
-                             phi_basis[ni:-ni].T,
-                             coulomb[ni:-ni] + ang_mom[ni:-ni] - 1,
-                             phi_basis[ni:-ni])
-        # self.A_3 = phi_basis[ni:-ni].T @ -phi_basis[ni:-ni]
+                             phi_basis.T,
+                             coulomb + ang_mom - 1,
+                             phi_basis)
+        # self.A_3 = phi_basis.T @ -phi_basis
 
         # Precompute what we can for the inhomogeneous term ( -< psi | F(phi_0) > ).
         d2_phi_0 = d2_operator @ self.basis.phi_0
-        self.b_1 = phi_basis[ni:-ni].T @ d2_phi_0[ni:-ni]
+        self.b_1 = phi_basis.T @ d2_phi_0
         self.b_2 = np.array([
-            phi_basis[ni:-ni].T @ (-row * self.basis.phi_0[ni:-ni]) for row in self.utilde_basis_functions[ni:-ni].T
+            phi_basis.T @ (-row * self.basis.phi_0) for row in self.utilde_basis_functions.T
         ])
-        self.b_3 = phi_basis[ni:-ni].T @ ((1 - ang_mom[ni:-ni] - coulomb[ni:-ni]) * self.basis.phi_0[ni:-ni])
+        self.b_3 = phi_basis.T @ ((1 - ang_mom - coulomb) * self.basis.phi_0)
 
         # Can we extract the phase shift faster?
         self.phi_components = np.hstack(( self.basis.phi_0[:, np.newaxis], self.basis.vectors ))

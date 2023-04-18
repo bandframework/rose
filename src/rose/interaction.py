@@ -26,7 +26,7 @@ class Interaction:
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
         self.energy = energy
         self.k = np.sqrt(2 * self.mu * self.energy/HBARC)
-        self.eta = ALPHA * Z_1 * Z_2 * self.mu / k
+        self.eta = ALPHA * Z_1 * Z_2 * self.mu / self.k
         self.is_complex = is_complex
 
 

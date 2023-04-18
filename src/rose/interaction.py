@@ -88,5 +88,5 @@ Complex_MN_Potential = Interaction(
     2,
     MU_NN,
     50,
-    True
+    is_complex = True
 )

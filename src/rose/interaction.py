@@ -8,6 +8,11 @@ import numpy.typing as npt
 
 from .constants import HBARC, DEFAULT_RHO_MESH, ALPHA
 
+def sommerfeld_parameter(mu, z1z2, energy):
+    k = np.sqrt(2*mu*energy/HBARC)
+    return ALPHA * z1z2 * mu / k
+
+
 class Interaction:
     '''
     Template class.
@@ -25,8 +30,10 @@ class Interaction:
         self.n_theta = n_theta
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
         self.energy = energy
+        self.z1z2 = Z_1*Z_2
         self.k = np.sqrt(2 * self.mu * self.energy/HBARC)
-        self.eta = ALPHA * Z_1 * Z_2 * self.mu / self.k
+        # self.eta = ALPHA * Z_1 * Z_2 * self.mu / self.k
+        self.sommerfeld = sommerfeld_parameter(self.mu, self.z1z2, self.energy)
         self.is_complex = is_complex
 
 
@@ -56,6 +63,12 @@ class Interaction:
         alpha: npt.ArrayLike # interaction parameters
     ):
         return alpha
+    
+
+    def eta(self,
+        alpha: np.array
+    ):
+        return self.sommerfeld
 
 
 class EnergizedInteraction(Interaction):
@@ -103,6 +116,12 @@ class EnergizedInteraction(Interaction):
         theta[0] is the energy
         '''
         return theta[1:]
+
+
+    def eta(self,
+        alpha: np.array
+    ):
+        return sommerfeld_parameter(self.mu, self.z1z2, alpha[0])
     
 
 NUCLEON_MASS = 939.565 # neutron mass (MeV)

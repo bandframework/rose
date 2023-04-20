@@ -58,6 +58,53 @@ class Interaction:
         return alpha
 
 
+class EnergizedInteraction(Interaction):
+    '''
+    A version of Interaction that treats the energy as a parameter... kind of.
+    '''
+    def __init__(self, 
+        coordinate_space_potential: Callable[[float, npt.ArrayLike], float], # V(r, theta)
+        n_theta: int, # How many parameters does the interaction have?
+        mu: float, # reduced mass (MeV)
+        Z_1: int = 0, # atomic number of particle 1
+        Z_2: int = 0, # atomic number of particle 2
+        is_complex: bool = False
+    ):
+        # We'll initialize with energy = 0 (this should help find bugs) even
+        # though the energy is not fixed.
+        # n_theta includes the energy, which Interaction doesn't see as a
+        # parameter, hence n_theta - 1.
+        super().__init__(coordinate_space_potential, n_theta-1, mu, 0.0,
+            Z_1=Z_1, Z_2=Z_2, is_complex=is_complex)
+    
+
+    def tilde(self,
+        s: float,
+        theta: np.array
+    ):
+        '''
+        theta[0] is the energy
+        '''
+        return  1.0/theta[0] * self.v_r(s/self.k, theta[1:])
+    
+
+    def basis_functions(self,
+        rho_mesh: npt.ArrayLike
+    ):
+        return np.array([
+            self.tilde(rho_mesh, row) for row in np.eye(self.n_theta-1)
+        ]).T
+    
+
+    def coefficients(self,
+        theta: npt.ArrayLike # interaction parameters
+    ):
+        '''
+        theta[0] is the energy
+        '''
+        return theta[1:]
+    
+
 NUCLEON_MASS = 939.565 # neutron mass (MeV)
 MU_NN = NUCLEON_MASS / 2 # reduced mass of the NN system (MeV)
 

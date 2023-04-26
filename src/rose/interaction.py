@@ -6,12 +6,7 @@ from typing import Callable
 import numpy as np
 import numpy.typing as npt
 
-from .constants import HBARC, DEFAULT_RHO_MESH, ALPHA
-
-def sommerfeld_parameter(mu, z1z2, energy):
-    k = np.sqrt(2*mu*energy/HBARC)
-    return ALPHA * z1z2 * mu / k
-
+from .constants import HBARC, ALPHA
 
 class Interaction:
     '''
@@ -29,7 +24,7 @@ class Interaction:
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
-        self.z1z2 = Z_1*Z_2
+        self.k_c = ALPHA * Z_1*Z_2 * self.mu
         # self.eta = ALPHA * Z_1 * Z_2 * self.mu / self.k
         self.is_complex = is_complex
         if energy:
@@ -37,7 +32,7 @@ class Interaction:
             # EnergizedInteraction instantiates), set up associated attributes.
             self.energy = energy
             self.k = np.sqrt(2 * self.mu * self.energy/HBARC)
-            self.sommerfeld = sommerfeld_parameter(self.mu, self.z1z2, self.energy)
+            self.sommerfeld = self.k_c / self.k
         else:
             # If the energy is not specified, these will be set up when the
             # methods are called.
@@ -102,14 +97,14 @@ class EnergizedInteraction(Interaction):
 
     def tilde(self,
         s: float,
-        theta: np.array
+        alpha: np.array
     ):
         '''
         theta[0] is the energy
         '''
-        energy = theta[0]
+        energy = alpha[0]
         k = np.sqrt(2*self.mu*energy/HBARC)
-        return  1.0/energy * self.v_r(s/k, theta[1:])
+        return  1.0/energy * self.v_r(s/k, alpha[1:])
     
 
     def basis_functions(self,
@@ -121,18 +116,18 @@ class EnergizedInteraction(Interaction):
     
 
     def coefficients(self,
-        theta: npt.ArrayLike # interaction parameters
+        alpha: npt.ArrayLike # interaction parameters
     ):
         '''
-        theta[0] is the energy
+        alpha[0] is the energy
         '''
-        return theta[1:]
+        return alpha[1:]
 
 
     def eta(self,
         alpha: np.array
     ):
-        return sommerfeld_parameter(self.mu, self.z1z2, alpha[0])
+        return self.k_c / np.sqrt(2*self.mu*alpha[0]/HBARC)
     
 
 NUCLEON_MASS = 939.565 # neutron mass (MeV)

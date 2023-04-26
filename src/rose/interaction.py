@@ -29,12 +29,21 @@ class Interaction:
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
-        self.energy = energy
         self.z1z2 = Z_1*Z_2
-        self.k = np.sqrt(2 * self.mu * self.energy/HBARC)
         # self.eta = ALPHA * Z_1 * Z_2 * self.mu / self.k
-        self.sommerfeld = sommerfeld_parameter(self.mu, self.z1z2, self.energy)
         self.is_complex = is_complex
+        if energy:
+            # If the energy is specified (not None as it is when subclass
+            # EnergizedInteraction instantiates), set up associated attributes.
+            self.energy = energy
+            self.k = np.sqrt(2 * self.mu * self.energy/HBARC)
+            self.sommerfeld = sommerfeld_parameter(self.mu, self.z1z2, self.energy)
+        else:
+            # If the energy is not specified, these will be set up when the
+            # methods are called.
+            self.energy = None
+            self.k = None
+            self.sommerfeld = None
 
 
     def tilde(self,
@@ -87,7 +96,7 @@ class EnergizedInteraction(Interaction):
         # though the energy is not fixed.
         # n_theta includes the energy, which Interaction doesn't see as a
         # parameter, hence n_theta - 1.
-        super().__init__(coordinate_space_potential, n_theta-1, mu, 0.0,
+        super().__init__(coordinate_space_potential, n_theta-1, mu, None,
             Z_1=Z_1, Z_2=Z_2, is_complex=is_complex)
     
 
@@ -98,7 +107,9 @@ class EnergizedInteraction(Interaction):
         '''
         theta[0] is the energy
         '''
-        return  1.0/theta[0] * self.v_r(s/self.k, theta[1:])
+        energy = theta[0]
+        k = np.sqrt(2*self.mu*energy/HBARC)
+        return  1.0/energy * self.v_r(s/k, theta[1:])
     
 
     def basis_functions(self,

@@ -105,7 +105,7 @@ class EnergizedInteraction(Interaction):
         rho_mesh: npt.ArrayLike
     ):
         return np.array([
-            self.tilde(rho_mesh, row) for row in np.eye(self.n_theta-1)
+            self.tilde(rho_mesh, np.hstack((1, row))) for row in np.eye(self.n_theta-1)
         ]).T
     
 

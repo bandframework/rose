@@ -61,7 +61,7 @@ class SchroedingerEquation:
         return_uprime - is u'(r).)
         '''
 
-        C_l = Gamow_factor(l, self.interaction.eta)
+        C_l = Gamow_factor(l, self.interaction.eta(alpha))
         if rho_0 is None:
             rho_0 = (phi_threshold / C_l) ** (1/(l+1))
         phi_0 = C_l * rho_0**(l+1)
@@ -74,7 +74,7 @@ class SchroedingerEquation:
         
         sol = solve_ivp(
             lambda s, phi: np.array([phi[1],
-                (self.interaction.tilde(s, alpha) + 2*self.interaction.eta/s + l*(l+1)/s**2 - 1.0) * phi[0]]),
+                (self.interaction.tilde(s, alpha) + 2*self.interaction.eta(alpha)/s + l*(l+1)/s**2 - 1.0) * phi[0]]),
             s_endpts, initial_conditions, rtol=self.rel_tol, atol=self.abs_tol,
             dense_output=True, **solve_ivp_kwargs
         )
@@ -98,8 +98,8 @@ class SchroedingerEquation:
         u = solution(s_0)
         rl = 1/s_0 * (u[0]/u[1])
         return np.log(
-            (H_minus(s_0, l, self.interaction.eta) - s_0*rl*H_minus_prime(s_0, l, self.interaction.eta)) / 
-            (H_plus(s_0, l, self.interaction.eta) - s_0*rl*H_plus_prime(s_0, l, self.interaction.eta))
+            (H_minus(s_0, l, self.interaction.eta(alpha)) - s_0*rl*H_minus_prime(s_0, l, self.interaction.eta(alpha))) / 
+            (H_plus(s_0, l, self.interaction.eta(alpha)) - s_0*rl*H_plus_prime(s_0, l, self.interaction.eta(alpha)))
         ) / 2j
 
 
@@ -115,7 +115,7 @@ class SchroedingerEquation:
         Computes phi(s_mesh)
         '''
         if rho_0 is None:
-            rho_0 = (phi_threshold / Gamow_factor(l, self.interaction.eta)) ** (1/(l+1))
+            rho_0 = (phi_threshold / Gamow_factor(l, self.interaction.eta(alpha))) ** (1/(l+1))
 
         solution = self.solve_se(alpha, [rho_0, s_mesh[-1]], l, rho_0=rho_0,
                                  phi_threshold=phi_threshold, **solve_ivp_kwargs)

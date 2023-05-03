@@ -61,7 +61,7 @@ class ScatteringAmplitudeEmulator:
         for l in range(self.l_max + 1):
             self.rbes.append(
                 ReducedBasisEmulator(
-                    interaction, bases[l], l, s_0=s_0
+                    interaction, bases[l], s_0=s_0
                 )
             )
         self.k = np.sqrt(2*interaction.mu*interaction.energy/HBARC)

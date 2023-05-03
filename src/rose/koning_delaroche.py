@@ -60,6 +60,7 @@ def KD_simple(r, alpha):
 class KoningDelaroche(InteractionEIM):
     def __init__(self,
         mu: float,
+        energy: float,
         training_info: np.array,
         n_basis: int = 8,
         explicit_training: bool = False,
@@ -68,7 +69,7 @@ class KoningDelaroche(InteractionEIM):
         match_points: np.array = None
     ):
         super().__init__(
-            KD_simple, 7, mu, training_info=training_info, Z_1=0, Z_2=0,
+            KD_simple, 7, mu, energy, training_info=training_info, Z_1=0, Z_2=0,
             is_complex=True, n_basis=n_basis,
             explicit_training=explicit_training, n_train=n_train,
             rho_mesh=rho_mesh, match_points=match_points

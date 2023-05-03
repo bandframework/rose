@@ -158,8 +158,9 @@ class ReducedBasisEmulator:
     ):
         a = self.s_mesh[self.i_0]
         Rl = self.logarithmic_derivative(theta)
-        return (H_minus(a, self.l, self.interaction.eta) - a*Rl*H_minus_prime(a, self.l, self.interaction.eta)) / \
-            (H_plus(a, self.l, self.interaction.eta) - a*Rl*H_plus_prime(a, self.l, self.interaction.eta))
+        eta = self.interaction.eta(theta)
+        return (H_minus(a, self.l, eta) - a*Rl*H_minus_prime(a, self.l, eta)) / \
+            (H_plus(a, self.l, eta) - a*Rl*H_plus_prime(a, self.l, eta))
 
 
     def exact_phase_shift(self, theta: np.array):

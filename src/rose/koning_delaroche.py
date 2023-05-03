@@ -1,6 +1,6 @@
 import numpy as np
 
-from .interaction_eim import EnergizedInteractionEIM
+from .interaction_eim import InteractionEIM
 from .constants import DEFAULT_RHO_MESH
 
 def Vv(E, v1, v2, v3, v4, Ef):

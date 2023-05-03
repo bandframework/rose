@@ -186,7 +186,6 @@ class EnergizedInteractionEIM(Interaction):
         if match_points is None:
             if n_basis is None:
                 n_basis = n_theta
-            print(n_basis)
             self.snapshots = np.copy(U[:, :n_basis])
             # random r points between 0 and 2π fm
             i_max = self.snapshots.shape[0] // 4

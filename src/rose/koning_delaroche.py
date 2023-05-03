@@ -57,7 +57,7 @@ def KD_simple(r, alpha):
            1j*(-4*ad)*wd * fp_WS(r, Rd, ad)
 
 
-class KoningDelaroche(EnergizedInteractionEIM):
+class KoningDelaroche(InteractionEIM):
     def __init__(self,
         mu: float,
         training_info: np.array,
@@ -68,7 +68,7 @@ class KoningDelaroche(EnergizedInteractionEIM):
         match_points: np.array = None
     ):
         super().__init__(
-            KD_simple, 8, mu, training_info=training_info, Z_1=0, Z_2=0,
+            KD_simple, 7, mu, training_info=training_info, Z_1=0, Z_2=0,
             is_complex=True, n_basis=n_basis,
             explicit_training=explicit_training, n_train=n_train,
             rho_mesh=rho_mesh, match_points=match_points

@@ -132,8 +132,10 @@ class ScatteringAmplitudeEmulator:
         See Eq. (3.1.50) in Thompson and Nunes.
         '''
         phase_shifts = self.emulate_phase_shifts(theta)
+        S = np.exp(2j*phase_shifts)
+        x = 1 - S
         return 4*np.pi/self.k**2 * \
-            np.sum(np.array([(2*l + 1) * np.sin(d)**2 for (l, d) in enumerate(phase_shifts)]))
+            np.sum(np.array([(2*l + 1) * np.conj(x) * x for (l, d) in enumerate(phase_shifts)]))
 
 
     def save(self, filename):

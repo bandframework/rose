@@ -7,7 +7,7 @@ import numpy as np
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
 from .basis import RelativeBasis, Basis
-from .constants import DEFAULT_RHO_MESH
+from .constants import DEFAULT_RHO_MESH, HBARC
 from .free_solutions import phase_shift, H_minus, H_plus, H_minus_prime, H_plus_prime
 from .utility import finite_difference_first_derivative, finite_difference_second_derivative
 
@@ -72,6 +72,20 @@ class ReducedBasisEmulator:
         # We want to choose a point at which the solution has already been
         # calculated so we can avoid interpolation.
         self.s_0 = self.s_mesh[self.i_0]
+        if self.interaction.k_c == 0:
+            # No Coulomb, so we can precompute with eta = 0.
+            self.Hm = H_minus(self.s_0, self.l, 0)
+            self.Hp = H_plus(self.s_0, self.l, 0)
+            self.Hmp = H_minus_prime(self.s_0, self.l, 0)
+            self.Hpp = H_plus_prime(self.s_0, self.l, 0)
+        else:
+            # There is Coulomb, but we haven't (yet) worked out how to emulate
+            # across energies, so we can precompute H+ and H- stuff.
+            eta = self.interaction.eta(None)
+            self.Hm = H_minus(self.s_0, self.l, eta)
+            self.Hp = H_plus(self.s_0, self.l, eta)
+            self.Hmp = H_minus_prime(self.s_0, self.l, eta)
+            self.Hpp = H_plus_prime(self.s_0, self.l, eta)
 
         # \tilde{U}_{bare} takes advantage of the linear dependence of \tilde{U}
         # on the parameters. The first column is multiplied by args[0]. The
@@ -140,7 +154,13 @@ class ReducedBasisEmulator:
         x = self.coefficients(theta)
         phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
         phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])
-        return phase_shift(phi, phi_prime, self.l, self.interaction.eta(theta), self.s_mesh[self.i_0])
+
+        rl = 1/self.s_0 * (phi/phi_prime)
+        return np.log(
+            (self.Hm - self.s_0*rl*self.Hmp) / 
+            (self.Hp - self.s_0*rl*self.Hpp)
+        ) / 2j
+        # return phase_shift(phi, phi_prime, self.l, self.interaction.eta(theta), self.s_mesh[self.i_0])
     
     
     def logarithmic_derivative(self,

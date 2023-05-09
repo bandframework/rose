@@ -122,9 +122,8 @@ class InteractionEIM(Interaction):
     def coefficients(self,
         alpha: np.array
     ):
-        k = np.sqrt(2*self.mu*alpha[0]/HBARC)
         u_true = self.tilde(self.r_i, alpha)
-        return 1/k, self.Ainv @ u_true
+        return 1/self.k, self.Ainv @ u_true
 
 
     def tilde_emu(self,

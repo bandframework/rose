@@ -116,13 +116,13 @@ class ReducedBasisEmulator:
     def coefficients(self,
         theta: np.array
     ):
-        beta = self.interaction.coefficients(theta)
+        invk, beta = self.interaction.coefficients(theta)
 
         A_utilde = np.einsum('i,ijk', beta, self.A_2)
-        A = self.A_13 + A_utilde + self.A_3_coulomb
+        A = self.A_13 + A_utilde + invk * self.A_3_coulomb
 
         b_utilde = beta @ self.b_2
-        b = self.b_13 + b_utilde + self.b_3_coulomb
+        b = self.b_13 + b_utilde + invk * self.b_3_coulomb
 
         return np.linalg.solve(A, b)
 

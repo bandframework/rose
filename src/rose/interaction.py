@@ -66,9 +66,9 @@ class Interaction:
         alpha: np.array # interaction parameters
     ):
         '''
-        Return 1/E, 1/k, and alpha
+        Return 1/k and alpha
         '''
-        return alpha
+        return 1, alpha
     
 
     def eta(self,

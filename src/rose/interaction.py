@@ -75,6 +75,10 @@ class Interaction:
         alpha: np.array
     ):
         return self.sommerfeld
+    
+
+    def momentum(self, alpha: np.array):
+        return self.k
 
 
 NUCLEON_MASS = 939.565 # neutron mass (MeV)

@@ -135,7 +135,6 @@ class InteractionEIM(Interaction):
         s = pr/hbar
         alpha are the parameters we are varying
         E = E_{c.m.}, [E] = MeV = [v_r]
-
         '''
         _, x = self.coefficients(alpha)
         emu = np.sum(x * self.snapshots, axis=1)
@@ -144,7 +143,7 @@ class InteractionEIM(Interaction):
 
     def basis_functions(self, rho_mesh: np.array):
         return np.copy(self.snapshots)
-
+    
 
 class EnergizedInteractionEIM(Interaction):
     def __init__(self,
@@ -252,6 +251,10 @@ class EnergizedInteractionEIM(Interaction):
 
     def basis_functions(self, rho_mesh: np.array):
         return np.copy(self.snapshots)
+    
+
+    def momentum(self, alpha: np.array):
+        return np.sqrt(2*self.mu*alpha[0]/HBARC)
 
 
 def wood_saxon(r, R, a):

@@ -6,7 +6,7 @@ from .reduced_basis_emulator import ReducedBasisEmulator
 from .scattering_amplitude_emulator import ScatteringAmplitudeEmulator
 from .free_solutions import phase_shift
 from .basis import CustomBasis, RelativeBasis
-from .koning_delaroche import KoningDelaroche
+from .koning_delaroche import KoningDelaroche, EnergizedKoningDelaroche
 
 
 __version__ = '0.9.0'

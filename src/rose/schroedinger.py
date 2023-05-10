@@ -40,7 +40,7 @@ class SchroedingerEquation:
         self.interaction = interaction
         if hifi_tolerances is None:
             self.rel_tol = 1e-12
-            self.abs_tol = 1e-30
+            self.abs_tol = 1e-12
         else:
             self.rel_tol = hifi_tolerances[0]
             self.abs_tol = hifi_tolerances[1]

@@ -53,7 +53,7 @@ def KD(r, E, v1, v2, v3, v4, w1, w2, d1, d2, d3, Ef, Rv, av, Rd, ad):
 
 def KD_simple(r, alpha):
     vv, wv, wd, Rv, av, Rd, ad = alpha
-    return vv * f_WS(r, Rv, av) + 1j*wv*f_WS(r, Rv, av) + \
+    return -vv * f_WS(r, Rv, av) - 1j*wv*f_WS(r, Rv, av) - \
            1j*(-4*ad)*wd * fp_WS(r, Rd, ad)
 
 

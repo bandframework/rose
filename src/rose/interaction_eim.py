@@ -244,7 +244,7 @@ class EnergizedInteractionEIM(Interaction):
         E = E_{c.m.}, [E] = MeV = [v_r]
 
         '''
-        x = self.coefficients(alpha)
+        _, x = self.coefficients(alpha)
         emu = np.sum(x * self.snapshots, axis=1)
         return emu
     

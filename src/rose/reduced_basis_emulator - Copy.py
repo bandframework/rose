@@ -74,12 +74,6 @@ class ReducedBasisEmulator:
         # calculated so we can avoid interpolation.
         self.s_0 = self.s_mesh[self.i_0]
 
-        eta = self.interaction.eta
-        self.Hm = H_minus(self.s_0, self.l, eta)
-        self.Hp = H_plus(self.s_0, self.l, eta)
-        self.Hmp = H_minus_prime(self.s_0, self.l, eta)
-        self.Hpp = H_plus_prime(self.s_0, self.l, eta)
-
         # \tilde{U}_{bare} takes advantage of the linear dependence of \tilde{U}
         # on the parameters. The first column is multiplied by args[0]. The
         # second by args[1]. And so on. The "total" potential is the sum across
@@ -144,15 +138,7 @@ class ReducedBasisEmulator:
         x = self.coefficients(theta)
         phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
         phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])
-
-
-        rl = 1/self.s_0 * (phi/phi_prime)
-        return np.log(
-            (self.Hm - self.s_0*rl*self.Hmp) / 
-            (self.Hp - self.s_0*rl*self.Hpp)
-        ) / 2j
-
-        # return phase_shift(phi, phi_prime, self.l, self.interaction.eta, self.s_mesh[self.i_0])
+        return phase_shift(phi, phi_prime, self.l, self.interaction.eta, self.s_mesh[self.i_0])
     
     
     def logarithmic_derivative(self,
@@ -170,12 +156,8 @@ class ReducedBasisEmulator:
     ):
         a = self.s_mesh[self.i_0]
         Rl = self.logarithmic_derivative(theta)
-
-        return (self.Hm - a*Rl*self.Hmp) / (self.Hp - a*Rl*self.Hpp)
-
-
-        # return (H_minus(a, self.l, self.interaction.eta) - a*Rl*H_minus_prime(a, self.l, self.interaction.eta)) / \
-            # (H_plus(a, self.l, self.interaction.eta) - a*Rl*H_plus_prime(a, self.l, self.interaction.eta))
+        return (H_minus(a, self.l, self.interaction.eta) - a*Rl*H_minus_prime(a, self.l, self.interaction.eta)) / \
+            (H_plus(a, self.l, self.interaction.eta) - a*Rl*H_plus_prime(a, self.l, self.interaction.eta))
 
 
     def exact_phase_shift(self, theta: np.array):

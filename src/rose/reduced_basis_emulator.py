@@ -6,7 +6,7 @@ import numpy as np
 
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
-from .basis import RelativeBasis, Basis
+from .basis import RelativeBasis, Basis, CustomBasis
 from .constants import DEFAULT_RHO_MESH, HBARC
 from .free_solutions import phase_shift, H_minus, H_plus, H_minus_prime, H_plus_prime
 from .utility import finite_difference_first_derivative, finite_difference_second_derivative
@@ -63,6 +63,9 @@ class ReducedBasisEmulator:
         self.interaction = interaction
         self.basis = basis
         self.l = self.basis.l
+
+        if isinstance(self.basis, CustomBasis):
+            self.basis.solver = SchroedingerEquation(interaction)
         self.se = self.basis.solver
 
         self.s_mesh = np.copy(basis.rho_mesh)

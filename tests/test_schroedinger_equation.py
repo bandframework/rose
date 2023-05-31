@@ -22,20 +22,35 @@ class TestSchrEq(unittest.TestCase):
     
 
     def test_energy(self):
+        '''
+        Tests the correct handling of energy-dependent interactions. Does not
+        use emulation.
+        Compares the HF solutions from two interactions -- one that is
+        energy-dependent and one that is not.
+        '''
         mu = 1.0
         energy = 50.0
         ell = 0
+        z = 0
         rho = rose.constants.DEFAULT_RHO_MESH
-        potential = lambda r, theta: theta[0] * np.exp(-(r/theta[1])**2) 
+        potential = lambda r, theta: theta[0] * rose.interaction_eim.wood_saxon(r, theta[1], theta[2]) 
 
-        interaction = rose.Interaction(potential, 2, mu, energy, 1, 1)
-        energized_interaction = rose.interaction.EnergizedInteraction(potential, 3, mu, 1, 1)
-
+        interaction = rose.Interaction(potential, 3, mu, energy, z, z)
         se1 = rose.SchroedingerEquation(interaction)
-        se2 = rose.SchroedingerEquation(energized_interaction)
 
-        theta1 = np.array([-10.0, 1.0])
+        theta1 = np.array([-10.0, 3.0, 1.0])
         theta2 = np.hstack((energy, theta1))
+
+        train = np.array([
+            [49.0, 51.0],
+            [-15.0, -5.0],
+            [2.0, 4.0],
+            [0.8, 1.2]
+        ])
+        energized_interaction = rose.interaction_eim.EnergizedInteractionEIM(
+            potential, 3, mu, train, Z_1=z, Z_2=z, n_train=20
+        )
+        se2 = rose.SchroedingerEquation(energized_interaction)
 
         phi1 = se1.phi(theta1, rho, ell)
         phi2 = se2.phi(theta2, rho, ell)

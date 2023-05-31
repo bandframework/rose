@@ -4,16 +4,15 @@ Includes some "hard-coded" interactions.
 '''
 from typing import Callable
 import numpy as np
-import numpy.typing as npt
 
-from .constants import HBARC, DEFAULT_RHO_MESH, ALPHA
+from .constants import HBARC, ALPHA
 
 class Interaction:
     '''
     Template class.
     '''
     def __init__(self,
-        coordinate_space_potential: Callable[[float, npt.ArrayLike], float], # V(r, theta)
+        coordinate_space_potential: Callable[[float, np.array], float], # V(r, theta)
         n_theta: int, # How many parameters does the interaction have?
         mu: float, # reduced mass (MeV)
         energy: float, # E_{c.m.}
@@ -24,15 +23,26 @@ class Interaction:
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
-        self.energy = energy
-        self.k = np.sqrt(2 * self.mu * self.energy/HBARC)
-        self.eta = ALPHA * Z_1 * Z_2 * self.mu / self.k
+        self.k_c = ALPHA * Z_1*Z_2 * self.mu
+        # self.eta = ALPHA * Z_1 * Z_2 * self.mu / self.k
         self.is_complex = is_complex
+        if energy:
+            # If the energy is specified (not None as it is when subclass
+            # EnergizedInteraction instantiates), set up associated attributes.
+            self.energy = energy
+            self.k = np.sqrt(2 * self.mu * self.energy/HBARC)
+            self.sommerfeld = self.k_c / self.k
+        else:
+            # If the energy is not specified, these will be set up when the
+            # methods are called.
+            self.energy = None
+            self.k = None
+            self.sommerfeld = None
 
 
     def tilde(self,
         s: float,
-        alpha: npt.ArrayLike
+        alpha: np.array
     ):
         '''
         tilde{U}(s, alpha, E)
@@ -45,7 +55,7 @@ class Interaction:
 
 
     def basis_functions(self,
-        rho_mesh: npt.ArrayLike
+        rho_mesh: np.array
     ):
         return np.array([
             self.tilde(rho_mesh, row) for row in np.eye(self.n_theta)
@@ -53,9 +63,22 @@ class Interaction:
     
 
     def coefficients(self,
-        alpha: npt.ArrayLike # interaction parameters
+        alpha: np.array # interaction parameters
     ):
-        return alpha
+        '''
+        Return 1/k and alpha
+        '''
+        return 1, alpha
+    
+
+    def eta(self,
+        alpha: np.array
+    ):
+        return self.sommerfeld
+    
+
+    def momentum(self, alpha: np.array):
+        return self.k
 
 
 NUCLEON_MASS = 939.565 # neutron mass (MeV)

@@ -6,7 +6,9 @@ import numpy.typing as npt
 from scipy.interpolate import interp1d
 from mpmath import coulombf
 
+from .constants import HBARC
 from .schroedinger import SchroedingerEquation
+from .interaction_eim import EnergizedInteractionEIM
 
 class Basis:
 
@@ -52,23 +54,39 @@ class RelativeBasis(Basis):
         rho_mesh: np.array, # s = kr; discrete mesh where phi(s) is calculated
         n_basis: int, # number of basis vectors
         l: int, # orbital angular momentum
-        use_svd: bool # use principal components?
+        use_svd: bool, # use principal components?
+        phi_0_energy: float = None # energy at which phi_0 is calculated
     ):
         super().__init__(solver, theta_train, rho_mesh, n_basis, l)
 
+        if phi_0_energy:
+            k = np.sqrt(2*self.solver.interaction.mu*phi_0_energy/HBARC)
+            eta = self.solver.interaction.k_c / k
+        else:
+            if isinstance(self.solver.interaction, EnergizedInteractionEIM):
+                # k_mean = np.sqrt(2*self.solver.interaction.mu*np.mean(theta_train[:, 0])/HBARC)
+                # eta = self.solver.interaction.k_c / k_mean
+                # Does not support Coulomb (yet).
+                eta = 0.0
+            else:
+                # If the phi_0 energy is not specified, we're only going to work
+                # with non-Coulombic systems (for now).
+                eta = 0.0
+        
         # Returns Bessel functions when eta = 0.
-        self.phi_0 = np.array([coulombf(self.l, self.solver.interaction.eta, rho) for rho in self.rho_mesh], dtype=np.float64)
+        self.phi_0 = np.array([coulombf(self.l, eta, rho) for rho in self.rho_mesh], dtype=np.float64)
 
         self.all_vectors = np.array([
-            self.solver.phi(solver.interaction.energy, theta, self.rho_mesh, l) - self.phi_0 for theta in theta_train
+            self.solver.phi(theta, self.rho_mesh, l) - self.phi_0 for theta in theta_train
         ]).T
+        self.pillars = self.all_vectors.copy()
 
         if use_svd:
             U, S, _ = np.linalg.svd(self.all_vectors, full_matrices=False)
             self.singular_values = np.copy(S)
-            self.all_vectors = np.copy(U)
+            self.pillars = np.copy(U)
         
-        self.vectors = np.copy(self.all_vectors[:, :self.n_basis])
+        self.vectors = np.copy(self.pillars[:, :self.n_basis])
     
 
     def phi_hat(self, coefficients):
@@ -87,6 +105,7 @@ class CustomBasis(Basis):
         super().__init__(None, None, rho_mesh, n_basis, ell)
 
         self.solutions = solutions.copy()
+        self.pillars = solutions.copy()
         self.rho_mesh = rho_mesh.copy()
         self.n_basis = n_basis
         # Energy and angular momentum are not actually used, but it may be
@@ -99,11 +118,11 @@ class CustomBasis(Basis):
         if use_svd:
             U, S, _ = np.linalg.svd(self.solutions - self.phi_0[:, np.newaxis], full_matrices=False)
             self.singular_values = S.copy()
-            self.solutions = U.copy()
+            self.pillars = U.copy()
         else:
             self.singular_values = None
         
-        self.vectors = self.solutions[:, :self.n_basis].copy()
+        self.vectors = self.pillars[:, :self.n_basis].copy()
         
         # interpolating functions
         # To extrapolate or not to extrapolate?

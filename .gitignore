@@ -9,3 +9,5 @@ docs/_*/
 src/rose.egg-info/
 src/rose.egg-info/PKG-INFO
 src/rose.egg-info/SOURCES.txt
+__pycache__/
+tests/__pycache__/

@@ -61,29 +61,30 @@ class ScatteringAmplitudeEmulator:
         for l in range(self.l_max + 1):
             self.rbes.append(
                 ReducedBasisEmulator(
-                    interaction, bases[l], l, s_0=s_0
+                    interaction, bases[l], s_0=s_0
                 )
             )
-        self.k = np.sqrt(2*interaction.mu*interaction.energy/HBARC)
 
     def predict(self, alpha):
+        k = self.rbes[0].interaction.momentum(alpha)
         phase_shifts = np.array([
             rbe.emulate_phase_shift(alpha) for rbe in self.rbes
         ])
         tl = np.exp(1j*phase_shifts) * np.sin(phase_shifts)
         f = np.array([
-            1/self.k * (2*l+1) * eval_legendre(l, np.cos(self.angles)) * t for (l, t) in enumerate(tl)
+            1/k * (2*l+1) * eval_legendre(l, np.cos(self.angles)) * t for (l, t) in enumerate(tl)
         ])
         return np.sum(f, axis=0)
     
 
     def exact(self, alpha: np.array):
+        k = self.rbes[0].interaction.momentum(alpha)
         phase_shifts = np.array([
             rbe.exact_phase_shift(alpha) for rbe in self.rbes
         ])
         tl = np.exp(1j*phase_shifts) * np.sin(phase_shifts)
         f = np.array([
-            1/self.k * (2*l+1) * eval_legendre(l, np.cos(self.angles)) * t for (l, t) in enumerate(tl)
+            1/k * (2*l+1) * eval_legendre(l, np.cos(self.angles)) * t for (l, t) in enumerate(tl)
         ])
         return np.sum(f, axis=0)
     
@@ -94,9 +95,10 @@ class ScatteringAmplitudeEmulator:
         '''
         Gives the differential cross section (dsigma/dOmega = dsdo).
         '''
+        k = self.rbes[0].interaction.momentum(theta)
         Sls = np.array([rbe.S_matrix_element(theta) for rbe in self.rbes])
         f = np.array([
-            -1j/(2*self.k) * (2*l + 1) * \
+            -1j/(2*k) * (2*l + 1) * \
                 eval_legendre(l, np.cos(self.angles)) * (Sl - 1) for (l, Sl) in enumerate(Sls)
         ])
         f = np.sum(f, axis=0)
@@ -131,9 +133,11 @@ class ScatteringAmplitudeEmulator:
         Gives the "total" (angle-integrated) cross section.
         See Eq. (3.1.50) in Thompson and Nunes.
         '''
-        phase_shifts = self.emulate_phase_shifts(theta)
-        return 4*np.pi/self.k**2 * \
-            np.sum(np.array([(2*l + 1) * np.sin(d)**2 for (l, d) in enumerate(phase_shifts)]))
+        k = self.rbes[0].interaction.momentum(theta)
+        phase_shifts = np.array(self.emulate_phase_shifts(theta))
+        S = np.exp(2j*phase_shifts)
+        return 4*np.pi/k**2 * \
+            np.sum(np.array([(2*l + 1) * np.conj(1-s) * (1-s) for (l, s) in enumerate(S)]))
 
 
     def save(self, filename):

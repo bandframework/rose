@@ -7,7 +7,7 @@ import numpy as np
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
 from .basis import RelativeBasis, Basis
-from .constants import DEFAULT_RHO_MESH
+from .constants import DEFAULT_RHO_MESH, HBARC
 from .free_solutions import phase_shift, H_minus, H_plus, H_minus_prime, H_plus_prime
 from .utility import finite_difference_first_derivative, finite_difference_second_derivative
 
@@ -52,18 +52,17 @@ class ReducedBasisEmulator:
             ell,
             use_svd
         )
-        return cls(interaction, basis, ell, s_0=s_0)
+        return cls(interaction, basis, s_0=s_0)
 
 
     def __init__(self,
         interaction: Interaction,
         basis: Basis,
-        ell: int,
         s_0: float = 6*np.pi # phase shift is "extracted" at s_0
     ):
         self.interaction = interaction
         self.basis = basis
-        self.l = ell
+        self.l = self.basis.l
         self.se = self.basis.solver
 
         self.s_mesh = np.copy(basis.rho_mesh)
@@ -73,6 +72,20 @@ class ReducedBasisEmulator:
         # We want to choose a point at which the solution has already been
         # calculated so we can avoid interpolation.
         self.s_0 = self.s_mesh[self.i_0]
+        if self.interaction.k_c == 0:
+            # No Coulomb, so we can precompute with eta = 0.
+            self.Hm = H_minus(self.s_0, self.l, 0)
+            self.Hp = H_plus(self.s_0, self.l, 0)
+            self.Hmp = H_minus_prime(self.s_0, self.l, 0)
+            self.Hpp = H_plus_prime(self.s_0, self.l, 0)
+        else:
+            # There is Coulomb, but we haven't (yet) worked out how to emulate
+            # across energies, so we can precompute H+ and H- stuff.
+            eta = self.interaction.eta(None)
+            self.Hm = H_minus(self.s_0, self.l, eta)
+            self.Hp = H_plus(self.s_0, self.l, eta)
+            self.Hmp = H_minus_prime(self.s_0, self.l, eta)
+            self.Hpp = H_plus_prime(self.s_0, self.l, eta)
 
         # \tilde{U}_{bare} takes advantage of the linear dependence of \tilde{U}
         # on the parameters. The first column is multiplied by args[0]. The
@@ -84,7 +97,7 @@ class ReducedBasisEmulator:
         d2_operator = finite_difference_second_derivative(self.s_mesh)
         phi_basis = self.basis.vectors
         ang_mom = self.l*(self.l+1) / self.s_mesh**2
-        coulomb = 2*self.interaction.eta / self.s_mesh
+        k_c = 2*self.interaction.k_c / self.s_mesh
 
         self.d2 = -d2_operator @ phi_basis
         self.A_1 = phi_basis.T @ self.d2
@@ -93,9 +106,10 @@ class ReducedBasisEmulator:
         ])
         self.A_3 = np.einsum('ij,j,jk',
                              phi_basis.T,
-                             coulomb + ang_mom - 1,
+                             ang_mom - 1,
                              phi_basis)
-        # self.A_3 = phi_basis.T @ -phi_basis
+        self.A_13 = self.A_1 + self.A_3
+        self.A_3_coulomb = np.einsum('ij,j,jk', phi_basis.T, k_c, phi_basis)
 
         # Precompute what we can for the inhomogeneous term ( -< psi | F(phi_0) > ).
         d2_phi_0 = d2_operator @ self.basis.phi_0
@@ -103,7 +117,9 @@ class ReducedBasisEmulator:
         self.b_2 = np.array([
             phi_basis.T @ (-row * self.basis.phi_0) for row in self.utilde_basis_functions.T
         ])
-        self.b_3 = phi_basis.T @ ((1 - ang_mom - coulomb) * self.basis.phi_0)
+        self.b_3 = phi_basis.T @ ((1 - ang_mom) * self.basis.phi_0)
+        self.b_13 = self.b_1 + self.b_3
+        self.b_3_coulomb = -phi_basis.T @ (k_c * self.basis.phi_0)
 
         # Can we extract the phase shift faster?
         self.phi_components = np.hstack(( self.basis.phi_0[:, np.newaxis], self.basis.vectors ))
@@ -114,13 +130,13 @@ class ReducedBasisEmulator:
     def coefficients(self,
         theta: np.array
     ):
-        beta = self.interaction.coefficients(theta)
+        invk, beta = self.interaction.coefficients(theta)
 
         A_utilde = np.einsum('i,ijk', beta, self.A_2)
-        A = self.A_1 + A_utilde + self.A_3
+        A = self.A_13 + A_utilde + invk * self.A_3_coulomb
 
         b_utilde = beta @ self.b_2
-        b = self.b_1 + b_utilde + self.b_3
+        b = self.b_13 + b_utilde + invk * self.b_3_coulomb
 
         return np.linalg.solve(A, b)
 
@@ -138,7 +154,13 @@ class ReducedBasisEmulator:
         x = self.coefficients(theta)
         phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
         phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])
-        return phase_shift(phi, phi_prime, self.l, self.interaction.eta, self.s_mesh[self.i_0])
+
+        rl = 1/self.s_0 * (phi/phi_prime)
+        return np.log(
+            (self.Hm - self.s_0*rl*self.Hmp) / 
+            (self.Hp - self.s_0*rl*self.Hpp)
+        ) / 2j
+        # return phase_shift(phi, phi_prime, self.l, self.interaction.eta(theta), self.s_mesh[self.i_0])
     
     
     def logarithmic_derivative(self,
@@ -156,13 +178,12 @@ class ReducedBasisEmulator:
     ):
         a = self.s_mesh[self.i_0]
         Rl = self.logarithmic_derivative(theta)
-        return (H_minus(a, self.l, self.interaction.eta) - a*Rl*H_minus_prime(a, self.l, self.interaction.eta)) / \
-            (H_plus(a, self.l, self.interaction.eta) - a*Rl*H_plus_prime(a, self.l, self.interaction.eta))
+        eta = self.interaction.eta(theta)
+        return (self.Hm - a*Rl*self.Hmp) / (self.Hp - a*Rl*self.Hpp)
 
 
     def exact_phase_shift(self, theta: np.array):
-        return self.se.delta(self.basis.solver.interaction.energy,
-            theta, self.s_mesh[[0, -1]], self.l, self.s_0)
+        return self.se.delta(theta, self.s_mesh[[0, -1]], self.l, self.s_0)
     
 
     def save(self, filename):

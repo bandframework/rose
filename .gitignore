@@ -11,3 +11,5 @@ src/rose.egg-info/PKG-INFO
 src/rose.egg-info/SOURCES.txt
 __pycache__/
 tests/__pycache__/
+tests/__pycache__/test_interactions.cpython-310.pyc
+tests/__pycache__/test_schroedinger_equation.cpython-310.pyc

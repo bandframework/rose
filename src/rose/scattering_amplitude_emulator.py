@@ -7,7 +7,7 @@ from .interaction import Interaction
 from .reduced_basis_emulator import ReducedBasisEmulator
 from .constants import DEFAULT_RHO_MESH, DEFAULT_ANGLE_MESH, HBARC
 from .schroedinger import SchroedingerEquation
-from .basis import RelativeBasis
+from .basis import RelativeBasis, CustomBasis
 
 class ScatteringAmplitudeEmulator:
 
@@ -50,7 +50,8 @@ class ScatteringAmplitudeEmulator:
         bases: list,
         l_max: int,
         angles: np.array = DEFAULT_ANGLE_MESH,
-        s_0: float = 6*np.pi
+        s_0: float = 6*np.pi,
+        verbose: bool = True
     ):
         '''
         :param interaction:
@@ -58,6 +59,13 @@ class ScatteringAmplitudeEmulator:
         self.l_max = l_max
         self.angles = angles.copy()
         self.rbes = []
+        bases_types = [isinstance(bases[l], CustomBasis) for l in range(self.l_max+1)]
+        if np.any(bases_types) and verbose:
+            print('''
+NOTE: When supplying a CustomBasis, the ROSE high-fidelity solver is \
+instantiated for the sake of future evaluations.  Any requests to the solver \
+will NOT be communicated to the user's own high-fidelity solver.
+''')
         for l in range(self.l_max + 1):
             self.rbes.append(
                 ReducedBasisEmulator(

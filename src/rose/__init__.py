@@ -9,4 +9,4 @@ from .basis import CustomBasis, RelativeBasis
 from .koning_delaroche import KoningDelaroche, EnergizedKoningDelaroche
 
 
-__version__ = '0.9.0'
+__version__ = '0.9.1'

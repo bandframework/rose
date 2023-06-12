@@ -1,7 +1,9 @@
 import numpy as np
 
 from .interaction_eim import InteractionEIM, EnergizedInteractionEIM
-from .constants import DEFAULT_RHO_MESH
+from .constants import DEFAULT_RHO_MESH, HBARC
+
+MASS_PION = 140 / HBARC # 1/fm
 
 def Vv(E, v1, v2, v3, v4, Ef):
     '''
@@ -53,8 +55,21 @@ def KD(r, E, v1, v2, v3, v4, w1, w2, d1, d2, d3, Ef, Rv, av, Rd, ad):
 
 def KD_simple(r, alpha):
     vv, wv, wd, Rv, av, Rd, ad = alpha
-    return -vv * f_WS(r, Rv, av) - 1j*wv*f_WS(r, Rv, av) - \
-           1j*(-4*ad)*wd * fp_WS(r, Rd, ad)
+    return -vv * f_WS(r, Rv, av) - \
+        1j*wv*f_WS(r, Rv, av) - \
+        1j*(-4*ad)*wd * fp_WS(r, Rd, ad)
+
+
+def KD_simple_so(r, alpha, lds):
+    '''
+    lds: l • s = 1/2 * (j(j+1) - l(l+1) - s(s+1))
+    '''
+    vv, wv, wd, vso, wso, Rv, Rd, Rso, av, ad, aso = alpha
+    return -vv * f_WS(r, Rv, av) - \
+        1j*wv*f_WS(r, Rv, av) - \
+        1j*(-4*ad)*wd * fp_WS(r, Rd, ad) + \
+        vso/MASS_PION**2/r*fp_WS(r, Rso, aso)*lds + \
+        1j*wso/MASS_PION**2/r*fp_WS(r, Rso, aso)*lds
 
 
 class KoningDelaroche(InteractionEIM):
@@ -69,7 +84,7 @@ class KoningDelaroche(InteractionEIM):
         match_points: np.array = None
     ):
         super().__init__(
-            KD_simple, 7, mu, energy, training_info=training_info, Z_1=0, Z_2=0,
+            KD_simple_so, 11, mu, energy, training_info=training_info, Z_1=0, Z_2=0,
             is_complex=True, n_basis=n_basis,
             explicit_training=explicit_training, n_train=n_train,
             rho_mesh=rho_mesh, match_points=match_points
@@ -87,7 +102,7 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIM):
         match_points: np.array = None
     ):
         super().__init__(
-            KD_simple, 8, mu, training_info=training_info, Z_1=0, Z_2=0,
+            KD_simple_so, 12, mu, training_info=training_info, Z_1=0, Z_2=0,
             is_complex=True, n_basis=n_basis,
             explicit_training=explicit_training, n_train=n_train,
             rho_mesh=rho_mesh, match_points=match_points

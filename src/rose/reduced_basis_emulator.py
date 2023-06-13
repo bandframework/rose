@@ -75,8 +75,7 @@ class ReducedBasisEmulator:
         self.l = self.basis.l
 
         if isinstance(self.basis, CustomBasis):
-            self.basis.solver = SchroedingerEquation(interaction)
-        self.se = self.basis.solver
+            self.basis.solver = basis.solver
 
         self.s_mesh = np.copy(basis.rho_mesh)
 
@@ -207,7 +206,7 @@ class ReducedBasisEmulator:
 
 
     def exact_phase_shift(self, theta: np.array):
-        return self.se.delta(theta, self.s_mesh[[0, -1]], self.l, self.s_0)
+        return self.basis.solver.delta(theta, self.s_mesh[[0, -1]], self.l, self.s_0)
     
 
     def save(self, filename):

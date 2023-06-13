@@ -140,4 +140,3 @@ class SchroedingerEquation:
         '''
         phi = self.phi(alpha, s_mesh, l, **solve_ivp_kwargs)
         return phi / np.max(np.abs(phi))
-

@@ -53,6 +53,7 @@ class InteractionEIM(Interaction):
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
         is_complex: bool = False,
+        spin_orbit_potential: Callable[[float, np.array, float], float] = None, #V_{SO}(r, theta, l•s)
         n_basis: int = None,
         explicit_training: bool = False,
         n_train: int = 1000,
@@ -81,7 +82,7 @@ class InteractionEIM(Interaction):
         '''
 
         super().__init__(coordinate_space_potential, n_theta, mu, energy,
-            Z_1=Z_1, Z_2=Z_2, is_complex=is_complex)
+            Z_1=Z_1, Z_2=Z_2, is_complex=is_complex, spin_orbit_potential=spin_orbit_potential)
 
         # Generate a basis used to approximate the potential.
         # Did the user specify the training points?

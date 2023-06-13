@@ -18,7 +18,8 @@ class Interaction:
         energy: float, # E_{c.m.}
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
-        is_complex: bool = False
+        is_complex: bool = False,
+        spin_orbit_potential: Callable[[float, np.array, float], float] = None #V_{SO}(r, theta, l•s)
     ):
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
@@ -26,6 +27,12 @@ class Interaction:
         self.k_c = ALPHA * Z_1*Z_2 * self.mu
         # self.eta = ALPHA * Z_1 * Z_2 * self.mu / self.k
         self.is_complex = is_complex
+
+        if spin_orbit_potential:
+            self.spin_orbit_potential = spin_orbit_potential
+        else:
+            self.spin_orbit_potential = lambda s, alpha, lds: 0.0
+
         if energy:
             # If the energy is specified (not None as it is when subclass
             # EnergizedInteraction instantiates), set up associated attributes.
@@ -42,7 +49,8 @@ class Interaction:
 
     def tilde(self,
         s: float,
-        alpha: np.array
+        alpha: np.array,
+        spin_orbit_coupling: float = 0
     ):
         '''
         tilde{U}(s, alpha, E)
@@ -51,7 +59,10 @@ class Interaction:
         alpha are the parameters we are varying
         E = E_{c.m.}, [E] = MeV = [v_r]
         '''
-        return  1.0/self.energy * self.v_r(s/self.k, alpha)
+        return  1.0/self.energy * (
+            self.v_r(s/self.k, alpha) + \
+            self.spin_orbit_potential(s/self.k, alpha, spin_orbit_coupling)
+        )
 
 
     def basis_functions(self,
@@ -59,6 +70,14 @@ class Interaction:
     ):
         return np.array([
             self.tilde(rho_mesh, row) for row in np.eye(self.n_theta)
+        ]).T
+    
+
+    def spin_orbit_basis_functions(self,
+        rho_mesh: np.array
+    ):
+        return np.array([
+            self.spin_orbit_potential(rho_mesh, row, 1) for row in np.eye(self.n_theta)
         ]).T
     
 

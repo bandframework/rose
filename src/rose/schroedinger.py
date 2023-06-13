@@ -30,7 +30,8 @@ def Gamow_factor(l, eta):
 class SchroedingerEquation:
     def __init__(self,
         interaction: Interaction,
-        hifi_tolerances: list = None
+        hifi_tolerances: list = None,
+        spin_orbit_coupling: float = 0.0
     ):
         '''
         Instantiates an object that stores the Interaction and makes it easy to
@@ -44,6 +45,7 @@ class SchroedingerEquation:
         else:
             self.rel_tol = hifi_tolerances[0]
             self.abs_tol = hifi_tolerances[1]
+        self.spin_orbit_coupling = spin_orbit_coupling
 
 
     def solve_se(self,
@@ -74,7 +76,8 @@ class SchroedingerEquation:
         
         sol = solve_ivp(
             lambda s, phi: np.array([phi[1],
-                (self.interaction.tilde(s, alpha) + 2*self.interaction.eta(alpha)/s + l*(l+1)/s**2 - 1.0) * phi[0]]),
+                (self.interaction.tilde(s, alpha, self.spin_orbit_coupling) + \
+                 2*self.interaction.eta(alpha)/s + l*(l+1)/s**2 - 1.0) * phi[0]]),
             s_endpts, initial_conditions, rtol=self.rel_tol, atol=self.abs_tol,
             dense_output=True, **solve_ivp_kwargs
         )

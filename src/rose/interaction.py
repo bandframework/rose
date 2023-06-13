@@ -30,8 +30,10 @@ class Interaction:
 
         if spin_orbit_potential:
             self.spin_orbit_potential = spin_orbit_potential
+            self.include_spin_orbit = True
         else:
             self.spin_orbit_potential = lambda s, alpha, lds: 0.0
+            self.include_spin_orbit = False
 
         if energy:
             # If the energy is specified (not None as it is when subclass

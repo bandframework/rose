@@ -128,7 +128,7 @@ will NOT be communicated to the user's own high-fidelity solver.
         Returns a list of arrays.
         Order is [l=0, l=1, ..., l=l_max-1].
         '''
-        return [rbe.emulate_wave_function(theta) for rbe in self.rbes]
+        return [[x.emulate_wave_function(theta) for x in rbe] for rbe in self.rbes]
 
 
     def emulate_phase_shifts(self,
@@ -148,7 +148,7 @@ will NOT be communicated to the user's own high-fidelity solver.
         Gives the "total" (angle-integrated) cross section.
         See Eq. (3.1.50) in Thompson and Nunes.
         '''
-        k = self.rbes[0].interaction.momentum(theta)
+        k = self.rbes[0][0].interaction.momentum(theta)
         phase_shifts = np.array(self.emulate_phase_shifts(theta))
         S = np.exp(2j*phase_shifts)
         return 4*np.pi/k**2 * \

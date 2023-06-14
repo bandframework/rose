@@ -78,7 +78,7 @@ class Interaction:
         rho_mesh: np.array
     ):
         return np.array([
-            self.spin_orbit_term.spin_orbit_potential(rho_mesh, row, 1) for row in np.eye(self.n_theta)
+            self.spin_orbit_term.spin_orbit_potential(rho_mesh, row) for row in np.eye(self.n_theta)
         ]).T
     
 

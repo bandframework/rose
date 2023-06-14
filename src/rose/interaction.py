@@ -144,7 +144,7 @@ class InteractionSpace:
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
         is_complex: bool = False,
-        spin_orbit_potential: Callable[[float, np.array, float], float] #V_{SO}(r, theta, l•s)
+        spin_orbit_potential: Callable[[float, np.array, float], float] = None #V_{SO}(r, theta, l•s)
     ):
         self.interactions = []
         if spin_orbit_potential is None:

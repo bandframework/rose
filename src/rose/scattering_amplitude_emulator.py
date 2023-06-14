@@ -3,7 +3,7 @@ import numpy as np
 from scipy.special import eval_legendre
 from tqdm import tqdm 
 
-from .interaction import Interaction
+from .interaction import Interaction, InteractionSpace
 from .reduced_basis_emulator import ReducedBasisEmulator
 from .constants import DEFAULT_RHO_MESH, DEFAULT_ANGLE_MESH, HBARC
 from .schroedinger import SchroedingerEquation
@@ -20,7 +20,7 @@ class ScatteringAmplitudeEmulator:
 
     @classmethod
     def from_train(cls,
-        interaction: Interaction,
+        interaction_space: InteractionSpace,
         theta_train: np.array,
         l_max: int,
         angles: np.array = DEFAULT_ANGLE_MESH,
@@ -31,32 +31,18 @@ class ScatteringAmplitudeEmulator:
         hf_tols: list = None
     ):
         bases = []
-        for l in tqdm(range(l_max+1)):
-            if interaction.include_spin_orbit:
-                basis_plus = RelativeBasis(
-                    SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
-                    theta_train, s_mesh, n_basis, l, use_svd
-                )
-                if l == 0:
-                    bases.append([basis_plus])
+        for interaction_list in tqdm(interaction_space.interactions):
+            basis_list = [RelativeBasis(
+                SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
+                theta_train, s_mesh, n_basis, interaction.ell, use_svd
+            ) for interaction in interaction_list]
+            bases.append(basis_list)
 
-                basis_minus = RelativeBasis(
-                    SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
-                    theta_train, s_mesh, n_basis, l, use_svd
-                )
-                bases.append([basis_plus, basis_minus])
-            else:
-                basis = RelativeBasis(
-                    SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
-                    theta_train, s_mesh, n_basis, l, use_svd
-                )
-                bases.append([basis])
-
-        return cls(interaction, bases, l_max, angles=angles, s_0=s_0)
+        return cls(interaction_space, bases, l_max, angles=angles, s_0=s_0)
 
 
     def __init__(self,
-        interaction: Interaction,
+        interaction_space: InteractionSpace,
         bases: list,
         l_max: int,
         angles: np.array = DEFAULT_ANGLE_MESH,
@@ -76,8 +62,9 @@ instantiated for the sake of future evaluations.  Any requests to the solver \
 will NOT be communicated to the user's own high-fidelity solver.
 ''')
         self.rbes = []
-        for l in range(self.l_max + 1):
-            self.rbes.append([ReducedBasisEmulator(interaction, b, s_0=s_0) for b in bases[l]])
+        for (interaction_list, basis_list) in zip(interaction_space.interactions, bases):
+            self.rbes.append([ReducedBasisEmulator(interaction, basis, s_0=s_0) for
+                (interaction, basis) in zip(interaction_list, basis_list)])
 
 
     def predict(self, alpha):
@@ -138,7 +125,7 @@ will NOT be communicated to the user's own high-fidelity solver.
         Gives the phase shifts for each partial wave.
         Order is [l=0, l=1, ..., l=l_max-1].
         '''
-        return [[x.emulate_phase_shift(theta) for x in rbe] for rbe in self.rbes]
+        return [[rbe.emulate_phase_shift(theta) for rbe in rbe_list] for rbe_list in self.rbes]
 
 
     def emulate_total_cross_section(self,

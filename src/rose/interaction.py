@@ -74,14 +74,6 @@ class Interaction:
         ]).T
     
 
-    def spin_orbit_basis_functions(self,
-        rho_mesh: np.array
-    ):
-        return np.array([
-            self.spin_orbit_term.spin_orbit_potential(rho_mesh, row) for row in np.eye(self.n_theta)
-        ]).T
-    
-
     def coefficients(self,
         alpha: np.array # interaction parameters
     ):

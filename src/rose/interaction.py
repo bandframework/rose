@@ -126,3 +126,38 @@ Complex_MN_Potential = Interaction(
     0,
     is_complex = True
 )
+
+def couplings(l):
+    if l == 0:
+        return [l/2]
+    else:
+        return [l/2, -(l+1)/2]
+
+
+class InteractionSpace:
+    def __init__(self,
+        coordinate_space_potential: Callable[[float, np.array], float], # V(r, theta)
+        n_theta: int, # How many parameters does the interaction have?
+        mu: float, # reduced mass (MeV)
+        energy: float, # E_{c.m.}
+        l_max: int,
+        Z_1: int = 0, # atomic number of particle 1
+        Z_2: int = 0, # atomic number of particle 2
+        is_complex: bool = False,
+        spin_orbit_potential: Callable[[float, np.array, float], float] #V_{SO}(r, theta, l•s)
+    ):
+        self.interactions = []
+        if spin_orbit_potential is None:
+            for l in range(l_max+1):
+                self.interactions.append(
+                    [Interaction(coordinate_space_potential, n_theta, mu,
+                        energy, l, Z_1=Z_1, Z_2=Z_2, is_complex=is_complex)]
+                )
+        else:
+            for l in range(l_max+1):
+                self.interactions.append(
+                    [Interaction(coordinate_space_potential, n_theta, mu,
+                        energy, l, Z_1=Z_1, Z_2=Z_2, is_complex=is_complex,
+                        spin_orbit_term=SpinOrbitTerm(spin_orbit_potential, lds))
+                        for lds in couplings(l)]
+                )

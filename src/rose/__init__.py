@@ -1,4 +1,4 @@
-from .interaction import Interaction, MN_Potential
+from .interaction import Interaction, MN_Potential, InteractionSpace
 from .interaction_eim import InteractionEIM, Optical_Potential, EnergizedInteractionEIM
 from .schroedinger import SchroedingerEquation
 from . import constants, metrics

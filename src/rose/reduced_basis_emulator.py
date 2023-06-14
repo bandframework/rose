@@ -47,7 +47,7 @@ class ReducedBasisEmulator:
             SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
             theta_train, s_mesh, n_basis, interaction.ell, use_svd
         )
-        return [cls(interaction, basis, s_0=s_0)]
+        return cls(interaction, basis, s_0=s_0)
 
 
     def __init__(self,
@@ -89,7 +89,6 @@ class ReducedBasisEmulator:
         # second by args[1]. And so on. The "total" potential is the sum across
         # columns.
         self.utilde_basis_functions = self.interaction.basis_functions(self.s_mesh)
-        self.utilde_spin_orbit_basis_functions = self.interaction.spin_orbit_basis_functions(self.s_mesh)
 
         # Precompute what we can for < psi | F(hat{phi}) >.
         d2_operator = finite_difference_second_derivative(self.s_mesh)
@@ -101,9 +100,6 @@ class ReducedBasisEmulator:
         self.A_1 = phi_basis.T @ self.d2
         self.A_2 = np.array([
             phi_basis.T @ (row[:, np.newaxis] * phi_basis) for row in self.utilde_basis_functions.T
-        ])
-        self.A_2_so = np.array([
-            phi_basis.T @ (row[:, np.newaxis] * phi_basis) for row in self.utilde_spin_orbit_basis_functions.T
         ])
         self.A_3 = np.einsum('ij,j,jk',
                              phi_basis.T,
@@ -118,9 +114,6 @@ class ReducedBasisEmulator:
         self.b_2 = np.array([
             phi_basis.T @ (-row * self.basis.phi_0) for row in self.utilde_basis_functions.T
         ])
-        self.b_2_so = np.array([
-            phi_basis.T @ (-row * self.basis.phi_0) for row in self.utilde_spin_orbit_basis_functions.T
-        ])
         self.b_3 = phi_basis.T @ ((1 - ang_mom) * self.basis.phi_0)
         self.b_13 = self.b_1 + self.b_3
         self.b_3_coulomb = -phi_basis.T @ (k_c * self.basis.phi_0)
@@ -132,34 +125,31 @@ class ReducedBasisEmulator:
     
 
     def coefficients(self,
-        theta: np.array,
-        spin_orbit_coupling: float = 0.0
+        theta: np.array
 
     ):
         invk, beta = self.interaction.coefficients(theta)
 
-        A_utilde = np.einsum('i,ijk', beta, self.A_2 + spin_orbit_coupling*self.A_2_so)
+        A_utilde = np.einsum('i,ijk', beta, self.A_2)
         A = self.A_13 + A_utilde + invk * self.A_3_coulomb
 
-        b_utilde = beta @ (self.b_2 + spin_orbit_coupling*self.b_2_so)
+        b_utilde = beta @ self.b_2
         b = self.b_13 + b_utilde + invk * self.b_3_coulomb
 
         return np.linalg.solve(A, b)
 
 
     def emulate_wave_function(self,
-        theta: np.array,
-        spin_orbit_coupling: float = 0.0
+        theta: np.array
     ):
-        x = self.coefficients(theta, spin_orbit_coupling=spin_orbit_coupling)
+        x = self.coefficients(theta)
         return self.basis.phi_hat(x)
     
 
     def emulate_phase_shift(self,
-        theta: np.array,
-        spin_orbit_coupling: float = 0.0
+        theta: np.array
     ):
-        x = self.coefficients(theta, spin_orbit_coupling=spin_orbit_coupling)
+        x = self.coefficients(theta)
         phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
         phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])
 

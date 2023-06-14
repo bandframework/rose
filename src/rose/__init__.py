@@ -1,5 +1,6 @@
 from .interaction import Interaction, MN_Potential, InteractionSpace
-from .interaction_eim import InteractionEIM, Optical_Potential, EnergizedInteractionEIM
+from .interaction_eim import InteractionEIM, Optical_Potential
+from .energized_interaction_eim import EnergizedInteractionEIM
 from .schroedinger import SchroedingerEquation
 from . import constants, metrics
 from .reduced_basis_emulator import ReducedBasisEmulator

@@ -8,7 +8,7 @@ from mpmath import coulombf
 
 from .constants import HBARC
 from .schroedinger import SchroedingerEquation
-from .interaction_eim import EnergizedInteractionEIM
+from .energized_interaction_eim import EnergizedInteractionEIM
 
 class Basis:
 

@@ -34,14 +34,14 @@ class ScatteringAmplitudeEmulator:
         for l in tqdm(range(l_max+1)):
             if interaction.include_spin_orbit:
                 basis_plus = RelativeBasis(
-                    SchroedingerEquation(interaction, hifi_tolerances=hf_tols, spin_orbit_coupling=l/2),
+                    SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
                     theta_train, s_mesh, n_basis, l, use_svd
                 )
                 if l == 0:
                     bases.append([basis_plus])
 
                 basis_minus = RelativeBasis(
-                    SchroedingerEquation(interaction, hifi_tolerances=hf_tols, spin_orbit_coupling=(-l-1)/2),
+                    SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
                     theta_train, s_mesh, n_basis, l, use_svd
                 )
                 bases.append([basis_plus, basis_minus])

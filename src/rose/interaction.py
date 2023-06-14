@@ -4,8 +4,8 @@ Includes some "hard-coded" interactions.
 '''
 from typing import Callable
 import numpy as np
-
 from .constants import HBARC, ALPHA
+from .spin_orbit import SpinOrbitTerm
 
 class Interaction:
     '''
@@ -16,24 +16,25 @@ class Interaction:
         n_theta: int, # How many parameters does the interaction have?
         mu: float, # reduced mass (MeV)
         energy: float, # E_{c.m.}
+        ell: int,
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
         is_complex: bool = False,
-        spin_orbit_potential: Callable[[float, np.array, float], float] = None #V_{SO}(r, theta, l•s)
+        spin_orbit_term: SpinOrbitTerm = None
     ):
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
+        self.ell = ell
         self.k_c = ALPHA * Z_1*Z_2 * self.mu
         # self.eta = ALPHA * Z_1 * Z_2 * self.mu / self.k
         self.is_complex = is_complex
+        self.spin_orbit_term = spin_orbit_term
 
-        if spin_orbit_potential:
-            self.spin_orbit_potential = spin_orbit_potential
-            self.include_spin_orbit = True
-        else:
-            self.spin_orbit_potential = lambda s, alpha, lds: 0.0
+        if spin_orbit_term is None:
             self.include_spin_orbit = False
+        else:
+            self.include_spin_orbit = True
 
         if energy:
             # If the energy is specified (not None as it is when subclass
@@ -51,8 +52,7 @@ class Interaction:
 
     def tilde(self,
         s: float,
-        alpha: np.array,
-        spin_orbit_coupling: float = 0
+        alpha: np.array
     ):
         '''
         tilde{U}(s, alpha, E)
@@ -61,10 +61,9 @@ class Interaction:
         alpha are the parameters we are varying
         E = E_{c.m.}, [E] = MeV = [v_r]
         '''
-        return  1.0/self.energy * (
-            self.v_r(s/self.k, alpha) + \
-            self.spin_orbit_potential(s/self.k, alpha, spin_orbit_coupling)
-        )
+        vr = self.v_r(s/self.k, alpha)
+        vr += self.spin_orbit_term.spin_orbit_potential(s/self.k, alpha) if self.include_spin_orbit else 0
+        return  1.0/self.energy * vr
 
 
     def basis_functions(self,
@@ -79,7 +78,7 @@ class Interaction:
         rho_mesh: np.array
     ):
         return np.array([
-            self.spin_orbit_potential(rho_mesh, row, 1) for row in np.eye(self.n_theta)
+            self.spin_orbit_term.spin_orbit_potential(rho_mesh, row, 1) for row in np.eye(self.n_theta)
         ]).T
     
 
@@ -118,7 +117,8 @@ MN_Potential = Interaction(
     mn_potential,
     2,
     MU_NN,
-    50
+    50,
+    0
 )
 
 def complex_mn_potential(r, args):
@@ -131,5 +131,6 @@ Complex_MN_Potential = Interaction(
     2,
     MU_NN,
     50,
+    0,
     is_complex = True
 )

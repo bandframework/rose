@@ -9,6 +9,7 @@ from scipy.stats import qmc
 
 from .interaction import Interaction
 from .constants import HBARC, DEFAULT_RHO_MESH
+from .spin_orbit import SpinOrbitTerm
 
 def max_vol(basis, indxGuess):
     # basis looks like a long matrix, the columns are the "pillars" V_i(x):
@@ -49,11 +50,12 @@ class InteractionEIM(Interaction):
         n_theta: int, # How many parameters does the interaction have?
         mu: float, # reduced mass (MeV)
         energy: float, # E_{c.m.}
+        ell: int,
         training_info: np.array,
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
         is_complex: bool = False,
-        spin_orbit_potential: Callable[[float, np.array, float], float] = None, #V_{SO}(r, theta, l•s)
+        spin_orbit_term: SpinOrbitTerm = None,
         n_basis: int = None,
         explicit_training: bool = False,
         n_train: int = 1000,
@@ -81,8 +83,8 @@ class InteractionEIM(Interaction):
 
         '''
 
-        super().__init__(coordinate_space_potential, n_theta, mu, energy,
-            Z_1=Z_1, Z_2=Z_2, is_complex=is_complex, spin_orbit_potential=spin_orbit_potential)
+        super().__init__(coordinate_space_potential, n_theta, mu, energy, ell,
+            Z_1=Z_1, Z_2=Z_2, is_complex=is_complex, spin_orbit_term=spin_orbit_term)
 
         # Generate a basis used to approximate the potential.
         # Did the user specify the training points?
@@ -151,10 +153,12 @@ class EnergizedInteractionEIM(Interaction):
         coordinate_space_potential: Callable[[float, np.array], float], # V(r, theta)
         n_theta: int, # How many parameters does the interaction have?
         mu: float, # reduced mass (MeV)
+        ell: int,
         training_info: np.array,
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
         is_complex: bool = False,
+        spin_orbit_term: SpinOrbitTerm = None,
         n_basis: int = None,
         explicit_training: bool = False,
         n_train: int = 1000,
@@ -165,8 +169,8 @@ class EnergizedInteractionEIM(Interaction):
         #     training_info, Z_1=Z_1, Z_2=Z_2, is_complex=is_complex, n_basis=n_basis,
         #     explicit_training=explicit_training, n_train=n_train,
         #     rho_mesh=rho_mesh, match_points=match_points)
-        super().__init__(coordinate_space_potential, n_theta, mu, None,
-            Z_1=Z_1, Z_2=Z_2, is_complex=is_complex)
+        super().__init__(coordinate_space_potential, n_theta, mu, None, ell,
+            Z_1=Z_1, Z_2=Z_2, is_complex=is_complex, spin_orbit_term=spin_orbit_term)
 
         # Generate a basis used to approximate the potential.
         # Did the user specify the training points?
@@ -299,6 +303,7 @@ Optical_Potential = InteractionEIM(
     7,
     MU_NN,
     50,
+    0,
     BOUNDS,
     is_complex = True
 )

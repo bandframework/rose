@@ -37,32 +37,17 @@ class ReducedBasisEmulator:
     def from_train(cls,
         interaction: Interaction,
         theta_train: np.array, # training points in parameter space
-        ell: int, # angular momentum
         n_basis: int = 4, # How many basis vectors?
         use_svd: bool = True, # Use principal components as basis vectors?
         s_mesh: np.array = DEFAULT_RHO_MESH, # s = rho = kr; solutions are phi(s)
         s_0: float = 6*np.pi, # phase shift is "extracted" at s_0
         hf_tols: list = None, # 2 numbers: high-fidelity solver tolerances, relative and absolute
     ):
-        if interaction.include_spin_orbit:
-            basis_plus = RelativeBasis(
-                SchroedingerEquation(interaction, hifi_tolerances=hf_tols, spin_orbit_coupling=ell/2),
-                theta_train, s_mesh, n_basis, ell, use_svd
-            )
-            if ell == 0:
-                return [cls(interaction, basis_plus, s_0=s_0)]
-
-            basis_minus = RelativeBasis(
-                SchroedingerEquation(interaction, hifi_tolerances=hf_tols, spin_orbit_coupling=(-ell-1)/2),
-                theta_train, s_mesh, n_basis, ell, use_svd
-            )
-            return [cls(interaction, basis_plus, s_0=s_0), cls(interaction, basis_minus, s_0=s_0)]
-        else:
-            basis = RelativeBasis(
-                SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
-                theta_train, s_mesh, n_basis, ell, use_svd
-            )
-            return [cls(interaction, basis, s_0=s_0)]
+        basis = RelativeBasis(
+            SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
+            theta_train, s_mesh, n_basis, interaction.ell, use_svd
+        )
+        return [cls(interaction, basis, s_0=s_0)]
 
 
     def __init__(self,

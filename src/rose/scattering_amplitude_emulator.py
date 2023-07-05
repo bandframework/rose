@@ -141,16 +141,22 @@ will NOT be communicated to the user's own high-fidelity solver.
 
 
     def emulate_total_cross_section(self,
-        theta: np.array
+        theta: np.array,
+        rel_ruth: bool = True
     ):
         '''
         Gives the "total" (angle-integrated) cross section.
         See Eq. (3.1.50) in Thompson and Nunes.
+        :param rel_ruth: Report the total cross section relative to Rutherford?
         '''
-        k = self.rbes[0].interaction.momentum(theta)
-        S = np.exp(2j*np.array(self.emulate_phase_shifts(theta)))
-        return 4*np.pi/k**2 * \
-            np.sum(np.array([(2*l + 1) * np.conj(1-s) * (1-s) for (l, s) in enumerate(S)]))
+        dsdo = self.emulate_dsdo(theta)
+
+        if rel_ruth:
+            k = self.rbes[0].interaction.momentum(theta)
+            eta = self.rbes[0].interaction.k_c / k
+            return dsdo / (eta**2 / (4*k**2*np.sin(self.angles/2)**4))
+        else:
+            return dso
 
 
     def save(self, filename):

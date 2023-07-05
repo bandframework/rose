@@ -62,8 +62,8 @@ class ScatteringAmplitudeEmulator:
         bases_types = [isinstance(bases[l], CustomBasis) for l in range(self.l_max+1)]
         if np.any(bases_types) and verbose:
             print('''
-NOTE: When supplying a CustomBasis, the ROSE high-fidelity solver is \
-instantiated for the sake of future evaluations.  Any requests to the solver \
+NOTE: When supplying a CustomBasis, the ROSE high-fidelity solver is \n
+instantiated for the sake of future evaluations.  Any requests to the solver \n
 will NOT be communicated to the user's own high-fidelity solver.
 ''')
         for l in range(self.l_max + 1):

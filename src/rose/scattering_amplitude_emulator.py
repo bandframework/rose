@@ -118,7 +118,7 @@ will NOT be communicated to the user's own high-fidelity solver.
         f_c = -eta / (2*k*sin2) * np.exp(-1j*eta*np.log(sin2) + 2j*sigma_l[0])
 
         f = f_n + f_c
-        return np.conj(f) * f
+        return (np.conj(f) * f).real
 
 
     def emulate_wave_functions(self,

@@ -1,6 +1,6 @@
 import pickle
 import numpy as np
-from scipy.special import eval_legendre
+from scipy.special import eval_legendre, gamma
 from tqdm import tqdm 
 
 from .interaction import Interaction
@@ -104,12 +104,18 @@ will NOT be communicated to the user's own high-fidelity solver.
         Gives the differential cross section (dsigma/dOmega = dsdo).
         '''
         k = self.rbes[0].interaction.momentum(theta)
-        Sls = np.array([rbe.S_matrix_element(theta) for rbe in self.rbes])
-        f = np.array([
-            -1j/(2*k) * (2*l + 1) * \
-                eval_legendre(l, np.cos(self.angles)) * (Sl - 1) for (l, Sl) in enumerate(Sls)
-        ])
-        f = np.sum(f, axis=0)
+        eta = self.rbes[0].interaction.k_c / k
+        sigma_l = np.angle(gamma(1 + np.arange(self.l_max+1) + 1j*eta))
+        S_n = np.exp(2j*np.array([self.emulate_phase_shifts(theta)]))
+        f_n = np.sum(np.array([
+            1/(2j*k) * (2*l + 1) * \
+                eval_legendre(l, np.cos(self.angles)) * np.exp(2j*sigma_l) * (S_n - 1) for (l, Sl) in enumerate(S_n)
+        ]), axis=0)
+
+        sin2 = np.sin(self.angles/2)**2
+        f_c = -eta / (2*k*sin2) * np.exp(-1j*eta*np.log(sin2) + 2j*sigma_l[0])
+
+        f = f_n + f_c
         return np.conj(f) * f
 
 
@@ -142,8 +148,7 @@ will NOT be communicated to the user's own high-fidelity solver.
         See Eq. (3.1.50) in Thompson and Nunes.
         '''
         k = self.rbes[0].interaction.momentum(theta)
-        phase_shifts = np.array(self.emulate_phase_shifts(theta))
-        S = np.exp(2j*phase_shifts)
+        S = np.exp(2j*np.array(self.emulate_phase_shifts(theta)))
         return 4*np.pi/k**2 * \
             np.sum(np.array([(2*l + 1) * np.conj(1-s) * (1-s) for (l, s) in enumerate(S)]))
 

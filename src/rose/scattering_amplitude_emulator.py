@@ -105,12 +105,14 @@ will NOT be communicated to the user's own high-fidelity solver.
         '''
         k = self.rbes[0].interaction.momentum(theta)
         eta = self.rbes[0].interaction.k_c / k
-        sigma_l = np.angle(gamma(1 + np.arange(self.l_max+1) + 1j*eta))
-        S_n = np.exp(2j*np.array([self.emulate_phase_shifts(theta)]))
-        f_n = np.sum(np.array([
-            1/(2j*k) * (2*l + 1) * \
-                eval_legendre(l, np.cos(self.angles)) * np.exp(2j*sigma_l) * (S_n - 1) for (l, Sl) in enumerate(S_n)
-        ]), axis=0)
+        ls = np.arange(self.l_max+1)[:, np.newaxis]
+        sigma_l = np.angle(gamma(1 + ls + 1j*eta))
+        S_n = np.exp(2j*np.array(self.emulate_phase_shifts(theta)))[:, np.newaxis]
+        f_n = np.sum(
+            1/(2j*k) * (2*ls + 1) * \
+                eval_legendre(ls, np.cos(self.angles)) * np.exp(2j*sigma_l) * (S_n - 1),
+            axis=0
+        )
 
         sin2 = np.sin(self.angles/2)**2
         f_c = -eta / (2*k*sin2) * np.exp(-1j*eta*np.log(sin2) + 2j*sigma_l[0])

@@ -156,7 +156,7 @@ will NOT be communicated to the user's own high-fidelity solver.
             eta = self.rbes[0].interaction.k_c / k
             return dsdo / (eta**2 / (4*k**2*np.sin(self.angles/2)**4))
         else:
-            return dso
+            return dsdo
 
 
     def save(self, filename):

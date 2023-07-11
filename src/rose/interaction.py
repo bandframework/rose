@@ -80,7 +80,7 @@ class Interaction:
         '''
         Return 1/k and alpha
         '''
-        return 1, alpha
+        return 1/self.k, alpha
     
 
     def eta(self,

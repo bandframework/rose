@@ -1,1 +1,8 @@
-site_name: My Docs
+site_name: ROSE
+
+plugins:
+- search
+- mkdocstrings
+
+theme:
+  name: material

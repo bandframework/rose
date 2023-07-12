@@ -3,9 +3,9 @@ import numpy as np
 from scipy.special import eval_legendre, gamma
 from tqdm import tqdm 
 
-from .interaction import Interaction, InteractionSpace
+from .interaction import InteractionSpace
 from .reduced_basis_emulator import ReducedBasisEmulator
-from .constants import DEFAULT_RHO_MESH, DEFAULT_ANGLE_MESH, HBARC
+from .constants import DEFAULT_RHO_MESH, DEFAULT_ANGLE_MESH
 from .schroedinger import SchroedingerEquation
 from .basis import RelativeBasis, CustomBasis
 
@@ -67,29 +67,31 @@ will NOT be communicated to the user's own high-fidelity solver.
                 (interaction, basis) in zip(interaction_list, basis_list)])
 
 
-    def predict(self, alpha):
-        k = self.rbes[0][0].interaction.momentum(alpha)
-        phase_shifts = np.array([
-            rbe.emulate_phase_shift(alpha) for rbe in self.rbes
-        ])
-        tl = np.exp(1j*phase_shifts) * np.sin(phase_shifts)
-        f = np.array([
-            1/k * (2*l+1) * eval_legendre(l, np.cos(self.angles)) * t for (l, t) in enumerate(tl)
-        ])
-        return np.sum(f, axis=0)
-    
+        # Let's precompute the things we can.
+        self.ls = np.arange(self.l_max+1)[:, np.newaxis]
+        self.P_l_costheta = eval_legendre(self.ls, np.cos(self.angles))
+        # Coulomb scattering amplitude
+        # (This is dangerous because it's not fixed when we emulate across
+        # energies, BUT we don't do that with Coulomb (yet). When we do emulate
+        # across energies, f_c is zero anyway.)
+        k = self.rbes[0][0].interaction.momentum(None)
+        self.k_c = self.rbes[0][0].interaction.k_c
+        self.eta = self.k_c / k
+        self.sigma_l = np.angle(gamma(1 + self.ls + 1j*self.eta))
+        sin2 = np.sin(self.angles/2)**2
+        self.f_c = -self.eta / (2*k*sin2) * np.exp(-1j*self.eta*np.log(sin2) + 2j*self.sigma_l[0])
+        self.rutherford = self.eta**2 / (4*k**2*np.sin(self.angles/2)**4)
 
-    def exact(self, alpha: np.array):
-        k = self.rbes[0].interaction.momentum(alpha)
-        phase_shifts = np.array([
-            rbe.exact_phase_shift(alpha) for rbe in self.rbes
-        ])
-        tl = np.exp(1j*phase_shifts) * np.sin(phase_shifts)
-        f = np.array([
-            1/k * (2*l+1) * eval_legendre(l, np.cos(self.angles)) * t for (l, t) in enumerate(tl)
-        ])
-        return np.sum(f, axis=0)
-    
+
+    def emulate_phase_shifts(self,
+        theta: np.array
+    ):
+        '''
+        Gives the phase shifts for each partial wave.
+        Order is [l=0, l=1, ..., l=l_max-1].
+        '''
+        return [[rbe.emulate_phase_shift(theta) for rbe in rbe_list] for rbe_list in self.rbes]
+
 
     def emulate_dsdo(self,
         theta: np.array
@@ -97,22 +99,30 @@ will NOT be communicated to the user's own high-fidelity solver.
         '''
         Gives the differential cross section (dsigma/dOmega = dsdo).
         '''
-        k = self.rbes[0].interaction.momentum(theta)
-        eta = self.rbes[0].interaction.k_c / k
-        ls = np.arange(self.l_max+1)[:, np.newaxis]
-        sigma_l = np.angle(gamma(1 + ls + 1j*eta))
-        S_n = np.exp(2j*np.array(self.emulate_phase_shifts(theta)))[:, np.newaxis]
-        f_n = np.sum(
-            1/(2j*k) * (2*ls + 1) * \
-                eval_legendre(ls, np.cos(self.angles)) * np.exp(2j*sigma_l) * (S_n - 1),
+        k = self.rbes[0][0].interaction.momentum(theta)
+
+        # Coulomb-distorted, nuclear scattering amplitude
+        deltas = self.emulate_phase_shifts(theta)
+        S_l_plus = np.array([np.exp(2j*d[0]) for d in deltas])[:, np.newaxis]
+        if self.rbes[0][0].interaction.include_spin_orbit:
+            S_l_minus = np.array([0] + [np.exp(2j*d[1]) for d in deltas[1:]])[:, np.newaxis]
+        else:
+            S_l_minus = S_l_plus.copy()
+        A = self.f_c + 1/(2j*k) * np.sum(
+            np.exp(2j*self.sigma_l) * ((self.ls+1)*(S_l_plus - 1) + \
+                self.ls*(S_l_minus - 1)) * self.P_l_costheta,
+            axis=0
+        )
+        B = 1/(2j*k) * np.sum(
+            np.exp(2j*self.sigma_l) * (S_l_plus - S_l_minus) * self.P_l_costheta,
             axis=0
         )
 
-        sin2 = np.sin(self.angles/2)**2
-        f_c = -eta / (2*k*sin2) * np.exp(-1j*eta*np.log(sin2) + 2j*sigma_l[0])
-
-        f = f_n + f_c
-        return (np.conj(f) * f).real
+        dsdo = (np.conj(A)*A + np.conj(B)*B).real
+        if self.k_c > 0:
+            return dsdo / self.rutherford
+        else:
+            return dsdo
 
 
     def emulate_wave_functions(self,
@@ -126,16 +136,6 @@ will NOT be communicated to the user's own high-fidelity solver.
         return [[x.emulate_wave_function(theta) for x in rbe] for rbe in self.rbes]
 
 
-    def emulate_phase_shifts(self,
-        theta: np.array
-    ):
-        '''
-        Gives the phase shifts for each partial wave.
-        Order is [l=0, l=1, ..., l=l_max-1].
-        '''
-        return [[rbe.emulate_phase_shift(theta) for rbe in rbe_list] for rbe_list in self.rbes]
-
-
     def emulate_total_cross_section(self,
         theta: np.array,
         rel_ruth: bool = True
@@ -145,14 +145,8 @@ will NOT be communicated to the user's own high-fidelity solver.
         See Eq. (3.1.50) in Thompson and Nunes.
         :param rel_ruth: Report the total cross section relative to Rutherford?
         '''
-        dsdo = self.emulate_dsdo(theta)
-
-        if rel_ruth:
-            k = self.rbes[0].interaction.momentum(theta)
-            eta = self.rbes[0].interaction.k_c / k
-            return dsdo / (eta**2 / (4*k**2*np.sin(self.angles/2)**4))
-        else:
-            return dsdo
+        # What do we do here when Coulomb and/or spin-orbit is present?
+        return None
 
 
     def save(self, filename):

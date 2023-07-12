@@ -47,8 +47,8 @@ class TestSchrEq(unittest.TestCase):
             [2.0, 4.0],
             [0.8, 1.2]
         ])
-        energized_interaction = rose.interaction_eim.EnergizedInteractionEIM(
-            potential, 3, mu, train, Z_1=z, Z_2=z, n_train=20
+        energized_interaction = rose.EnergizedInteractionEIM(
+            potential, 3, mu, ell, train, Z_1=z, Z_2=z, n_train=20
         )
         se2 = rose.SchroedingerEquation(energized_interaction)
 

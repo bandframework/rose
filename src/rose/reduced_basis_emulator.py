@@ -37,7 +37,6 @@ class ReducedBasisEmulator:
     def from_train(cls,
         interaction: Interaction,
         theta_train: np.array, # training points in parameter space
-        ell: int, # angular momentum
         n_basis: int = 4, # How many basis vectors?
         use_svd: bool = True, # Use principal components as basis vectors?
         s_mesh: np.array = DEFAULT_RHO_MESH, # s = rho = kr; solutions are phi(s)
@@ -46,11 +45,7 @@ class ReducedBasisEmulator:
     ):
         basis = RelativeBasis(
             SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
-            theta_train,
-            s_mesh,
-            n_basis,
-            ell,
-            use_svd
+            theta_train, s_mesh, n_basis, interaction.ell, use_svd
         )
         return cls(interaction, basis, s_0=s_0)
 
@@ -65,8 +60,7 @@ class ReducedBasisEmulator:
         self.l = self.basis.l
 
         if isinstance(self.basis, CustomBasis):
-            self.basis.solver = SchroedingerEquation(interaction)
-        self.se = self.basis.solver
+            self.basis.solver = basis.solver
 
         self.s_mesh = np.copy(basis.rho_mesh)
 
@@ -132,6 +126,7 @@ class ReducedBasisEmulator:
 
     def coefficients(self,
         theta: np.array
+
     ):
         invk, beta = self.interaction.coefficients(theta)
 
@@ -186,7 +181,7 @@ class ReducedBasisEmulator:
 
 
     def exact_phase_shift(self, theta: np.array):
-        return self.se.delta(theta, self.s_mesh[[0, -1]], self.l, self.s_0)
+        return self.basis.solver.delta(theta, self.s_mesh[[0, -1]], self.l, self.s_0)
     
 
     def save(self, filename):

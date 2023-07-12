@@ -4,8 +4,8 @@ Includes some "hard-coded" interactions.
 '''
 from typing import Callable
 import numpy as np
-
 from .constants import HBARC, ALPHA
+from .spin_orbit import SpinOrbitTerm
 
 class Interaction:
     '''
@@ -16,16 +16,26 @@ class Interaction:
         n_theta: int, # How many parameters does the interaction have?
         mu: float, # reduced mass (MeV)
         energy: float, # E_{c.m.}
+        ell: int,
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
-        is_complex: bool = False
+        is_complex: bool = False,
+        spin_orbit_term: SpinOrbitTerm = None
     ):
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
+        self.ell = ell
         self.k_c = ALPHA * Z_1*Z_2 * self.mu
         # self.eta = ALPHA * Z_1 * Z_2 * self.mu / self.k
         self.is_complex = is_complex
+        self.spin_orbit_term = spin_orbit_term
+
+        if spin_orbit_term is None:
+            self.include_spin_orbit = False
+        else:
+            self.include_spin_orbit = True
+
         if energy:
             # If the energy is specified (not None as it is when subclass
             # EnergizedInteraction instantiates), set up associated attributes.
@@ -51,7 +61,9 @@ class Interaction:
         alpha are the parameters we are varying
         E = E_{c.m.}, [E] = MeV = [v_r]
         '''
-        return  1.0/self.energy * self.v_r(s/self.k, alpha)
+        vr = self.v_r(s/self.k, alpha)
+        vr += self.spin_orbit_term.spin_orbit_potential(s/self.k, alpha) if self.include_spin_orbit else 0
+        return  1.0/self.energy * vr
 
 
     def basis_functions(self,
@@ -68,7 +80,7 @@ class Interaction:
         '''
         Return 1/k and alpha
         '''
-        return 1, alpha
+        return 1/self.k, alpha
     
 
     def eta(self,
@@ -97,7 +109,8 @@ MN_Potential = Interaction(
     mn_potential,
     2,
     MU_NN,
-    50
+    50,
+    0
 )
 
 def complex_mn_potential(r, args):
@@ -110,5 +123,41 @@ Complex_MN_Potential = Interaction(
     2,
     MU_NN,
     50,
+    0,
     is_complex = True
 )
+
+def couplings(l):
+    if l == 0:
+        return [l/2]
+    else:
+        return [l/2, -(l+1)/2]
+
+
+class InteractionSpace:
+    def __init__(self,
+        coordinate_space_potential: Callable[[float, np.array], float], # V(r, theta)
+        n_theta: int, # How many parameters does the interaction have?
+        mu: float, # reduced mass (MeV)
+        energy: float, # E_{c.m.}
+        l_max: int,
+        Z_1: int = 0, # atomic number of particle 1
+        Z_2: int = 0, # atomic number of particle 2
+        is_complex: bool = False,
+        spin_orbit_potential: Callable[[float, np.array, float], float] = None #V_{SO}(r, theta, l•s)
+    ):
+        self.interactions = []
+        if spin_orbit_potential is None:
+            for l in range(l_max+1):
+                self.interactions.append(
+                    [Interaction(coordinate_space_potential, n_theta, mu,
+                        energy, l, Z_1=Z_1, Z_2=Z_2, is_complex=is_complex)]
+                )
+        else:
+            for l in range(l_max+1):
+                self.interactions.append(
+                    [Interaction(coordinate_space_potential, n_theta, mu,
+                        energy, l, Z_1=Z_1, Z_2=Z_2, is_complex=is_complex,
+                        spin_orbit_term=SpinOrbitTerm(spin_orbit_potential, lds))
+                        for lds in couplings(l)]
+                )

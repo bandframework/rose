@@ -74,7 +74,8 @@ class SchroedingerEquation:
         
         sol = solve_ivp(
             lambda s, phi: np.array([phi[1],
-                (self.interaction.tilde(s, alpha) + 2*self.interaction.eta(alpha)/s + l*(l+1)/s**2 - 1.0) * phi[0]]),
+                (self.interaction.tilde(s, alpha) + \
+                 2*self.interaction.eta(alpha)/s + l*(l+1)/s**2 - 1.0) * phi[0]]),
             s_endpts, initial_conditions, rtol=self.rel_tol, atol=self.abs_tol,
             dense_output=True, **solve_ivp_kwargs
         )
@@ -137,4 +138,3 @@ class SchroedingerEquation:
         '''
         phi = self.phi(alpha, s_mesh, l, **solve_ivp_kwargs)
         return phi / np.max(np.abs(phi))
-

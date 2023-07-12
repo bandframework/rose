@@ -3,7 +3,7 @@ import numpy as np
 from scipy.special import eval_legendre, gamma
 from tqdm import tqdm 
 
-from .interaction import Interaction
+from .interaction import Interaction, InteractionSpace
 from .reduced_basis_emulator import ReducedBasisEmulator
 from .constants import DEFAULT_RHO_MESH, DEFAULT_ANGLE_MESH, HBARC
 from .schroedinger import SchroedingerEquation
@@ -20,7 +20,7 @@ class ScatteringAmplitudeEmulator:
 
     @classmethod
     def from_train(cls,
-        interaction: Interaction,
+        interaction_space: InteractionSpace,
         theta_train: np.array,
         l_max: int,
         angles: np.array = DEFAULT_ANGLE_MESH,
@@ -30,23 +30,19 @@ class ScatteringAmplitudeEmulator:
         s_0: float = 6*np.pi,
         hf_tols: list = None
     ):
-        solver = SchroedingerEquation(interaction, hifi_tolerances=hf_tols)
-        
         bases = []
-        for l in tqdm(range(l_max+1)):
-            bases.append(RelativeBasis(
-                solver,
-                theta_train,
-                s_mesh,
-                n_basis,
-                l,
-                use_svd
-            ))
-        return cls(interaction, bases, l_max, angles=angles, s_0=s_0)
+        for interaction_list in tqdm(interaction_space.interactions):
+            basis_list = [RelativeBasis(
+                SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
+                theta_train, s_mesh, n_basis, interaction.ell, use_svd
+            ) for interaction in interaction_list]
+            bases.append(basis_list)
+
+        return cls(interaction_space, bases, l_max, angles=angles, s_0=s_0)
 
 
     def __init__(self,
-        interaction: Interaction,
+        interaction_space: InteractionSpace,
         bases: list,
         l_max: int,
         angles: np.array = DEFAULT_ANGLE_MESH,
@@ -58,7 +54,6 @@ class ScatteringAmplitudeEmulator:
         '''
         self.l_max = l_max
         self.angles = angles.copy()
-        self.rbes = []
         bases_types = [isinstance(bases[l], CustomBasis) for l in range(self.l_max+1)]
         if np.any(bases_types) and verbose:
             print('''
@@ -66,15 +61,14 @@ NOTE: When supplying a CustomBasis, the ROSE high-fidelity solver is \n
 instantiated for the sake of future evaluations.  Any requests to the solver \n
 will NOT be communicated to the user's own high-fidelity solver.
 ''')
-        for l in range(self.l_max + 1):
-            self.rbes.append(
-                ReducedBasisEmulator(
-                    interaction, bases[l], s_0=s_0
-                )
-            )
+        self.rbes = []
+        for (interaction_list, basis_list) in zip(interaction_space.interactions, bases):
+            self.rbes.append([ReducedBasisEmulator(interaction, basis, s_0=s_0) for
+                (interaction, basis) in zip(interaction_list, basis_list)])
+
 
     def predict(self, alpha):
-        k = self.rbes[0].interaction.momentum(alpha)
+        k = self.rbes[0][0].interaction.momentum(alpha)
         phase_shifts = np.array([
             rbe.emulate_phase_shift(alpha) for rbe in self.rbes
         ])
@@ -129,7 +123,7 @@ will NOT be communicated to the user's own high-fidelity solver.
         Returns a list of arrays.
         Order is [l=0, l=1, ..., l=l_max-1].
         '''
-        return [rbe.emulate_wave_function(theta) for rbe in self.rbes]
+        return [[x.emulate_wave_function(theta) for x in rbe] for rbe in self.rbes]
 
 
     def emulate_phase_shifts(self,
@@ -139,7 +133,7 @@ will NOT be communicated to the user's own high-fidelity solver.
         Gives the phase shifts for each partial wave.
         Order is [l=0, l=1, ..., l=l_max-1].
         '''
-        return [rbe.emulate_phase_shift(theta) for rbe in self.rbes]
+        return [[rbe.emulate_phase_shift(theta) for rbe in rbe_list] for rbe_list in self.rbes]
 
 
     def emulate_total_cross_section(self,

@@ -4,9 +4,6 @@ dist/rose*.*
 *.pyc
 tests/*.ipynb
 tests/.ipynb_checkpoints
-docs/html
-docs/generated
-docs/_*/
 src/rose.egg-info/
 src/rose.egg-info/PKG-INFO
 src/rose.egg-info/SOURCES.txt

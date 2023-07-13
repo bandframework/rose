@@ -1,7 +1,7 @@
-# Code Documentation
+# Documentation
 
 Hello!
 
 ## ReducedBasisEmulator
 
-::: rose.reduced_basis_emulator.ReducedBasisEmulator
+::: rose.reduced_basis_emulator

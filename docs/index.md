@@ -1,17 +1,32 @@
-# Welcome to MkDocs
+# Overview
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+## What is ROSE?
 
-## Commands
+ROSE = Reduced-Order Scattering Emulator
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+`rose` is a Python package, [available on GitHub](https://github.com/odell/rose)
+that enables aspiring graduate students and long-suffering postdocs to emulate
+nuclear scattering observables with optical potentials, trading negligible
+amounts of accuracy for orders-of-magnitude gains in speed.
 
-## Project layout
+Specifically, `rose` supports user-defined, local, complex potentials. The
+[Koning-Delaroche](https://www.sciencedirect.com/science/article/pii/S0375947402013210)
+potential, albeit in simplified form[^1], is hard-coded into `rose` as
+`KoningDelaroche`.
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+Life is full of choices, and many of those choices deal with how you're going to
+spend your time. Do you really want to spend years of your life, and possibly
+the lives of your successors, waiting for some computer to finish calculating a
+cross section? No, you don't. What if you could obtain those results in minutes
+at the cost of a few significant digits that you weren't going to look at
+anyway? What if you had a plot to help you make these difficult decisions? Like
+this one:
+
+![CAT Plot](CAT-40Cann.jpg)
+
+If only the rest of life was so accommodating.
+
+For more details about `rose`, see our organic, artisanal, free-range
+[documentation](reference.md). Or start with the [tutorials](tutorials.md).
+
+[^1]: Take Eq. 2 and ignore the energy dependence of the coefficients.

@@ -5,6 +5,8 @@ partial wave.
 It instantiates a Basis and precomputes the integrals it can with the basis
 states and operators. When the user asks for an emulated phase shift, the
 emulator computes the $\hat{\phi}$ coefficients.
+
+Kyle is the best everything! 
 '''
 import pickle
 import numpy as np
@@ -23,7 +25,6 @@ from .utility import finite_difference_first_derivative, finite_difference_secon
 
 class ReducedBasisEmulator:
     '''
-    Kyle is the best everything! 
 
     A ReducedBasisEmulator (RBE) uses the specified `interaction` and `theta_train`
     to generate solutions to the Schrödinger equation at a specific energy

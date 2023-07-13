@@ -14,7 +14,7 @@ DEFAULT_R_MAX = 30.0 # fm
 DEFAULT_R_0 = 20.0 # fm
 DEFAULT_NUM_PTS = 2000
 MAX_STEPS = 20000
-PHI_THRESHOLD = 1e-12
+PHI_THRESHOLD = 1e-10
 
 def Gamow_factor(l, eta):
     if eta == 0.0:

@@ -8,5 +8,13 @@ theme:
   name: material
 
 nav:
+  - index.md
   - tutorials.md
   - Code Documentation: reference.md
+
+search:
+  ranking:
+    src/rose: 10
+
+watch:
+- src

@@ -1,5 +1,10 @@
 '''
-Defines a ReducedBasisEmulator.
+A ReducedBasisEmulator builds the reduced basis for a given interaction and
+partial wave.
+
+It instantiates a Basis and precomputes the integrals it can with the basis
+states and operators. When the user asks for an emulated phase shift, the
+emulator computes the coefficients to the $\hat{\phi}$ expansion.
 '''
 import pickle
 import numpy as np
@@ -18,7 +23,7 @@ from .utility import finite_difference_first_derivative, finite_difference_secon
 
 class ReducedBasisEmulator:
     '''
-    A ReducedBasisEmulator (RBE) uses the specified interaction and theta_train
+    A ReducedBasisEmulator (RBE) uses the specified `interaction` and `theta_train`
     to generate solutions to the Schrödinger equation at a specific energy
     (energy) and partial wave (l).
 

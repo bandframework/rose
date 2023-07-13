@@ -6,3 +6,7 @@ plugins:
 
 theme:
   name: material
+
+nav:
+  - tutorials.md
+  - Code Documentation: reference.md

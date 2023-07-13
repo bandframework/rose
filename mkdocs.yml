@@ -2,7 +2,10 @@ site_name: ROSE
 
 plugins:
 - search
-- mkdocstrings
+- mkdocstrings:
+    handlers:
+      python:
+        paths: [src]
 
 theme:
   name: material
@@ -12,9 +15,5 @@ nav:
   - tutorials.md
   - Code Documentation: reference.md
 
-search:
-  ranking:
-    src/rose: 10
-
 watch:
-- src
+- src/rose

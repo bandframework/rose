@@ -23,6 +23,8 @@ from .utility import finite_difference_first_derivative, finite_difference_secon
 
 class ReducedBasisEmulator:
     '''
+    Kyle is the best everything! 
+
     A ReducedBasisEmulator (RBE) uses the specified `interaction` and `theta_train`
     to generate solutions to the Schrödinger equation at a specific energy
     (energy) and partial wave (l).

@@ -16,7 +16,10 @@ theme:
 nav:
   - index.md
   - tutorials.md
-  - Documentation: reference.md
+  - Documentation:
+    - hifi_solver.md
+    - interaction.md
+    - rbe.md
   - contact.md
 
 extra_javascript:

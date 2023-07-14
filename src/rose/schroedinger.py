@@ -1,6 +1,5 @@
-'''
-Defines a class that provides simple methods for solving the Schrödinger
-equation (SE) in coordinate space.
+'''`SchroedingerEquation` is a high-fidelity, Schrödinger-equation solver for
+local, complex interactions.
 '''
 import numpy as np
 from scipy.integrate import solve_ivp
@@ -16,34 +15,25 @@ DEFAULT_NUM_PTS = 2000
 MAX_STEPS = 20000
 PHI_THRESHOLD = 1e-12
 
-def Gamow_factor(l, eta):
-    if eta == 0.0:
-        if l == 0:
-            return 1
-        else:
-            return 1 / (2*l + 1) * Gamow_factor(l-1, 0)
-    elif l == 0:
-        return np.sqrt(2*np.pi*eta / (np.exp(2*np.pi*eta)-1))
-    else:
-        return np.sqrt(l**2 + eta**2) / (l*(2*l+1)) * Gamow_factor(l-1, eta)
-
 class SchroedingerEquation:
+    '''
+    High-fidelity (HF) solver for optical potentials. How high-fidelity? You decide!
+    '''
     def __init__(self,
         interaction: Interaction,
-        hifi_tolerances: list = None
+        hifi_tolerances: list = [1e-12, 1e-12]
     ):
-        '''
-        Instantiates an object that stores the Interaction and makes it easy to
-        compute solutions to the Schrödinger equation and extract phase shifts
-        with that Interaction.
+        '''Solves the Shrödinger equation for local, complex potentials.
+        
+        Parameters:
+            interaction (Interaction): See [Interaction documentation](interaction.md).
+            hifi_tolerances (list): 2-element list of numbers: the relative
+                tolerance, `rel_tol`, and the absolute tolerance `abs_tol`
+
         '''
         self.interaction = interaction
-        if hifi_tolerances is None:
-            self.rel_tol = 1e-12
-            self.abs_tol = 1e-12
-        else:
-            self.rel_tol = hifi_tolerances[0]
-            self.abs_tol = hifi_tolerances[1]
+        self.rel_tol = hifi_tolerances[0]
+        self.abs_tol = hifi_tolerances[1]
 
 
     def solve_se(self,
@@ -54,11 +44,12 @@ class SchroedingerEquation:
         phi_threshold = PHI_THRESHOLD, # minimum phi value (zero below this value)
         **solve_ivp_kwargs
     ):
-        '''
-        Solves the reduced, radial Schrödinger equation.
-        Returns a 2-column matrix. The first is the r values. The second is the
-        reduced radial wavefunction, u(r). (The optional third - based on
-        return_uprime - is u'(r).)
+        '''Solves the reduced, radial Schrödinger equation.
+        
+        Returns:
+          2-column matrix (ndarray): The first is the r values. The second is
+          the reduced radial wavefunction, u(r). (The optional third - based on
+          return_uprime - is u'(r).)
         '''
 
         C_l = Gamow_factor(l, self.interaction.eta(alpha))
@@ -112,8 +103,7 @@ class SchroedingerEquation:
         phi_threshold: float = PHI_THRESHOLD,
         **solve_ivp_kwargs # passed to solve_se
     ):
-        '''
-        Computes phi(s_mesh)
+        '''Computes phi(s_mesh)
         '''
         if rho_0 is None:
             rho_0 = (phi_threshold / Gamow_factor(l, self.interaction.eta(alpha))) ** (1/(l+1))
@@ -138,3 +128,19 @@ class SchroedingerEquation:
         '''
         phi = self.phi(alpha, s_mesh, l, **solve_ivp_kwargs)
         return phi / np.max(np.abs(phi))
+
+
+def Gamow_factor(l, eta):
+    '''
+    This returns the... Gamow factor.
+    See [Wikipedia](https://en.wikipedia.org/wiki/Gamow_factor).
+    '''
+    if eta == 0.0:
+        if l == 0:
+            return 1
+        else:
+            return 1 / (2*l + 1) * Gamow_factor(l-1, 0)
+    elif l == 0:
+        return np.sqrt(2*np.pi*eta / (np.exp(2*np.pi*eta)-1))
+    else:
+        return np.sqrt(l**2 + eta**2) / (l*(2*l+1)) * Gamow_factor(l-1, eta)

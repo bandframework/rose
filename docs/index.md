@@ -27,6 +27,6 @@ this one:
 If only the rest of life was so accommodating.
 
 For more details about `rose`, see our organic, artisanal, free-range
-[documentation](reference.md). Or start with the [tutorials](tutorials.md).
+[documentation](hifi_solver.md). Or start with the [tutorials](tutorials.md).
 
 [^1]: Take Eq. 2 and ignore the energy dependence of the coefficients.

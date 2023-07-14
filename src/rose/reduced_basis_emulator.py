@@ -1,5 +1,4 @@
-'''
-A ReducedBasisEmulator builds the reduced basis for a given interaction and
+'''A ReducedBasisEmulator builds the reduced basis for a given interaction and
 partial wave.
 
 It instantiates a Basis and precomputes the integrals it can with the basis

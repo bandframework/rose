@@ -127,6 +127,10 @@ class KoningDelaroche(InteractionEIM):
             rho_mesh (ndarray):  $\rho$ (or $s$) grid values
             match_points (ndarray): $\rho$ points at which we demand the EIMed
                 potential match the true potential
+
+        Returns:
+            instance (KoningDelaroche): instance of the class
+
         ''' 
         super().__init__(
             KD_simple_so, 11, mu, ell, energy, training_info=training_info, Z_1=0, Z_2=0,
@@ -170,6 +174,9 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIM):
             rho_mesh (ndarray):  $\rho$ (or $s$) grid values
             match_points (ndarray): $\rho$ points at which we demand the EIMed
                 potential match the true potential
+        
+        Returns:
+            instance (EnergizedKoningDelaroche): instance of the class
         ''' 
         super().__init__(
             KD_simple_so, 12, mu, ell, training_info=training_info, Z_1=0, Z_2=0,

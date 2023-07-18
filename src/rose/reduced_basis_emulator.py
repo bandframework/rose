@@ -1,11 +1,11 @@
-'''A ReducedBasisEmulator builds the reduced basis for a given interaction and
+r'''A ReducedBasisEmulator builds the reduced basis for a given interaction and
 partial wave.
 
 It instantiates a Basis and precomputes the integrals it can with the basis
 states and operators. When the user asks for an emulated phase shift, the
 emulator computes the $\hat{\phi}$ coefficients.
 
-Kyle is the best everything! 
+Kyle is the best everything!
 '''
 import pickle
 import numpy as np
@@ -23,18 +23,26 @@ from .utility import finite_difference_first_derivative, finite_difference_secon
 # ni = 2
 
 class ReducedBasisEmulator:
-    '''
-
-    A ReducedBasisEmulator (RBE) uses the specified `interaction` and `theta_train`
-    to generate solutions to the Schrödinger equation at a specific energy
-    (energy) and partial wave (l).
+    r'''A ReducedBasisEmulator (RBE) uses the specified `interaction` and
+    `theta_train` to generate solutions to the Schrödinger equation at a
+    specific energy (`energy`) and partial wave (`l`).
 
     Using the Galerkin projection method, a linear combination of those
     solutions (or a PCA basis of them) is found at some arbitrary point in
-    parameter space, theta.
+    parameter space, `theta`.
+
     '''
     @classmethod
     def load(obj, filename):
+        r'''Loads a previously trained emulator.
+
+        Parameters:
+            filename (string): name of file
+        
+        Returns:
+            emulator (ReducedBasisEmulator): previously trainined `ReducedBasisEmulator`
+        
+        '''
         with open(filename, 'rb') as f:
             rbe = pickle.load(f)
         return rbe
@@ -50,6 +58,22 @@ class ReducedBasisEmulator:
         s_0: float = 6*np.pi, # phase shift is "extracted" at s_0
         hf_tols: list = None, # 2 numbers: high-fidelity solver tolerances, relative and absolute
     ):
+        r'''Trains a reduced-basis emulator based on the provided interaction and training space.
+        
+        Parameters:
+            interaction (Interation): local interaction
+            theta_train (ndarray): training points in parameter space; shape = (n_points, n_parameters)
+            n_basis (int): number of basis vectors for $\hat{\phi}$ expansion
+            use_svd (bool): Use principal components of training wave functions?
+            s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
+            s_0 (float): $s$ point where the phase shift is extracted
+            hf_tols (list): 2-element list passed to `SchroedingerEquation`;
+                [relative tolerance, absolute tolerance]
+        
+        Returns:
+            rbe (ReducedBasisEmulator): $\ell$-specific, reduced basis emulator
+
+        '''
         basis = RelativeBasis(
             SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
             theta_train, s_mesh, n_basis, interaction.ell, use_svd
@@ -62,6 +86,17 @@ class ReducedBasisEmulator:
         basis: Basis,
         s_0: float = 6*np.pi # phase shift is "extracted" at s_0
     ):
+        r'''Trains a reduced-basis emulator based on the provided interaction and basis.
+        
+        Parameters:
+            interaction (Interation): local interaction
+            basis (Basis): see [Basis documentation](basis.md)
+            s_0 (float): $s$ point where the phase shift is extracted
+        
+        Returns:
+            rbe (ReducedBasisEmulator): $\ell$-specific, reduced basis emulator
+
+        '''
         self.interaction = interaction
         self.basis = basis
         self.l = self.basis.l
@@ -135,6 +170,15 @@ class ReducedBasisEmulator:
         theta: np.array
 
     ):
+        r'''Calculated the coefficients in the $\hat{\phi}$ expansion.
+
+        Parameters:
+            theta (ndarray): point in parameters space
+
+        Returns:
+            coefficients (ndarray): coefficients in $\hat{\phi}$ expansion
+
+        '''
         invk, beta = self.interaction.coefficients(theta)
 
         A_utilde = np.einsum('i,ijk', beta, self.A_2)
@@ -149,6 +193,15 @@ class ReducedBasisEmulator:
     def emulate_wave_function(self,
         theta: np.array
     ):
+        r'''Calculate the emulated wave function.
+
+        Parameters:
+            theta (ndarray): point in parameters space
+
+        Returns:
+            wave_function (ndarray): $\hat{\phi}$ on the default $s$ mesh
+
+        '''
         x = self.coefficients(theta)
         return self.basis.phi_hat(x)
     
@@ -156,6 +209,15 @@ class ReducedBasisEmulator:
     def emulate_phase_shift(self,
         theta: np.array
     ):
+        r'''Calculate the emulated phase shift.
+
+        Parameters:
+            theta (ndarray): point in parameters space
+        
+        Returns:
+            delta (float | complex): emulated phase shift (extracted at $s_0$)
+
+        '''
         x = self.coefficients(theta)
         phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
         phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])
@@ -165,7 +227,6 @@ class ReducedBasisEmulator:
             (self.Hm - self.s_0*rl*self.Hmp) / 
             (self.Hp - self.s_0*rl*self.Hpp)
         ) / 2j
-        # return phase_shift(phi, phi_prime, self.l, self.interaction.eta(theta), self.s_mesh[self.i_0])
     
     
     def logarithmic_derivative(self,
@@ -188,9 +249,26 @@ class ReducedBasisEmulator:
 
 
     def exact_phase_shift(self, theta: np.array):
+        r'''Calculate the high-fidelity phase shift.
+        
+        Parameters:
+            theta (ndarray): point in parameters space
+        
+        Returns:
+            delta (float | complex): high-fidelity phase shift (extracted at $s_0$)
+
+        '''
         return self.basis.solver.delta(theta, self.s_mesh[[0, -1]], self.l, self.s_0)
     
 
     def save(self, filename):
+        r'''Write the current emulator to file.
+        
+        Parameters:
+            filename (string): name of the file where the emulator is saved
+        
+        Returns:
+            _ (None): nothing
+        '''
         with open(filename, 'wb') as f:
             pickle.dump(self, f)

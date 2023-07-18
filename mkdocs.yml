@@ -6,6 +6,13 @@ plugins:
     handlers:
       python:
         paths: [src]
+        options:
+          docstring_options:
+            ignore_init_summary: false
+          merge_init_into_class: true
+
+watch:
+- src/rose
 
 markdown_extensions:
 - footnotes
@@ -20,6 +27,7 @@ nav:
     - hifi_solver.md
     - interaction.md
     - rbe.md
+    - basis.md
   - contact.md
 
 extra_javascript:

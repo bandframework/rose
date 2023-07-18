@@ -23,3 +23,5 @@ convenient.
 ::: rose.energized_interaction_eim
 
 ## Spin-Orbit
+
+::: rose.spin_orbit

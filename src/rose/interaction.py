@@ -129,9 +129,9 @@ Complex_MN_Potential = Interaction(
 
 def couplings(l):
     if l == 0:
-        return [l/2]
+        return [l]
     else:
-        return [l/2, -(l+1)/2]
+        return [l, -(l+1)]
 
 
 class InteractionSpace:

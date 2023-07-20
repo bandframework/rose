@@ -71,9 +71,8 @@ class InteractionEIM(Interaction):
                 theta) where theta are the interaction parameters
             n_theta (int): number of interaction parameters
             mu (float): reduced mass (MeV); converted to 1/fm
-            is_complex (bool): Is the interaction complex (e.g. optical
-                potentials)?
-            n_basis (int): number of basis states, or "pillars" in $\hat{U}$ approximation
+            energy (float): center-of-mass scattering energy
+            ell (int): angular momentum
             training_info (ndarray): Either (1) parameters bounds or (2)
                 explicit training points
 
@@ -88,6 +87,10 @@ class InteractionEIM(Interaction):
             Z_1 (int): charge of particle 1
             Z_2 (int): charge of particle 2
             R_C (float): Coulomb "cutoff" radius
+            is_complex (bool): Is the interaction complex (e.g. optical
+                potentials)?
+            spin_orbit_term (SpinOrbitTerm): spin-orbit part of the interaction
+            n_basis (int): number of basis states, or "pillars" in $\hat{U}$ approximation
             explicit_training (bool): Is training_info (1) or (2)? (1) is
                 default
             n_train (int): How many snapshots to generate? Ignored if

@@ -32,6 +32,7 @@ class Interaction:
             ell (int): angular momentum
             Z_1 (int): charge of particle 1
             Z_2 (int): charge of particle 2
+            R_C (float): Coulomb "cutoff" radius
             is_complex (bool): Is the interaction complex?
             spin_orbit_term (SpinOrbitTerm): See [Spin-Orbit section](#spin-orbit).
         
@@ -193,6 +194,7 @@ class InteractionSpace:
             l_max (int): maximum angular momentum
             Z_1 (int): charge of particle 1
             Z_2 (int): charge of particle 2
+            R_C (float): Coulomb "cutoff" radius
             is_complex (bool): Is the interaction complex?
             spin_orbit_term (SpinOrbitTerm): See [Spin-Orbit section](#spin-orbit).
         

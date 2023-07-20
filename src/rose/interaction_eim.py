@@ -85,6 +85,9 @@ class InteractionEIM(Interaction):
                 If (2):
                     This is an MxN matrix. N is the number of parameters. M is
                     the number of samples.
+            Z_1 (int): charge of particle 1
+            Z_2 (int): charge of particle 2
+            R_C (float): Coulomb "cutoff" radius
             explicit_training (bool): Is training_info (1) or (2)? (1) is
                 default
             n_train (int): How many snapshots to generate? Ignored if
@@ -200,6 +203,7 @@ class InteractionEIMSpace(InteractionSpace):
             training_info (ndarray): See `InteractionEIM` documentation.
             Z_1 (int): charge of particle 1
             Z_2 (int): charge of particle 2
+            R_C (float): Coulomb "cutoff" radius
             is_complex (bool): Is the interaction complex?
             spin_orbit_potential (Callable[[float, np.array, float], float]):
                 used to create a `SpinOrbitTerm`

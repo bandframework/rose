@@ -117,8 +117,15 @@ class EnergizedInteractionEIM(Interaction):
         s: float,
         alpha: np.array
     ):
-        '''
-        theta[0] is the energy
+        r'''Computes the energy-scaled interaction.
+        
+        Parameters:
+            s (float): mesh point
+            alpha (ndarray): interaction parameters
+        
+        Returns:
+            u_tilde (float | complex): energy-scaled interaction
+
         '''
         energy = alpha[0]
         k = np.sqrt(2*self.mu*energy/HBARC)
@@ -128,8 +135,14 @@ class EnergizedInteractionEIM(Interaction):
     def coefficients(self,
         alpha: np.array # interaction parameters
     ):
-        '''
-        alpha[0] is the energy
+        r'''Computes the EIM expansion coefficients.
+
+        Parameters:
+            alpha (ndarray): interaction parameters
+        
+        Returns:
+            coefficients (ndarray): EIM expansion coefficients
+
         '''
         k = np.sqrt(2*self.mu*alpha[0]/HBARC)
         u_true = self.tilde(self.r_i, alpha)
@@ -139,6 +152,15 @@ class EnergizedInteractionEIM(Interaction):
     def eta(self,
         alpha: np.array
     ):
+        r'''Returns the Sommerfeld parameter.
+        
+        Parameters:
+            alpha (ndarray): interaction parameters
+        
+        Returns:
+            eta (float): Sommerfeld parameter
+        
+        '''
         return self.k_c / np.sqrt(2*self.mu*alpha[0]/HBARC)
     
 
@@ -146,12 +168,13 @@ class EnergizedInteractionEIM(Interaction):
         s: float,
         alpha: np.array
     ):
-        '''
-        tilde{U}(s, alpha, E)
-        Does not include the Coulomb term.
-        s = pr/hbar
-        alpha are the parameters we are varying
-        E = E_{c.m.}, [E] = MeV = [v_r]
+        r'''Emulated interaction = $\hat{U}(s, \alpha, E)$
+
+        Parameters:
+            alpha (ndarray): interaction parameters
+        
+        Returns:
+            u_hat (ndarray): emulated interaction
 
         '''
         _, x = self.coefficients(alpha)
@@ -160,10 +183,27 @@ class EnergizedInteractionEIM(Interaction):
     
 
     def basis_functions(self, rho_mesh: np.array):
+        r'''$u_j$ in $\tilde{U} \approx \hat{U} \equiv \sum_j \beta_j(\alpha) u_j$
+
+        Parameters:
+            alpha (ndarray): interaction parameters
+        
+        Returns:
+            u_j (ndarray): "pillars" (MxN matrix; M = number of mesh points; N = number of pillars)
+
+        '''
         return np.copy(self.snapshots)
     
 
     def momentum(self, alpha: np.array):
+        r'''Center-of-mass, scattering momentum
+        
+        Parameters:
+            alpha (ndarray): interaction parameters
+        
+        Returns:
+            k (float): momentum
+        '''
         return np.sqrt(2*self.mu*alpha[0]/HBARC)
 
 

@@ -153,6 +153,15 @@ class InteractionEIM(Interaction):
     def coefficients(self,
         alpha: np.array
     ):
+        r'''Computes the EIM expansion coefficients.
+
+        Parameters:
+            alpha (ndarray): interaction parameters
+        
+        Returns:
+            coefficients (ndarray): EIM expansion coefficients
+
+        '''
         u_true = self.tilde(self.r_i, alpha)
         return 1/self.k, self.Ainv @ u_true
 
@@ -160,12 +169,14 @@ class InteractionEIM(Interaction):
     def tilde_emu(self,
         alpha: np.array
     ):
-        '''
-        tilde{U}(s, alpha, E)
-        Does not include the Coulomb term.
-        s = pr/hbar
-        alpha are the parameters we are varying
-        E = E_{c.m.}, [E] = MeV = [v_r]
+        r'''Emulated interaction = $\hat{U}(s, \alpha, E)$
+
+        Parameters:
+            alpha (ndarray): interaction parameters
+        
+        Returns:
+            u_hat (ndarray): emulated interaction
+
         '''
         _, x = self.coefficients(alpha)
         emu = np.sum(x * self.snapshots, axis=1)
@@ -173,6 +184,15 @@ class InteractionEIM(Interaction):
     
 
     def basis_functions(self, rho_mesh: np.array):
+        r'''$u_j$ in $\tilde{U} \approx \hat{U} \equiv \sum_j \beta_j(\alpha) u_j$
+
+        Parameters:
+            alpha (ndarray): interaction parameters
+        
+        Returns:
+            u_j (ndarray): "pillars" (MxN matrix; M = number of mesh points; N = number of pillars)
+
+        '''
         return np.copy(self.snapshots)
     
 
@@ -221,7 +241,7 @@ class InteractionEIMSpace(InteractionSpace):
             instance (InteractionEIMSpace): instance of InteractionEIMSpace
         
         Attributes:
-            interaction (list): list of `InteractionEIM`s
+            interactions (list): list of `InteractionEIM`s
         '''
         self.interactions = []
         if spin_orbit_potential is None:

@@ -62,6 +62,21 @@ def KD(r, E, v1, v2, v3, v4, w1, w2, d1, d2, d3, Ef, Rv, av, Rd, ad):
            1j * (-4*ad) * Wd(E, d1, d2, d3, Ef) * woods_saxon_prime(r, Rd, ad)
 
 
+def decompose_alpha(alpha):
+    r'''Splits the parameter-space vector into non-spin-orbit and spin-orbit
+    parameters.
+
+    Parameters:
+        alpha (ndarray): interaction parameters
+    
+    Returns:
+        parameters (tuple): 2-tuple of non-spin-orbit (`parameters[0]`) and
+            spin-orbit parameters (`parameters[1]`)
+
+    '''
+    vv, rv, av, wv, rwv, awv, wd, rd, ad, vso, rso, aso = alpha
+    return (vv, rv, av, wv, rwv, awv, wd, rd, ad), (vso, rso, aso)
+
 def KD_simple(r, alpha):
     '''simplified Koning-Delaroche without the spin-orbit terms
 
@@ -154,6 +169,8 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIM):
         r'''Wraps the Koning-Delaroche potential into a `rose`-friendly class.
         Saves system-specific information. Allows the user to emulate across
         energies.
+
+        * **Does not (yet) support Coulomb.**
         
         Parameters:
             mu (float): reduced mass of the 2-body system

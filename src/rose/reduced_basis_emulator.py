@@ -9,7 +9,7 @@ from .schroedinger import SchroedingerEquation
 from .basis import RelativeBasis, Basis, CustomBasis
 from .constants import DEFAULT_RHO_MESH, HBARC
 from .free_solutions import phase_shift, H_minus, H_plus, H_minus_prime, H_plus_prime
-from .utility import finite_difference_first_derivative, finite_difference_second_derivative
+from .utility import finite_difference_first_derivative, finite_difference_second_derivative, regular_inverse_s
 
 # How many points should be ignored at the beginning
 # and end of the vectors (due to finite-difference
@@ -94,7 +94,9 @@ class ReducedBasisEmulator:
         d2_operator = finite_difference_second_derivative(self.s_mesh)
         phi_basis = self.basis.vectors
         ang_mom = self.l*(self.l+1) / self.s_mesh**2
-        k_c = 2*self.interaction.k_c / self.s_mesh
+        
+        # This is not going to work when we implement energy emulation with Coulomb.
+        k_c = 2*self.interaction.k_c * regular_inverse_s(self.s_mesh, self.interaction.S_C(None))
 
         self.d2 = -d2_operator @ phi_basis
         self.A_1 = phi_basis.T @ self.d2

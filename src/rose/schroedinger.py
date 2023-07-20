@@ -7,6 +7,7 @@ from scipy.integrate import solve_ivp
 
 from .interaction import Interaction
 from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
+from .utility import regular_inverse_s
 
 # Default values for solving the SE.
 DEFAULT_R_MIN = 1e-12 # fm
@@ -62,6 +63,8 @@ class SchroedingerEquation:
         '''
 
         C_l = Gamow_factor(l, self.interaction.eta(alpha))
+        S_C = self.interaction.momentum(alpha) * self.interaction.R_C
+
         if rho_0 is None:
             rho_0 = (phi_threshold / C_l) ** (1/(l+1))
         phi_0 = C_l * rho_0**(l+1)
@@ -75,7 +78,7 @@ class SchroedingerEquation:
         sol = solve_ivp(
             lambda s, phi: np.array([phi[1],
                 (self.interaction.tilde(s, alpha) + \
-                 2*self.interaction.eta(alpha)/s + l*(l+1)/s**2 - 1.0) * phi[0]]),
+                 2*self.interaction.eta(alpha) * regular_inverse_s(s, S_C) + l*(l+1)/s**2 - 1.0) * phi[0]]),
             s_endpts, initial_conditions, rtol=self.rel_tol, atol=self.abs_tol,
             dense_output=True, **solve_ivp_kwargs
         )

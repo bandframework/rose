@@ -64,3 +64,21 @@ Spacing must be consistent throughout the entire mesh.
     D2[-1, -5:] = np.array([0, -1, 4, -5, 2]) / dx**2 
 
     return D2
+
+
+def regular_inverse_r(r, r_c):
+    if isinstance(r, float):
+        return 1/(2*r_c) * (3 - (r/r_c)**2) if r < r_c else 1/r
+    else:
+        ii = np.where(r <= r_c)[0]
+        jj = np.where(r > r_c)[0]
+        return np.hstack([1/(2*r_c) * (3 - (r[ii]/r_c)**2), 1/r[jj]])
+
+
+def regular_inverse_s(s, s_c):
+    if isinstance(s, float) or isinstance(s, int):
+        return 1/(2*s_c) * (3 - (s/s_c)**2) if s < s_c else 1/s
+    else:
+        ii = np.where(s <= s_c)[0]
+        jj = np.where(s > s_c)[0]
+        return np.hstack([1/(2*s_c) * (3 - (s[ii]/s_c)**2), 1/s[jj]])

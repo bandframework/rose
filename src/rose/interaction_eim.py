@@ -54,6 +54,7 @@ class InteractionEIM(Interaction):
         training_info: np.array,
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
+        R_C: float = 0.0, # Coulomb "cutoff"
         is_complex: bool = False,
         spin_orbit_term: SpinOrbitTerm = None,
         n_basis: int = None,
@@ -84,7 +85,7 @@ class InteractionEIM(Interaction):
         '''
 
         super().__init__(coordinate_space_potential, n_theta, mu, energy, ell,
-            Z_1=Z_1, Z_2=Z_2, is_complex=is_complex, spin_orbit_term=spin_orbit_term)
+            Z_1=Z_1, Z_2=Z_2, R_C=R_C, is_complex=is_complex, spin_orbit_term=spin_orbit_term)
 
         # Generate a basis used to approximate the potential.
         # Did the user specify the training points?
@@ -158,6 +159,7 @@ class InteractionEIMSpace(InteractionSpace):
         training_info: np.array,
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
+        R_C: float = 0.0, # Coulomb "cutoff"
         is_complex: bool = False,
         spin_orbit_potential: Callable[[float, np.array, float], float] = None, #V_{SO}(r, theta, l•s)
         n_basis: int = None,
@@ -171,7 +173,7 @@ class InteractionEIMSpace(InteractionSpace):
             for l in range(l_max+1):
                 self.interactions.append(
                     [InteractionEIM(coordinate_space_potential, n_theta, mu,
-                        energy, l, training_info, Z_1=Z_1, Z_2=Z_2,
+                        energy, l, training_info, Z_1=Z_1, Z_2=Z_2, R_C=R_C,
                         is_complex=is_complex, n_basis=n_basis, explicit_training=explicit_training,
                         n_train=n_train, rho_mesh=rho_mesh, match_points=match_points)]
                 )
@@ -179,11 +181,13 @@ class InteractionEIMSpace(InteractionSpace):
             for l in range(l_max+1):
                 self.interactions.append(
                     [InteractionEIM(coordinate_space_potential, n_theta, mu,
-                        energy, l, training_info, Z_1=Z_1, Z_2=Z_2, is_complex=is_complex,
-                        spin_orbit_term=SpinOrbitTerm(spin_orbit_potential, lds),
-                        n_basis=n_basis, explicit_training=explicit_training,
-                        n_train=n_train, rho_mesh=rho_mesh, match_points=match_points)
-                        for lds in couplings(l)]
+                        energy, l, training_info, Z_1=Z_1, Z_2=Z_2, R_C=R_C,
+                        is_complex=is_complex,
+                        spin_orbit_term=SpinOrbitTerm(spin_orbit_potential,
+                        lds), n_basis=n_basis,
+                        explicit_training=explicit_training, n_train=n_train,
+                        rho_mesh=rho_mesh, match_points=match_points) for lds in
+                        couplings(l)]
                 )
 
 

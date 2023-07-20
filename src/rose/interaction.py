@@ -19,14 +19,16 @@ class Interaction:
         ell: int,
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
+        R_C: float = 0.0, # Coulomb "cutoff"
         is_complex: bool = False,
-        spin_orbit_term: SpinOrbitTerm = None
+        spin_orbit_term: SpinOrbitTerm = None,
     ):
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
         self.ell = ell
         self.k_c = ALPHA * Z_1*Z_2 * self.mu
+        self.R_C = R_C
         # self.eta = ALPHA * Z_1 * Z_2 * self.mu / self.k
         self.is_complex = is_complex
         self.spin_orbit_term = spin_orbit_term
@@ -91,6 +93,10 @@ class Interaction:
 
     def momentum(self, alpha: np.array):
         return self.k
+    
+
+    def S_C(self, alpha: np.array):
+        return self.k*self.R_C
 
 
 NUCLEON_MASS = 939.565 # neutron mass (MeV)
@@ -143,6 +149,7 @@ class InteractionSpace:
         l_max: int,
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
+        R_C: float = 0.0,
         is_complex: bool = False,
         spin_orbit_potential: Callable[[float, np.array, float], float] = None #V_{SO}(r, theta, l•s)
     ):
@@ -151,13 +158,15 @@ class InteractionSpace:
             for l in range(l_max+1):
                 self.interactions.append(
                     [Interaction(coordinate_space_potential, n_theta, mu,
-                        energy, l, Z_1=Z_1, Z_2=Z_2, is_complex=is_complex)]
+                        energy, l, Z_1=Z_1, Z_2=Z_2, R_C=R_C,
+                        is_complex=is_complex)]
                 )
         else:
             for l in range(l_max+1):
                 self.interactions.append(
                     [Interaction(coordinate_space_potential, n_theta, mu,
-                        energy, l, Z_1=Z_1, Z_2=Z_2, is_complex=is_complex,
-                        spin_orbit_term=SpinOrbitTerm(spin_orbit_potential, lds))
-                        for lds in couplings(l)]
+                        energy, l, Z_1=Z_1, Z_2=Z_2, R_C=R_C,
+                        is_complex=is_complex,
+                        spin_orbit_term=SpinOrbitTerm(spin_orbit_potential,
+                        lds)) for lds in couplings(l)]
                 )

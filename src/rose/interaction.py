@@ -1,15 +1,14 @@
+'''Wraps the user-defined interaction into a class that stores several relevant
+parameters of the problem.
 '''
-Defines a general template for interactions.
-Includes some "hard-coded" interactions.
-'''
+
 from typing import Callable
 import numpy as np
 from .constants import HBARC, ALPHA
 from .spin_orbit import SpinOrbitTerm
 
 class Interaction:
-    '''
-    Template class.
+    '''Defines a local, (possibly) complex, affine, fixed-energy interaction.
     '''
     def __init__(self,
         coordinate_space_potential: Callable[[float, np.array], float], # V(r, theta)
@@ -23,6 +22,32 @@ class Interaction:
         is_complex: bool = False,
         spin_orbit_term: SpinOrbitTerm = None,
     ):
+        r'''Creates a local, (possibly) complex, affine, fixed-energy interaction.
+
+        Parameters:
+            coordinate_space_potential (Callable[[float,ndarray],float]): V(r, theta)
+            n_theta (int): number of parameters
+            mu (float): reduced mass
+            energy (float): center-of-mass, scattering energy
+            ell (int): angular momentum
+            Z_1 (int): charge of particle 1
+            Z_2 (int): charge of particle 2
+            is_complex (bool): Is the interaction complex?
+            spin_orbit_term (SpinOrbitTerm): See [Spin-Orbit section](#spin-orbit).
+        
+        Returns:
+            instance (Interaction): instance of `Interaction`
+
+        Attributes:
+            v_r (Callable[[float,ndarray],float]): coordinate-space potential; $V(r, \alpha)$
+            n_theta (int): number of parameters
+            mu (float): reduced mass
+            ell (int): angular momentum
+            k_c (float): Coulomb momentum; $k\eta$
+            is_complex (bool): Is this a complex potential?
+            spin_orbit_term (SpinOrbitTerm): See [Spin-Orbit section](#spin-orbit)
+
+        '''
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
         self.mu = mu / HBARC # Go ahead and convert to 1/fm
@@ -56,12 +81,18 @@ class Interaction:
         s: float,
         alpha: np.array
     ):
-        '''
-        tilde{U}(s, alpha, E)
-        Does not include the Coulomb term.
-        s = pr/hbar
-        alpha are the parameters we are varying
-        E = E_{c.m.}, [E] = MeV = [v_r]
+        r'''Scaled potential, $\tilde{U}(s, \alpha, E)$.
+
+        * Does not include the Coulomb term.
+        * $E = E_{c.m.}$; `[E] = MeV = [v_r]`
+
+        Parameters:
+            s (float): mesh point; $s = pr/\hbar$
+            alpha (ndarray): the varied parameters
+        
+        Returns:
+            u_tilde (float | complex): value of scaled interaction
+
         '''
         vr = self.v_r(s/self.k, alpha)
         vr += self.spin_orbit_term.spin_orbit_potential(s/self.k, alpha) if self.include_spin_orbit else 0
@@ -71,6 +102,22 @@ class Interaction:
     def basis_functions(self,
         rho_mesh: np.array
     ):
+        r'''In general, we approximate the potential as
+
+        $\hat{U} = \sum_{j} \beta_j(\alpha) u_j$
+        
+        For affine interactions (like those defined in this class) the basis
+        functions (or "pillars), $u_j$, are just the "naked" parts of the
+        potential. As seen below, it is assumed that the $\beta_j(\alpha)$
+        coefficients are just the affine parameters, $\alpha$, themselves.
+
+        Parameters:
+            rho_mesh (ndarray): discrete $\rho$ values at which the potential is
+                going to be evaluated
+        
+        Returns:
+            value (ndarray): values of the scaled potential at provided $\rho$ points
+        '''
         return np.array([
             self.tilde(rho_mesh, row) for row in np.eye(self.n_theta)
         ]).T
@@ -79,8 +126,16 @@ class Interaction:
     def coefficients(self,
         alpha: np.array # interaction parameters
     ):
-        '''
-        Return 1/k and alpha
+        r'''As noted in the `basis_functions` documentation, the coefficients
+        for affine interactions are simply the parameter values. The inverse of
+        the momentum is also returned to support energy emulation.
+
+        Parameters:
+            alpha (ndarray): parameter point
+        
+        Returns:
+            result (tuple): inverse momentum and coefficients
+
         '''
         return 1/self.k, alpha
     
@@ -88,56 +143,31 @@ class Interaction:
     def eta(self,
         alpha: np.array
     ):
+        r'''Sommerfeld parameter. Implemented as a function to support energy
+        emulation (where the energy could be a part of the parameter vector,
+        `alpha`).
+        
+        Parameters:
+            alpha (ndarray): parameter vector
+        
+        Returns:
+            eta (float): Sommerfeld parametere
+        '''
         return self.sommerfeld
     
 
     def momentum(self, alpha: np.array):
+        r'''Momentum. Implemented as a function to support energy emulation
+        (where the energy/momentum could be a part of the parameter vector,
+        `alpha`).
+        
+        Parameters:
+            alpha (ndarray): parameter vector
+        
+        Returns:
+            k (float): center-of-mass, scattering momentum
+        '''
         return self.k
-    
-
-    def S_C(self, alpha: np.array):
-        return self.k*self.R_C
-
-
-NUCLEON_MASS = 939.565 # neutron mass (MeV)
-MU_NN = NUCLEON_MASS / 2 # reduced mass of the NN system (MeV)
-
-def mn_potential(r, args):
-    '''
-    Minnesota potential
-    '''
-    v_0r, v_0s = args
-    return v_0r * np.exp(-1.487*r**2) + v_0s*np.exp(-0.465*r**2)
-
-# Stored instances of the Minnesota interaction for testing.
-# Fixed at E_{c.m.} = 50 MeV.
-MN_Potential = Interaction(
-    mn_potential,
-    2,
-    MU_NN,
-    50,
-    0
-)
-
-def complex_mn_potential(r, args):
-    vr, vi = args
-    return mn_potential(r, [vr, 1j*vi])
-
-
-Complex_MN_Potential = Interaction(
-    complex_mn_potential,
-    2,
-    MU_NN,
-    50,
-    0,
-    is_complex = True
-)
-
-def couplings(l):
-    if l == 0:
-        return [l]
-    else:
-        return [l, -(l+1)]
 
 
 class InteractionSpace:
@@ -153,6 +183,25 @@ class InteractionSpace:
         is_complex: bool = False,
         spin_orbit_potential: Callable[[float, np.array, float], float] = None #V_{SO}(r, theta, l•s)
     ):
+        r'''Generates a list of $\ell$-specific interactions.
+        
+        Parameters:
+            coordinate_space_potential (Callable[[float,ndarray],float]): V(r, theta)
+            n_theta (int): number of parameters
+            mu (float): reduced mass
+            energy (float): center-of-mass, scattering energy
+            l_max (int): maximum angular momentum
+            Z_1 (int): charge of particle 1
+            Z_2 (int): charge of particle 2
+            is_complex (bool): Is the interaction complex?
+            spin_orbit_term (SpinOrbitTerm): See [Spin-Orbit section](#spin-orbit).
+        
+        Returns:
+            instance (InteractionSpace): instance of InteractionSpace
+        
+        Attributes:
+            interaction (list): list of `Interaction`s
+        '''
         self.interactions = []
         if spin_orbit_potential is None:
             for l in range(l_max+1):
@@ -170,3 +219,20 @@ class InteractionSpace:
                         spin_orbit_term=SpinOrbitTerm(spin_orbit_potential,
                         lds)) for lds in couplings(l)]
                 )
+
+
+def couplings(l):
+    r'''For a spin-1/2 nucleon scattering off a spin-0 nucleus, there are
+    maximally 2 different total angular momentum couplings: l+1/2 and l-1/2.
+    
+    Parameters:
+        l (int): angular momentum
+    
+    Returns:
+        couplings (list): total angular momentum possibilities
+    '''
+    if l == 0:
+        return [l]
+    else:
+        return [l, -(l+1)]
+

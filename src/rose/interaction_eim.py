@@ -1,6 +1,6 @@
-'''
-Defines a class for "affinizing" Interactions using the Empirical Interpolation
-Method (EIM).
+'''Interactions that leverage the Empirical Interpolation Method (EIM) to allow
+the emulation of parameters in which the coordinate-space potential is not
+affine.
 '''
 
 from typing import Callable
@@ -12,14 +12,16 @@ from .constants import HBARC, DEFAULT_RHO_MESH
 from .spin_orbit import SpinOrbitTerm
 
 def max_vol(basis, indxGuess):
-    # basis looks like a long matrix, the columns are the "pillars" V_i(x):
-    #     [   V_1(x)
-    #         V_2(x)
-    #         .
-    #         .
-    #         .
-    #     ]
-    # indxGuess is a first guess of where we should "measure", or ask the questions
+    r'''basis looks like a long matrix, the columns are the "pillars" V_i(x):
+        [   V_1(x)
+            V_2(x)
+            .
+            .
+            .
+        ]
+        indxGuess is a first guess of where we should "measure", or ask the questions
+
+    '''
     nbases = basis.shape[1]
     interpBasis = np.copy(basis)
 
@@ -63,25 +65,44 @@ class InteractionEIM(Interaction):
         rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None
     ):
-        '''
-        :param coordinate_space_potential: V(r, theta) where theta are the interaction parameters
-        :param n_theta: number of interaction parameters
-        :param mu: reduced mass (MeV); converted to 1/fm
-        :param is_complex: Is the interaction complex (e.g. optical potentials)?
-        :param n_basis: How many "columns" do we need?
-        :param training_info: either (1) parameters bounds or (2) explicit training points
-        if (1):
-        This is a 2-column matrix. The first column are the lower
-        bounds. The second are the upper bounds. Each row maps to a
-        single parameter.
-        if (2):
-        This is an MxN matrix. N is the number of parameters. M is the
-        number of samples.
-        :param explicit_training: Is training_info (1) or (2)? (1) is default
-        :param n_train: How many snapshots to generate? Ignored if explicit_training is True.
-        :param r: coordinate-space points at which the interaction is generated (used
-        for training)
+        r'''
+        Parameters:
+            coordinate_space_potential (Callable[[float,ndarray],float]): V(r,
+                theta) where theta are the interaction parameters
+            n_theta (int): number of interaction parameters
+            mu (float): reduced mass (MeV); converted to 1/fm
+            is_complex (bool): Is the interaction complex (e.g. optical
+                potentials)?
+            n_basis (int): number of basis states, or "pillars" in $\hat{U}$ approximation
+            training_info (ndarray): Either (1) parameters bounds or (2)
+                explicit training points
 
+                If (1):
+                    This is a 2-column matrix. The first column are the lower
+                    bounds. The second are the upper bounds. Each row maps to a
+                    single parameter.
+
+                If (2):
+                    This is an MxN matrix. N is the number of parameters. M is
+                    the number of samples.
+            explicit_training (bool): Is training_info (1) or (2)? (1) is
+                default
+            n_train (int): How many snapshots to generate? Ignored if
+                explicit_training is True.
+            rho_mesh (ndarray): coordinate-space points at which the interaction
+                is generated (used for training)
+            match_points (ndarray): $\rho$ points where agreement with the true
+                potential is enforced
+
+        Attributes:
+            singular_values (ndarray): `S` in `U, S, Vt = numpy.linalg.svd(...)`
+            snapshots (ndarray): pillars, columns of `U`
+            match_indices (ndarray): indices of points in $\rho$ mesh that are
+                matched to the true potential
+            match_points (ndarray): points in $\rho$ mesh that are matched to
+                the true potential
+            r_i (ndarray): copy of `match_points` (???)
+            Ainv (ndarray): inverse of A matrix (Ax = b)
         '''
 
         super().__init__(coordinate_space_potential, n_theta, mu, energy, ell,
@@ -168,6 +189,33 @@ class InteractionEIMSpace(InteractionSpace):
         rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None
     ):
+        r'''Generates a list of $\ell$-specific, EIMed interactions.
+        
+        Parameters:
+            coordinate_space_potential (Callable[[float,ndarray],float]): V(r, theta)
+            n_theta (int): number of parameters
+            mu (float): reduced mass
+            energy (float): center-of-mass, scattering energy
+            l_max (int): maximum angular momentum
+            training_info (ndarray): See `InteractionEIM` documentation.
+            Z_1 (int): charge of particle 1
+            Z_2 (int): charge of particle 2
+            is_complex (bool): Is the interaction complex?
+            spin_orbit_potential (Callable[[float, np.array, float], float]):
+                used to create a `SpinOrbitTerm`
+            n_basis (int): number of pillars --- basis states in $\hat{U}$ expansion
+            explicit_training (bool): See `InteractionEIM` documentation.
+            n_train (int): number of training samples
+            rho_mesh (ndarray): discrete $\rho$ points
+            match_points (ndarray): $\rho$ points where agreement with the true
+                potential is enforced
+        
+        Returns:
+            instance (InteractionEIMSpace): instance of InteractionEIMSpace
+        
+        Attributes:
+            interaction (list): list of `InteractionEIM`s
+        '''
         self.interactions = []
         if spin_orbit_potential is None:
             for l in range(l_max+1):
@@ -189,50 +237,3 @@ class InteractionEIMSpace(InteractionSpace):
                         rho_mesh=rho_mesh, match_points=match_points) for lds in
                         couplings(l)]
                 )
-
-
-def wood_saxon(r, R, a):
-    return 1/(1 + np.exp((r-R)/a))
-
-
-def wood_saxon_prime(r, R, a):
-    return -1/a * np.exp((r-R)/a) / (1 + np.exp((r-R)/a))**2
-
-
-def optical_potential(r, theta):
-    Vv, Wv, Wd, Rv, av, Rd, ad = theta
-    return -Vv * wood_saxon(r, Rv, av) - \
-           1j*Wv * wood_saxon(r, Rv, av) - \
-           1j*4*ad*Wd * wood_saxon_prime(r, Rd, ad)
-
-
-NUCLEON_MASS = 939.565 # neutron mass (MeV)
-MU_NN = NUCLEON_MASS / 2 # reduced mass of the NN system (MeV)
-
-BOUNDS_VV = [1, 10]
-BOUNDS_WV = [-10, 10]
-BOUNDS_WD = [-10, 10]
-BOUNDS_RV = [3, 5]
-BOUNDS_AV = [0.8, 1.2]
-BOUNDS_RD = [3, 5]
-BOUNDS_AD = [0.8, 1.2]
-
-BOUNDS = np.array([
-    BOUNDS_VV,
-    BOUNDS_WV,
-    BOUNDS_WD,
-    BOUNDS_RV,
-    BOUNDS_AV,
-    BOUNDS_RD,
-    BOUNDS_AD
-])
-
-Optical_Potential = InteractionEIM(
-    optical_potential,
-    7,
-    MU_NN,
-    50,
-    0,
-    BOUNDS,
-    is_complex = True
-)

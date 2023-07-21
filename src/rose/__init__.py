@@ -1,6 +1,6 @@
-from .interaction import Interaction, MN_Potential, InteractionSpace
-from .interaction_eim import InteractionEIM, Optical_Potential
-from .energized_interaction_eim import EnergizedInteractionEIM
+from .interaction import Interaction, InteractionSpace
+from .interaction_eim import InteractionEIM, InteractionEIMSpace
+from .energized_interaction_eim import EnergizedInteractionEIM, EnergizedInteractionEIMSpace
 from .schroedinger import SchroedingerEquation
 from . import constants, metrics
 from .reduced_basis_emulator import ReducedBasisEmulator
@@ -11,4 +11,4 @@ from .koning_delaroche import KoningDelaroche, EnergizedKoningDelaroche
 from .spin_orbit import SpinOrbitTerm
 
 
-__version__ = '0.9.2'
+__version__ = '0.9.3'

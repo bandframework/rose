@@ -71,7 +71,8 @@ will NOT be communicated to the user's own high-fidelity solver.
         # Let's precompute the things we can.
         self.ls = np.arange(self.l_max+1)[:, np.newaxis]
         self.P_l_costheta = eval_legendre(self.ls, np.cos(self.angles))
-        self.P_1_l_costheta = np.array([eval_assoc_legendre(l) for l in self.ls])
+        self.P_1_l_costheta = np.array([[eval_assoc_legendre(l, a) for a in np.cos(self.angles)] 
+                                        for l in self.ls])
         # Coulomb scattering amplitude
         # (This is dangerous because it's not fixed when we emulate across
         # energies, BUT we don't do that with Coulomb (yet). When we do emulate

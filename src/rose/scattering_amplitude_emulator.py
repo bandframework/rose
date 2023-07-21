@@ -8,6 +8,7 @@ from .reduced_basis_emulator import ReducedBasisEmulator
 from .constants import DEFAULT_RHO_MESH, DEFAULT_ANGLE_MESH
 from .schroedinger import SchroedingerEquation
 from .basis import RelativeBasis, CustomBasis
+from .utility import eval_assoc_legendre
 
 class ScatteringAmplitudeEmulator:
 
@@ -70,6 +71,7 @@ will NOT be communicated to the user's own high-fidelity solver.
         # Let's precompute the things we can.
         self.ls = np.arange(self.l_max+1)[:, np.newaxis]
         self.P_l_costheta = eval_legendre(self.ls, np.cos(self.angles))
+        self.P_1_l_costheta = np.array([eval_assoc_legendre(l) for l in self.ls])
         # Coulomb scattering amplitude
         # (This is dangerous because it's not fixed when we emulate across
         # energies, BUT we don't do that with Coulomb (yet). When we do emulate
@@ -105,7 +107,7 @@ will NOT be communicated to the user's own high-fidelity solver.
         deltas = self.emulate_phase_shifts(theta)
         S_l_plus = np.array([np.exp(2j*d[0]) for d in deltas])[:, np.newaxis]
         if self.rbes[0][0].interaction.include_spin_orbit:
-            S_l_minus = np.array([0] + [np.exp(2j*d[1]) for d in deltas[1:]])[:, np.newaxis]
+            S_l_minus = np.array([S_l_plus[0]] + [np.exp(2j*d[1]) for d in deltas[1:]])[:, np.newaxis]
         else:
             S_l_minus = S_l_plus.copy()
         A = self.f_c + 1/(2j*k) * np.sum(
@@ -114,7 +116,7 @@ will NOT be communicated to the user's own high-fidelity solver.
             axis=0
         )
         B = 1/(2j*k) * np.sum(
-            np.exp(2j*self.sigma_l) * (S_l_plus - S_l_minus) * self.P_l_costheta,
+            np.exp(2j*self.sigma_l) * (S_l_plus - S_l_minus) * self.P_1_l_costheta,
             axis=0
         )
 

@@ -105,7 +105,7 @@ will NOT be communicated to the user's own high-fidelity solver.
         return [[rbe.exact_phase_shift(theta) for rbe in rbe_list] for rbe_list in self.rbes]
 
 
-    def dsdo(self, theta : np.array, deltas : np.array)
+    def dsdo(self, theta : np.array, deltas : np.array):
         '''
         Gives the differential cross section (dsigma/dOmega = dsdo).
         '''

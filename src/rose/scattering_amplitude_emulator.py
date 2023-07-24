@@ -95,17 +95,23 @@ will NOT be communicated to the user's own high-fidelity solver.
         '''
         return [[rbe.emulate_phase_shift(theta) for rbe in rbe_list] for rbe_list in self.rbes]
 
-
-    def emulate_dsdo(self,
+    def exact_phase_shifts(self,
         theta: np.array
     ):
+        '''
+        Gives the phase shifts for each partial wave.
+        Order is [l=0, l=1, ..., l=l_max-1].
+        '''
+        return [[rbe.exact_phase_shift(theta) for rbe in rbe_list] for rbe_list in self.rbes]
+
+
+    def dsdo(self, theta : np.array, deltas : np.array)
         '''
         Gives the differential cross section (dsigma/dOmega = dsdo).
         '''
         k = self.rbes[0][0].interaction.momentum(theta)
 
         # Coulomb-distorted, nuclear scattering amplitude
-        deltas = self.emulate_phase_shifts(theta)
         S_l_plus = np.array([np.exp(2j*d[0]) for d in deltas])[:, np.newaxis]
         if self.rbes[0][0].interaction.include_spin_orbit:
             S_l_minus = np.array([S_l_plus[0]] + [np.exp(2j*d[1]) for d in deltas[1:]])[:, np.newaxis]
@@ -126,6 +132,27 @@ will NOT be communicated to the user's own high-fidelity solver.
             return dsdo / self.rutherford
         else:
             return dsdo
+
+
+    def emulate_dsdo(self,
+        theta: np.array
+    ):
+        '''
+        Gives the differential cross section (dsigma/dOmega = dsdo).
+        '''
+        # Coulomb-distorted, nuclear scattering amplitude
+        deltas = self.emulate_phase_shifts(theta)
+        return self.dsdo(theta, deltas)
+
+    def exact_dsdo(self,
+        theta: np.array
+    ):
+        '''
+        Gives the differential cross section (dsigma/dOmega = dsdo).
+        '''
+        # Coulomb-distorted, nuclear scattering amplitude
+        deltas = self.exact_phase_shifts(theta)
+        return self.dsdo(theta, deltas)
 
 
     def emulate_wave_functions(self,

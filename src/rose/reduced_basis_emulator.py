@@ -136,9 +136,10 @@ class ReducedBasisEmulator:
         d2_operator = finite_difference_second_derivative(self.s_mesh)
         phi_basis = self.basis.vectors
         ang_mom = self.l*(self.l+1) / self.s_mesh**2
-        
+
         # This is not going to work when we implement energy emulation with Coulomb.
-        k_c = 2*self.interaction.k_c * regular_inverse_s(self.s_mesh, self.interaction.S_C(None))
+        S_C = self.interaction.R_C * self.interaction.k
+        k_c = 2*self.interaction.k_c * regular_inverse_s(self.s_mesh,S_C )
 
         self.d2 = -d2_operator @ phi_basis
         self.A_1 = phi_basis.T @ self.d2

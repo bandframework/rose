@@ -113,10 +113,10 @@ def KD_simple(r, alpha):
 
     Take Eq. (1) and remove the energy dependence of the coefficients.
     '''
-    vv, rv, av, wv, rwv, awv, wd, rwd, awd = decompose_alpha(alpha)[0]
+    vv, rv, av, wv, rwv, awv, wd, rd, ad = decompose_alpha(alpha)[0]
     return -vv * woods_saxon_safe(r, rv, av) - \
         1j*wv * woods_saxon_safe(r, rwv, awv) - \
-        1j*(-4*awd)*wd * woods_saxon_prime_safe(r, rwd, awd)
+        1j*(-4*ad)*wd * woods_saxon_prime_safe(r, rd, ad)
 
 
 def KD_simple_so(r, alpha, lds):

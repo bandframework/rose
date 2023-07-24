@@ -114,7 +114,9 @@ will NOT be communicated to the user's own high-fidelity solver.
         # Coulomb-distorted, nuclear scattering amplitude
         S_l_plus = np.array([np.exp(2j*d[0]) for d in deltas])[:, np.newaxis]
         if self.rbes[0][0].interaction.include_spin_orbit:
-            S_l_minus = np.array([S_l_plus[0]] + [np.exp(2j*d[1]) for d in deltas[1:]])[:, np.newaxis]
+            S_l_minus = np.array([
+                0 if l == 0 else np.exp(2j*d[1]) for l, d in enumerate(deltas)
+            ])[:, np.newaxis]
         else:
             S_l_minus = S_l_plus.copy()
         A = self.f_c + 1/(2j*k) * np.sum(
@@ -123,7 +125,7 @@ will NOT be communicated to the user's own high-fidelity solver.
             axis=0
         )
         B = 1/(2j*k) * np.sum(
-            np.exp(2j*self.sigma_l) * (S_l_plus - S_l_minus) * self.P_1_l_costheta,
+            np.exp(2j*self.sigma_l) * (S_l_plus - S_l_minus) * self.P_l_costheta,
             axis=0
         )
 

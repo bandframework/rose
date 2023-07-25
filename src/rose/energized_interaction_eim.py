@@ -182,11 +182,11 @@ class EnergizedInteractionEIM(Interaction):
         return emu
     
 
-    def basis_functions(self, rho_mesh: np.array):
+    def basis_functions(self, s_mesh: np.array):
         r'''$u_j$ in $\tilde{U} \approx \hat{U} \equiv \sum_j \beta_j(\alpha) u_j$
 
         Parameters:
-            alpha (ndarray): interaction parameters
+            s_mesh (ndarray): $s$ mesh points
         
         Returns:
             u_j (ndarray): "pillars" (MxN matrix; M = number of mesh points; N = number of pillars)

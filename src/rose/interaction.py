@@ -196,7 +196,7 @@ class InteractionSpace:
             Z_2 (int): charge of particle 2
             R_C (float): Coulomb "cutoff" radius
             is_complex (bool): Is the interaction complex?
-            spin_orbit_term (SpinOrbitTerm): See [Spin-Orbit section](#spin-orbit).
+            spin_orbit_potential (Callable[[float,ndarray,float],float]): coordinate-space, spin-orbit potential; $V_{\rm SO}(s, \alpha, 2\ell\cdot s$)
         
         Returns:
             instance (InteractionSpace): instance of InteractionSpace

@@ -28,9 +28,9 @@ nav:
   - Documentation:
     - hifi_solver.md
     - interaction.md
+    - basis.md
     - rbe.md
     - sae.md
-    - basis.md
   - contact.md
 
 extra_javascript:

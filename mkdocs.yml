@@ -19,6 +19,8 @@ markdown_extensions:
 
 theme:
   name: material
+  features:
+    - toc.integrate
 
 nav:
   - index.md

@@ -246,16 +246,73 @@ will NOT be communicated to the user's own high-fidelity solver.
         return [[x.emulate_wave_function(theta) for x in rbe] for rbe in self.rbes]
 
 
-    def emulate_total_cross_section(self,
-        theta: np.array,
-        rel_ruth: bool = True
+    def S_matrix_elements(self,
+        deltas: list
     ):
-        r'''Gives the "total" (angle-integrated) cross section.  See Eq.
-            (3.1.50) in Thompson and Nunes.  :param rel_ruth: Report the total
-            cross section relative to Rutherford?
+        deltas_plus = np.array([d[0] for d in deltas])
+        deltas_minus = np.array([d[1] for d in deltas[1:]])
+
+        S_l_plus = np.exp(2j*deltas_plus)[:, np.newaxis]
+        if self.rbes[0][0].interaction.include_spin_orbit:
+            # If there is spin-orbit, the l=0 term for B has to be zero.
+            S_l_minus = np.hstack((S_l_plus[0], np.exp(2j*deltas_minus)))[:, np.newaxis]
+        else:
+            # This ensures that A reduces to the non-spin-orbit formula, and B = 0.
+            S_l_minus = S_l_plus.copy()
+        
+        return S_l_plus, S_l_minus
+
+
+    def emulate_total_cross_section(self,
+        theta: np.array
+    ):
+        r'''Gives the "total" (angle-integrated) cross section.  See Eq. (63)
+            in Carlson's notes.
+        
+        Parameters:
+            theta (ndarray): parameter-space vector
+        
+        Returns:
+            cross_section (ndarray): emulated total cross section
+
         '''
         # What do we do here when Coulomb and/or spin-orbit is present?
-        return None
+        if self.rbes[0][0].interaction.k_c > 0:
+            raise Exception('The total cross section is infinite in the presence of Coulomb.')
+        
+        k = self.rbes[0][0].interaction.momentum(theta)
+        S_l_plus, S_l_minus = self.S_matrix_elements(self.emulate_phase_shifts(theta))
+
+        sum = np.sum(np.pi/k**2 * (2*self.ls + 2) * (1 - S_l_plus.real))
+        sum += np.sum(np.pi/k**2 * (2*self.ls - 2) * (1 - S_l_minus.real))
+
+        return sum
+
+
+    def exact_total_cross_section(self,
+        theta: np.array
+    ):
+        r'''Gives the "total" (angle-integrated) cross section.  See Eq. (63)
+            in Carlson's notes.
+        
+        Parameters:
+            theta (ndarray): parameter-space vector
+        
+        Returns:
+            cross_section (ndarray): emulated total cross section
+
+        '''
+        # What do we do here when Coulomb and/or spin-orbit is present?
+        if self.rbes[0][0].interaction.k_c > 0:
+            raise Exception('The total cross section is infinite in the presence of Coulomb.')
+        
+        k = self.rbes[0][0].interaction.momentum(theta)
+        S_l_plus, S_l_minus = self.S_matrix_elements(self.exact_phase_shifts(theta))
+
+        sum = np.sum(np.pi/k**2 * (2*self.ls + 2) * (1 - S_l_plus.real))
+        sum += np.sum(np.pi/k**2 * (2*self.ls - 2) * (1 - S_l_minus.real))
+
+        return sum
 
 
     def save(self, filename):

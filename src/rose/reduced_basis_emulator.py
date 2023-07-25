@@ -17,11 +17,6 @@ from .constants import DEFAULT_RHO_MESH, HBARC
 from .free_solutions import phase_shift, H_minus, H_plus, H_minus_prime, H_plus_prime
 from .utility import finite_difference_first_derivative, finite_difference_second_derivative, regular_inverse_s
 
-# How many points should be ignored at the beginning
-# and end of the vectors (due to finite-difference
-# inaccuracies)?
-# ni = 2
-
 class ReducedBasisEmulator:
     r'''A ReducedBasisEmulator (RBE) uses the specified `interaction` and
     `theta_train` to generate solutions to the Schrödinger equation at a
@@ -61,7 +56,7 @@ class ReducedBasisEmulator:
         r'''Trains a reduced-basis emulator based on the provided interaction and training space.
         
         Parameters:
-            interaction (Interation): local interaction
+            interaction (Interaction): local interaction
             theta_train (ndarray): training points in parameter space; shape = (n_points, n_parameters)
             n_basis (int): number of basis vectors for $\hat{\phi}$ expansion
             use_svd (bool): Use principal components of training wave functions?
@@ -89,7 +84,7 @@ class ReducedBasisEmulator:
         r'''Trains a reduced-basis emulator based on the provided interaction and basis.
         
         Parameters:
-            interaction (Interation): local interaction
+            interaction (Interaction): local interaction
             basis (Basis): see [Basis documentation](basis.md)
             s_0 (float): $s$ point where the phase shift is extracted
         

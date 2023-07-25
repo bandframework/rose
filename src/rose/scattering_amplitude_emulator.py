@@ -71,8 +71,7 @@ will NOT be communicated to the user's own high-fidelity solver.
         # Let's precompute the things we can.
         self.ls = np.arange(self.l_max+1)[:, np.newaxis]
         self.P_l_costheta = eval_legendre(self.ls, np.cos(self.angles))
-        self.P_1_l_costheta = np.array([[eval_assoc_legendre(l, a) for a in np.cos(self.angles)] 
-                                        for l in self.ls])
+        self.P_1_l_costheta = np.array([eval_assoc_legendre(l, np.cos(self.angles)) for l in self.ls])
         # Coulomb scattering amplitude
         # (This is dangerous because it's not fixed when we emulate across
         # energies, BUT we don't do that with Coulomb (yet). When we do emulate
@@ -106,11 +105,15 @@ will NOT be communicated to the user's own high-fidelity solver.
 
         # Coulomb-distorted, nuclear scattering amplitude
         deltas = self.emulate_phase_shifts(theta)
-        S_l_plus = np.array([np.exp(2j*d[0]) for d in deltas])[:, np.newaxis]
+        deltas_plus = np.array([d[0] for d in deltas])
+        deltas_minus = np.array([d[1] for d in deltas[1:]])
+
+        S_l_plus = np.exp(2j*deltas_plus)[:, np.newaxis]
         if self.rbes[0][0].interaction.include_spin_orbit:
-            S_l_minus = np.array([S_l_plus[0]] + [np.exp(2j*d[1]) for d in deltas[1:]])[:, np.newaxis]
+            S_l_minus = np.hstack((S_l_plus[0], np.exp(2j*deltas_minus)))[:, np.newaxis]
         else:
             S_l_minus = S_l_plus.copy()
+        
         A = self.f_c + 1/(2j*k) * np.sum(
             np.exp(2j*self.sigma_l) * ((self.ls+1)*(S_l_plus - 1) + \
                 self.ls*(S_l_minus - 1)) * self.P_l_costheta,

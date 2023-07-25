@@ -91,6 +91,19 @@ class ScatteringAmplitudeEmulator:
             s_0 (float): $s$ point where the phase shift is extracted
             verbose (bool): Do you want the class to print out warnings?
 
+        Attributes:
+            l_max (int): maximum angular momentum
+            angles (ndarray): angle values at which the differential cross section is desired
+            rbes (list): list of `ReducedBasisEmulators`; one for each partial wave (and total $j$ with spin-orbit)
+            ls (ndarray): angular momenta; shape = (`l_max`+1, 1)
+            P_l_costheta (ndarray): Legendre polynomials evaluated at `angles`
+            P_1_l_costheta (ndarray): **associated** Legendre polynomials evalated at `angles`
+            k_c (float): Coulomb momentum, $k\eta$
+            eta (float): Sommerfeld parameter
+            sigma_l (float): Coulomb phase shift
+            f_c (ndarray): scattering amplitude
+            rutherford (ndarray): Rutherford scattering
+
         '''
         self.l_max = l_max
         self.angles = angles.copy()
@@ -277,7 +290,7 @@ will NOT be communicated to the user's own high-fidelity solver.
 
         '''
         # What do we do here when Coulomb and/or spin-orbit is present?
-        if self.rbes[0][0].interaction.k_c > 0:
+        if self.k_c > 0:
             raise Exception('The total cross section is infinite in the presence of Coulomb.')
         
         k = self.rbes[0][0].interaction.momentum(theta)
@@ -303,7 +316,7 @@ will NOT be communicated to the user's own high-fidelity solver.
 
         '''
         # What do we do here when Coulomb and/or spin-orbit is present?
-        if self.rbes[0][0].interaction.k_c > 0:
+        if self.k_c > 0:
             raise Exception('The total cross section is infinite in the presence of Coulomb.')
         
         k = self.rbes[0][0].interaction.momentum(theta)

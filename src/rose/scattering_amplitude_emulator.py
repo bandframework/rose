@@ -14,6 +14,15 @@ class ScatteringAmplitudeEmulator:
 
     @classmethod
     def load(obj, filename):
+        r'''Loads a previously trained emulator.
+
+        Parameters:
+            filename (string): name of file
+        
+        Returns:
+            emulator (ScatteringAmplitudeEmulator): previously trainined `ScatteringAmplitudeEmulator`
+        
+        '''
         with open(filename, 'rb') as f:
             sae = pickle.load(f)
         return sae
@@ -31,6 +40,26 @@ class ScatteringAmplitudeEmulator:
         s_0: float = 6*np.pi,
         hf_tols: list = None
     ):
+        r'''Trains a reduced-basis emulator based on the provided interaction and training space.
+        
+        Parameters:
+            interaction_space (InteractionSpace): local interaction up to (and including $\ell_\max$)
+            theta_train (ndarray): training points in parameter space; shape = (n_points, n_parameters)
+            l_max (int): maximum angular momentum to include in the sum approximating the cross section
+            angles (ndarray): Differential cross sections are functions of the
+                angles. These are the specific values at which the user wants to
+                emulate the cross section.
+            n_basis (int): number of basis vectors for $\hat{\phi}$ expansion
+            use_svd (bool): Use principal components of training wave functions?
+            s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
+            s_0 (float): $s$ point where the phase shift is extracted
+            hf_tols (list): 2-element list passed to `SchroedingerEquation`;
+                [relative tolerance, absolute tolerance]
+        
+        Returns:
+            sae (ScatteringAmplitudeEmulator): scattering amplitude emulator
+        
+        '''
         bases = []
         for interaction_list in tqdm(interaction_space.interactions):
             basis_list = [RelativeBasis(
@@ -50,8 +79,18 @@ class ScatteringAmplitudeEmulator:
         s_0: float = 6*np.pi,
         verbose: bool = True
     ):
-        '''
-        :param interaction:
+        r'''Trains a reduced-basis emulator that computes differential and total cross sections (from emulated phase shifts).
+
+        Parameters:
+            interaction_space (InteractionSpace): local interaction up to (and including $\ell_\max$)
+            bases (list[Basis]): list of `Basis` objects
+            l_max (int): maximum angular momentum to include in the sum approximating the cross section
+            angles (ndarray): Differential cross sections are functions of the
+                angles. These are the specific values at which the user wants to
+                emulate the cross section.
+            s_0 (float): $s$ point where the phase shift is extracted
+            verbose (bool): Do you want the class to print out warnings?
+
         '''
         self.l_max = l_max
         self.angles = angles.copy()
@@ -88,25 +127,44 @@ will NOT be communicated to the user's own high-fidelity solver.
     def emulate_phase_shifts(self,
         theta: np.array
     ):
-        '''
-        Gives the phase shifts for each partial wave.
-        Order is [l=0, l=1, ..., l=l_max-1].
+        r'''Gives the phase shifts for each partial wave.  Order is [l=0, l=1,
+            ..., l=l_max-1].
+        
+        Parameters:
+            theta (ndarray): parameter-space vector
+        
+        Returns:
+            phase_shift (list): emulated phase shifts
+
         '''
         return [[rbe.emulate_phase_shift(theta) for rbe in rbe_list] for rbe_list in self.rbes]
 
     def exact_phase_shifts(self,
         theta: np.array
     ):
-        '''
-        Gives the phase shifts for each partial wave.
-        Order is [l=0, l=1, ..., l=l_max-1].
+        r'''Gives the phase shifts for each partial wave. Order is [l=0, l=1,
+            ..., l=l_max-1].
+        
+        Parameters:
+            theta (ndarray): parameter-space vector
+        
+        Returns:
+            phase_shift (list): high-fidelity phase shifts
+
         '''
         return [[rbe.exact_phase_shift(theta) for rbe in rbe_list] for rbe_list in self.rbes]
 
 
     def dsdo(self, theta : np.array, deltas : np.array):
-        '''
-        Gives the differential cross section (dsigma/dOmega = dsdo).
+        r'''Gives the differential cross section (dsigma/dOmega = dsdo).
+
+        Parameters:
+            theta (ndarray): parameter-space vector
+            deltas (ndarray): phase shifts
+        
+        Returns:
+            dsdo (ndarray): differential cross section (fm^2)
+
         '''
         k = self.rbes[0][0].interaction.momentum(theta)
 
@@ -117,8 +175,10 @@ will NOT be communicated to the user's own high-fidelity solver.
 
         S_l_plus = np.exp(2j*deltas_plus)[:, np.newaxis]
         if self.rbes[0][0].interaction.include_spin_orbit:
+            # If there is spin-orbit, the l=0 term for B has to be zero.
             S_l_minus = np.hstack((S_l_plus[0], np.exp(2j*deltas_minus)))[:, np.newaxis]
         else:
+            # This ensures that A reduces to the non-spin-orbit formula, and B = 0.
             S_l_minus = S_l_plus.copy()
         
         A = self.f_c + 1/(2j*k) * np.sum(
@@ -141,20 +201,30 @@ will NOT be communicated to the user's own high-fidelity solver.
     def emulate_dsdo(self,
         theta: np.array
     ):
+        r'''Emulates the differential cross section (dsigma/dOmega = dsdo).
+
+        Parameters:
+            theta (ndarray): parameter-space vector
+
+        Returns:
+            dsdo (ndarray): emulated differential cross section
+
         '''
-        Gives the differential cross section (dsigma/dOmega = dsdo).
-        '''
-        # Coulomb-distorted, nuclear scattering amplitude
         deltas = self.emulate_phase_shifts(theta)
         return self.dsdo(theta, deltas)
 
     def exact_dsdo(self,
         theta: np.array
     ):
+        r'''Calculates the high-fidelity differential cross section (dsigma/dOmega = dsdo).
+
+        Parameters:
+            theta (ndarray): parameter-space vector
+
+        Returns:
+            dsdo (ndarray): high-fidelity differential cross section
+
         '''
-        Gives the differential cross section (dsigma/dOmega = dsdo).
-        '''
-        # Coulomb-distorted, nuclear scattering amplitude
         deltas = self.exact_phase_shifts(theta)
         return self.dsdo(theta, deltas)
 
@@ -162,10 +232,16 @@ will NOT be communicated to the user's own high-fidelity solver.
     def emulate_wave_functions(self,
         theta: np.array
     ):
-        '''
-        Gives the wave functions for each partial wave.
-        Returns a list of arrays.
-        Order is [l=0, l=1, ..., l=l_max-1].
+        r'''Gives the wave functions for each partial wave.  Returns a list of
+            arrays.  Order is [l=0, l=1, ..., l=l_max-1].
+        
+        Parameters:
+            theta (ndarray): parameter-space vector
+
+        Returns:
+            wave_functions (list): emulated wave functions
+
+        
         '''
         return [[x.emulate_wave_function(theta) for x in rbe] for rbe in self.rbes]
 
@@ -174,15 +250,20 @@ will NOT be communicated to the user's own high-fidelity solver.
         theta: np.array,
         rel_ruth: bool = True
     ):
-        '''
-        Gives the "total" (angle-integrated) cross section.
-        See Eq. (3.1.50) in Thompson and Nunes.
-        :param rel_ruth: Report the total cross section relative to Rutherford?
+        r'''Gives the "total" (angle-integrated) cross section.  See Eq.
+            (3.1.50) in Thompson and Nunes.  :param rel_ruth: Report the total
+            cross section relative to Rutherford?
         '''
         # What do we do here when Coulomb and/or spin-orbit is present?
         return None
 
 
     def save(self, filename):
+        r'''Saves the emulator to the desired file.
+        
+        Parameters:
+            filename (string): name of file
+        
+        '''
         with open(filename, 'wb') as f:
             pickle.dump(self, f)

@@ -7,3 +7,4 @@ docs/html
 docs/generated
 docs/_*/
 src/rose.egg-info/
+build/

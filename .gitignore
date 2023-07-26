@@ -1,5 +1,6 @@
 .DS_Store
-dist/rose*.*
+dist/
+src/nuclear_rose.egg-info
 build/
 *.pkl
 *.pyc

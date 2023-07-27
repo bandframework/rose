@@ -181,26 +181,15 @@ will NOT be communicated to the user's own high-fidelity solver.
         '''
         k = self.rbes[0][0].interaction.momentum(theta)
 
-        # Coulomb-distorted, nuclear scattering amplitude
-        deltas = self.emulate_phase_shifts(theta)
-        deltas_plus = np.array([d[0] for d in deltas])
-        deltas_minus = np.array([d[1] for d in deltas[1:]])
+        S_l_plus, S_l_minus = self.S_matrix_elements(deltas)
 
-        S_l_plus = np.exp(2j*deltas_plus)[:, np.newaxis]
-        if self.rbes[0][0].interaction.include_spin_orbit:
-            # If there is spin-orbit, the l=0 term for B has to be zero.
-            S_l_minus = np.hstack((S_l_plus[0], np.exp(2j*deltas_minus)))[:, np.newaxis]
-        else:
-            # This ensures that A reduces to the non-spin-orbit formula, and B = 0.
-            S_l_minus = S_l_plus.copy()
-        
         A = self.f_c + 1/(2j*k) * np.sum(
             np.exp(2j*self.sigma_l) * ((self.ls+1)*(S_l_plus - 1) + \
                 self.ls*(S_l_minus - 1)) * self.P_l_costheta,
             axis=0
         )
         B = 1/(2j*k) * np.sum(
-            np.exp(2j*self.sigma_l) * (S_l_plus - S_l_minus) * self.P_l_costheta,
+            np.exp(2j*self.sigma_l) * (S_l_plus - S_l_minus) * self.P_1_l_costheta,
             axis=0
         )
 
@@ -225,6 +214,7 @@ will NOT be communicated to the user's own high-fidelity solver.
         '''
         deltas = self.emulate_phase_shifts(theta)
         return self.dsdo(theta, deltas)
+
 
     def exact_dsdo(self,
         theta: np.array

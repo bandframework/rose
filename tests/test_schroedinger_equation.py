@@ -76,9 +76,9 @@ class TestSchrEq(unittest.TestCase):
 
         ell = 3
         interaction = rose.InteractionEIM(rose.koning_delaroche.KD_simple,
-                                        ntheta, mu, energy, ell, train, is_complex=True,
-                                        spin_orbit_term=rose.SpinOrbitTerm(rose.koning_delaroche.KD_simple_so, ell),
-                                        n_basis=ntheta+16, explicit_training=True)
+                                          ntheta, mu, energy, ell, train, is_complex=True,
+                                          spin_orbit_term=rose.SpinOrbitTerm(rose.koning_delaroche.KD_simple_so, ell),
+                                          n_basis=ntheta+16, explicit_training=True)
 
         y = interaction.tilde(interaction.s_mesh, alphastar)
         yp = interaction.tilde_emu(alphastar)

@@ -101,6 +101,7 @@ class InteractionEIM(Interaction):
                 potential is enforced
 
         Attributes:
+            s_mesh (ndarray): $s$ points
             singular_values (ndarray): `S` in `U, S, Vt = numpy.linalg.svd(...)`
             snapshots (ndarray): pillars, columns of `U`
             match_indices (ndarray): indices of points in $\rho$ mesh that are
@@ -114,6 +115,7 @@ class InteractionEIM(Interaction):
         super().__init__(coordinate_space_potential, n_theta, mu, energy, ell,
             Z_1=Z_1, Z_2=Z_2, R_C=R_C, is_complex=is_complex, spin_orbit_term=spin_orbit_term)
 
+        self.s_mesh = rho_mesh.copy()
         # Generate a basis used to approximate the potential.
         # Did the user specify the training points?
         if explicit_training:

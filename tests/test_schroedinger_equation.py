@@ -33,7 +33,7 @@ class TestSchrEq(unittest.TestCase):
         ell = 0
         z = 0
         rho = rose.constants.DEFAULT_RHO_MESH
-        potential = lambda r, theta: theta[0] * rose.interaction_eim.wood_saxon(r, theta[1], theta[2]) 
+        potential = lambda r, theta: theta[0] * rose.koning_delaroche.woods_saxon(r, theta[1], theta[2]) 
 
         interaction = rose.Interaction(potential, 3, mu, energy, z, z)
         se1 = rose.SchroedingerEquation(interaction)
@@ -60,7 +60,34 @@ class TestSchrEq(unittest.TestCase):
             norm_diff < 1e-16,
             msg=f'norm(difference) = {norm_diff:.2e}'
         )
+    
 
+    def test_emulation(self):
+        AMU = 931.5
+        A = 40
+        mu = A / (A + 1) * AMU
+        energy = 13.659
+
+        alphastar = np.array([51.9, 4.00134372,  0.75, 0.4, 4.5143365, 0.51, 8.3,
+            4.5143365, 0.51, 6.2, 3.45415141, 0.75, 1.0, 3.45415141, 0.75])
+        ntheta = alphastar.size
+
+        train = np.load('train.npy')
+
+        ell = 3
+        interaction = rose.InteractionEIM(rose.koning_delaroche.KD_simple,
+                                        ntheta, mu, energy, ell, train, is_complex=True,
+                                        spin_orbit_term=rose.SpinOrbitTerm(rose.koning_delaroche.KD_simple_so, ell),
+                                        n_basis=ntheta+16, explicit_training=True)
+
+        y = interaction.tilde(interaction.s_mesh, alphastar)
+        yp = interaction.tilde_emu(alphastar)
+
+        norm_diff = np.linalg.norm(y-yp)
+        self.assertTrue(
+            norm_diff < 1e-4,
+            msg=f'norm(difference) = {norm_diff:.2e}'
+        )
 
 if __name__ == '__main__':
     unittest.main()

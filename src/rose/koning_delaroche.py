@@ -120,7 +120,7 @@ def KD_simple(r, alpha):
 
 
 def KD_simple_so(r, alpha, lds):
-    r'''simplified Koning-Delaroche *with* the spin-orbit terms
+    r'''simplified Koning-Delaroche spin-orbit terms
 
     Take Eq. (1) and remove the energy dependence of the coefficients.
 

@@ -11,5 +11,4 @@ from .basis import CustomBasis, RelativeBasis
 from .koning_delaroche import KoningDelaroche, EnergizedKoningDelaroche
 from .spin_orbit import SpinOrbitTerm
 
-
-__version__ = '0.9.3'
+from .__version__ import __version__

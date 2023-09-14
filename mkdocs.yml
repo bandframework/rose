@@ -19,6 +19,8 @@ markdown_extensions:
 
 theme:
   name: material
+  features:
+    - toc.integrate
 
 nav:
   - index.md
@@ -26,8 +28,9 @@ nav:
   - Documentation:
     - hifi_solver.md
     - interaction.md
-    - rbe.md
     - basis.md
+    - rbe.md
+    - sae.md
   - contact.md
 
 extra_javascript:

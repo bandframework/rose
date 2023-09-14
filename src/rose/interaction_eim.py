@@ -56,6 +56,7 @@ class InteractionEIM(Interaction):
         training_info: np.array,
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
+        R_C: float = 0.0, # Coulomb "cutoff"
         is_complex: bool = False,
         spin_orbit_term: SpinOrbitTerm = None,
         n_basis: int = None,
@@ -70,9 +71,8 @@ class InteractionEIM(Interaction):
                 theta) where theta are the interaction parameters
             n_theta (int): number of interaction parameters
             mu (float): reduced mass (MeV); converted to 1/fm
-            is_complex (bool): Is the interaction complex (e.g. optical
-                potentials)?
-            n_basis (int): number of basis states, or "pillars" in $\hat{U}$ approximation
+            energy (float): center-of-mass scattering energy
+            ell (int): angular momentum
             training_info (ndarray): Either (1) parameters bounds or (2)
                 explicit training points
 
@@ -84,6 +84,13 @@ class InteractionEIM(Interaction):
                 If (2):
                     This is an MxN matrix. N is the number of parameters. M is
                     the number of samples.
+            Z_1 (int): charge of particle 1
+            Z_2 (int): charge of particle 2
+            R_C (float): Coulomb "cutoff" radius
+            is_complex (bool): Is the interaction complex (e.g. optical
+                potentials)?
+            spin_orbit_term (SpinOrbitTerm): spin-orbit part of the interaction
+            n_basis (int): number of basis states, or "pillars" in $\hat{U}$ approximation
             explicit_training (bool): Is training_info (1) or (2)? (1) is
                 default
             n_train (int): How many snapshots to generate? Ignored if
@@ -94,6 +101,7 @@ class InteractionEIM(Interaction):
                 potential is enforced
 
         Attributes:
+            s_mesh (ndarray): $s$ points
             singular_values (ndarray): `S` in `U, S, Vt = numpy.linalg.svd(...)`
             snapshots (ndarray): pillars, columns of `U`
             match_indices (ndarray): indices of points in $\rho$ mesh that are
@@ -105,8 +113,9 @@ class InteractionEIM(Interaction):
         '''
 
         super().__init__(coordinate_space_potential, n_theta, mu, energy, ell,
-            Z_1=Z_1, Z_2=Z_2, is_complex=is_complex, spin_orbit_term=spin_orbit_term)
+            Z_1=Z_1, Z_2=Z_2, R_C=R_C, is_complex=is_complex, spin_orbit_term=spin_orbit_term)
 
+        self.s_mesh = rho_mesh.copy()
         # Generate a basis used to approximate the potential.
         # Did the user specify the training points?
         if explicit_training:
@@ -146,6 +155,15 @@ class InteractionEIM(Interaction):
     def coefficients(self,
         alpha: np.array
     ):
+        r'''Computes the EIM expansion coefficients.
+
+        Parameters:
+            alpha (ndarray): interaction parameters
+        
+        Returns:
+            coefficients (ndarray): EIM expansion coefficients
+
+        '''
         u_true = self.tilde(self.r_i, alpha)
         return 1/self.k, self.Ainv @ u_true
 
@@ -153,19 +171,30 @@ class InteractionEIM(Interaction):
     def tilde_emu(self,
         alpha: np.array
     ):
-        '''
-        tilde{U}(s, alpha, E)
-        Does not include the Coulomb term.
-        s = pr/hbar
-        alpha are the parameters we are varying
-        E = E_{c.m.}, [E] = MeV = [v_r]
+        r'''Emulated interaction = $\hat{U}(s, \alpha, E)$
+
+        Parameters:
+            alpha (ndarray): interaction parameters
+        
+        Returns:
+            u_hat (ndarray): emulated interaction
+
         '''
         _, x = self.coefficients(alpha)
         emu = np.sum(x * self.snapshots, axis=1)
         return emu
     
 
-    def basis_functions(self, rho_mesh: np.array):
+    def basis_functions(self, s_mesh: np.array):
+        r'''$u_j$ in $\tilde{U} \approx \hat{U} \equiv \sum_j \beta_j(\alpha) u_j$
+
+        Parameters:
+            s_mesh (ndarray): $s$ mesh points
+        
+        Returns:
+            u_j (ndarray): "pillars" (MxN matrix; M = number of mesh points; N = number of pillars)
+
+        '''
         return np.copy(self.snapshots)
     
 
@@ -179,6 +208,7 @@ class InteractionEIMSpace(InteractionSpace):
         training_info: np.array,
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
+        R_C: float = 0.0, # Coulomb "cutoff"
         is_complex: bool = False,
         spin_orbit_potential: Callable[[float, np.array, float], float] = None, #V_{SO}(r, theta, l•s)
         n_basis: int = None,
@@ -198,6 +228,7 @@ class InteractionEIMSpace(InteractionSpace):
             training_info (ndarray): See `InteractionEIM` documentation.
             Z_1 (int): charge of particle 1
             Z_2 (int): charge of particle 2
+            R_C (float): Coulomb "cutoff" radius
             is_complex (bool): Is the interaction complex?
             spin_orbit_potential (Callable[[float, np.array, float], float]):
                 used to create a `SpinOrbitTerm`
@@ -212,14 +243,14 @@ class InteractionEIMSpace(InteractionSpace):
             instance (InteractionEIMSpace): instance of InteractionEIMSpace
         
         Attributes:
-            interaction (list): list of `InteractionEIM`s
+            interactions (list): list of `InteractionEIM`s
         '''
         self.interactions = []
         if spin_orbit_potential is None:
             for l in range(l_max+1):
                 self.interactions.append(
                     [InteractionEIM(coordinate_space_potential, n_theta, mu,
-                        energy, l, training_info, Z_1=Z_1, Z_2=Z_2,
+                        energy, l, training_info, Z_1=Z_1, Z_2=Z_2, R_C=R_C,
                         is_complex=is_complex, n_basis=n_basis, explicit_training=explicit_training,
                         n_train=n_train, rho_mesh=rho_mesh, match_points=match_points)]
                 )
@@ -227,9 +258,11 @@ class InteractionEIMSpace(InteractionSpace):
             for l in range(l_max+1):
                 self.interactions.append(
                     [InteractionEIM(coordinate_space_potential, n_theta, mu,
-                        energy, l, training_info, Z_1=Z_1, Z_2=Z_2, is_complex=is_complex,
-                        spin_orbit_term=SpinOrbitTerm(spin_orbit_potential, lds),
-                        n_basis=n_basis, explicit_training=explicit_training,
-                        n_train=n_train, rho_mesh=rho_mesh, match_points=match_points)
-                        for lds in couplings(l)]
+                        energy, l, training_info, Z_1=Z_1, Z_2=Z_2, R_C=R_C,
+                        is_complex=is_complex,
+                        spin_orbit_term=SpinOrbitTerm(spin_orbit_potential,
+                        lds), n_basis=n_basis,
+                        explicit_training=explicit_training, n_train=n_train,
+                        rho_mesh=rho_mesh, match_points=match_points) for lds in
+                        couplings(l)]
                 )

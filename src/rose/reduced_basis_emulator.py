@@ -15,12 +15,7 @@ from .schroedinger import SchroedingerEquation
 from .basis import RelativeBasis, Basis, CustomBasis
 from .constants import DEFAULT_RHO_MESH, HBARC
 from .free_solutions import phase_shift, H_minus, H_plus, H_minus_prime, H_plus_prime
-from .utility import finite_difference_first_derivative, finite_difference_second_derivative
-
-# How many points should be ignored at the beginning
-# and end of the vectors (due to finite-difference
-# inaccuracies)?
-# ni = 2
+from .utility import finite_difference_first_derivative, finite_difference_second_derivative, regular_inverse_s
 
 class ReducedBasisEmulator:
     r'''A ReducedBasisEmulator (RBE) uses the specified `interaction` and
@@ -61,7 +56,7 @@ class ReducedBasisEmulator:
         r'''Trains a reduced-basis emulator based on the provided interaction and training space.
         
         Parameters:
-            interaction (Interation): local interaction
+            interaction (Interaction): local interaction
             theta_train (ndarray): training points in parameter space; shape = (n_points, n_parameters)
             n_basis (int): number of basis vectors for $\hat{\phi}$ expansion
             use_svd (bool): Use principal components of training wave functions?
@@ -89,7 +84,7 @@ class ReducedBasisEmulator:
         r'''Trains a reduced-basis emulator based on the provided interaction and basis.
         
         Parameters:
-            interaction (Interation): local interaction
+            interaction (Interaction): local interaction
             basis (Basis): see [Basis documentation](basis.md)
             s_0 (float): $s$ point where the phase shift is extracted
         
@@ -136,7 +131,10 @@ class ReducedBasisEmulator:
         d2_operator = finite_difference_second_derivative(self.s_mesh)
         phi_basis = self.basis.vectors
         ang_mom = self.l*(self.l+1) / self.s_mesh**2
-        k_c = 2*self.interaction.k_c / self.s_mesh
+
+        # This is not going to work when we implement energy emulation with Coulomb.
+        S_C = self.interaction.R_C * self.interaction.k
+        k_c = 2*self.interaction.k_c * regular_inverse_s(self.s_mesh,S_C )
 
         self.d2 = -d2_operator @ phi_basis
         self.A_1 = phi_basis.T @ self.d2

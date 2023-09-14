@@ -11,9 +11,10 @@ import numpy as np
 
 from .interaction_eim import InteractionEIM
 from .energized_interaction_eim import EnergizedInteractionEIM
-from .constants import DEFAULT_RHO_MESH, HBARC
+from .constants import DEFAULT_RHO_MESH, MASS_PION
 
-MASS_PION = 140 / HBARC # 1/fm
+MAX_ARG = np.log(1/1e-16)
+NUM_PARAMS = 15
 
 def Vv(E, v1, v2, v3, v4, Ef):
     r'''energy-dependent, volume-central strength - real term, Eq. (7)
@@ -49,10 +50,40 @@ def woods_saxon(r, R, a):
     return 1/(1 + np.exp((r-R)/a))
 
 
+def woods_saxon_safe(r, R, a):
+    '''Woods-Saxon potential
+
+     * avoids `exp` overflows
+
+     '''
+    x = (r-R)/a
+    if isinstance(x, float):
+        return 1/(1 + np.exp(x)) if x < MAX_ARG else 0
+    else:
+        ii = np.where(x <= MAX_ARG)[0]
+        jj = np.where(x > MAX_ARG)[0]
+        return np.hstack([1/(1 + np.exp(x[ii])), np.zeros(jj.size)])
+    
+
 def woods_saxon_prime(r, R, a):
     '''derivative of the Woods-Saxon potential w.r.t. $r$
     '''
     return -1/a * np.exp((r-R)/a) / (1 + np.exp((r-R)/a))**2
+
+
+def woods_saxon_prime_safe(r, R, a):
+    '''derivative of the Woods-Saxon potential w.r.t. $r$
+
+    * avoids `exp` overflows
+
+    '''
+    x = (r-R)/a
+    if isinstance(x, float):
+        return -1/a * np.exp(x)/(1 + np.exp(x))**2 if x < MAX_ARG else 0
+    else:
+        ii = np.where(x <= MAX_ARG)[0]
+        jj = np.where(x > MAX_ARG)[0]
+        return np.hstack([-1/a * np.exp(x[ii])/(1 + np.exp(x[ii]))**2, np.zeros(jj.size)])
 
 
 def KD(r, E, v1, v2, v3, v4, w1, w2, d1, d2, d3, Ef, Rv, av, Rd, ad):
@@ -62,30 +93,42 @@ def KD(r, E, v1, v2, v3, v4, w1, w2, d1, d2, d3, Ef, Rv, av, Rd, ad):
            1j * (-4*ad) * Wd(E, d1, d2, d3, Ef) * woods_saxon_prime(r, Rd, ad)
 
 
+def decompose_alpha(alpha):
+    r'''Splits the parameter-space vector into non-spin-orbit and spin-orbit
+    parameters.
+
+    Parameters:
+        alpha (ndarray): interaction parameters
+    
+    Returns:
+        parameters (tuple): 2-tuple of non-spin-orbit (`parameters[0]`) and
+            spin-orbit parameters (`parameters[1]`)
+
+    '''
+    vv, rv, av, wv, rwv, awv, wd, rd, ad, vso, rso, aso, wso, rwso, awso = alpha
+    return (vv, rv, av, wv, rwv, awv, wd, rd, ad), (vso, rso, aso, wso, rwso, awso)
+
 def KD_simple(r, alpha):
-    '''simplified Koning-Delaroche without the spin-orbit terms
+    r'''simplified Koning-Delaroche without the spin-orbit terms
 
     Take Eq. (1) and remove the energy dependence of the coefficients.
     '''
-    vv, wv, wd, Rv, av, Rd, ad = alpha
-    return -vv * woods_saxon(r, Rv, av) - \
-        1j*wv*woods_saxon(r, Rv, av) - \
-        1j*(-4*ad)*wd * woods_saxon_prime(r, Rd, ad)
+    vv, rv, av, wv, rwv, awv, wd, rd, ad = decompose_alpha(alpha)[0]
+    return -vv * woods_saxon_safe(r, rv, av) - \
+        1j*wv * woods_saxon_safe(r, rwv, awv) - \
+        1j*(-4*ad)*wd * woods_saxon_prime_safe(r, rd, ad)
 
 
 def KD_simple_so(r, alpha, lds):
-    '''simplified Koning-Delaroche *with* the spin-orbit terms
+    r'''simplified Koning-Delaroche spin-orbit terms
 
     Take Eq. (1) and remove the energy dependence of the coefficients.
 
     lds: l • s = 1/2 * (j(j+1) - l(l+1) - s(s+1))
     '''
-    vv, wv, wd, vso, wso, Rv, Rd, Rso, av, ad, aso = alpha
-    return -vv * woods_saxon(r, Rv, av) - \
-        1j*wv*woods_saxon(r, Rv, av) - \
-        1j*(-4*ad)*wd * woods_saxon_prime(r, Rd, ad) + \
-        vso/MASS_PION**2/r*woods_saxon_prime(r, Rso, aso)*lds + \
-        1j*wso/MASS_PION**2/r*woods_saxon_prime(r, Rso, aso)*lds
+    vso, rso, aso, wso, rwso, awso = decompose_alpha(alpha)[1]
+    return lds * vso/MASS_PION**2/r * woods_saxon_prime_safe(r, rso, aso) + \
+        1j*wso/MASS_PION**2/r*woods_saxon_prime_safe(r, rwso, awso)
 
 
 class KoningDelaroche(InteractionEIM):
@@ -133,7 +176,7 @@ class KoningDelaroche(InteractionEIM):
 
         ''' 
         super().__init__(
-            KD_simple_so, 11, mu, ell, energy, training_info=training_info, Z_1=0, Z_2=0,
+            KD_simple_so, NUM_PARAMS, mu, ell, energy, training_info=training_info, Z_1=0, Z_2=0,
             is_complex=True, n_basis=n_basis,
             explicit_training=explicit_training, n_train=n_train,
             rho_mesh=rho_mesh, match_points=match_points
@@ -154,6 +197,8 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIM):
         r'''Wraps the Koning-Delaroche potential into a `rose`-friendly class.
         Saves system-specific information. Allows the user to emulate across
         energies.
+
+        * **Does not (yet) support Coulomb.**
         
         Parameters:
             mu (float): reduced mass of the 2-body system
@@ -179,7 +224,7 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIM):
             instance (EnergizedKoningDelaroche): instance of the class
         ''' 
         super().__init__(
-            KD_simple_so, 12, mu, ell, training_info=training_info, Z_1=0, Z_2=0,
+            KD_simple_so, NUM_PARAMS, mu, ell, training_info=training_info, Z_1=0, Z_2=0,
             is_complex=True, n_basis=n_basis,
             explicit_training=explicit_training, n_train=n_train,
             rho_mesh=rho_mesh, match_points=match_points

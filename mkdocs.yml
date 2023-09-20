@@ -22,6 +22,25 @@ theme:
   name: material
   features:
     - toc.integrate
+    - content.action.edit
+
+  palette: 
+
+    # Palette toggle for light mode
+    - scheme: default
+      toggle:
+        icon: material/brightness-7 
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github-alt
+    edit: material/pencil 
+    view: material/eye
 
 nav:
   - index.md
@@ -43,3 +62,11 @@ extra_javascript:
 
 extra_css:
   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.css
+
+repo_url: https://github.com/bandframework/rose
+
+repo_name: bandframework/rose
+
+edit_uri: edit/develop/docs/
+
+copyright: Copyright &copy; 2022 - 2023 BAND Collaboration

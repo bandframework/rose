@@ -2,6 +2,7 @@ site_name: ROSE
 
 plugins:
 - search
+- mkdocs-jupyter
 - mkdocstrings:
     handlers:
       python:
@@ -24,7 +25,9 @@ theme:
 
 nav:
   - index.md
-  - tutorials.md
+  - Tutorials:
+    - tutorials/ROSE_tutorial_1_building_an_emulator.ipynb
+    - tutorials/ROSE_tutorial_2_optical_potential_surmise_UQ.ipynb
   - Documentation:
     - hifi_solver.md
     - interaction.md

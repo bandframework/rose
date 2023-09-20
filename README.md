@@ -43,3 +43,6 @@ phi = rbe.emulate_wave_function(theta)
 # or...
 delta = rbe.emulate_phase_shift(theta)
 ```
+
+
+For a full set of examples walking through emulation and calibration, check the [tutorials](docs/tutorials/) directory.

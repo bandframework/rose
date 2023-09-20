@@ -7,9 +7,9 @@ name = "nuclear-rose"
 dynamic = ["version", "dependencies"]
 authors = [
   {name="Daniel Odell", email="dodell@ohio.edo"},
-  {name="Pablo Giuliani", email="giulia27@msu.edu"}
-  {name="Kyle Godbey", email="rose@kyle.ee"}
-  {name="Kyle Beyer"}
+  {name="Pablo Giuliani", email="giulia27@msu.edu"},
+  {name="Kyle Godbey", email="rose@kyle.ee"},
+  {name="Kyle Beyer"},
   {name="Moses Chan"}
 ]
 description = "The Reduced-Order Scattering Emulator (rose) is a user-friendly software for building efficient surrogate models for nuclear scattering."

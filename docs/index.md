@@ -22,7 +22,7 @@ at the cost of a few significant digits that you weren't going to look at
 anyway? What if you had a plot to help you make these difficult decisions? Like
 this one:
 
-![CAT Plot](CAT-40Cann.jpg)
+![CAT Plot](CAT-ROSE.png)
 
 If only the rest of life was so accommodating.
 

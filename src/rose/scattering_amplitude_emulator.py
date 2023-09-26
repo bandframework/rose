@@ -1,7 +1,9 @@
 import pickle
 import numpy as np
 from scipy.special import eval_legendre, gamma
-from tqdm import tqdm 
+from tqdm import tqdm
+from numba import njit
+from dataclasses import dataclass
 
 from .interaction import InteractionSpace
 from .reduced_basis_emulator import ReducedBasisEmulator
@@ -9,6 +11,93 @@ from .constants import DEFAULT_RHO_MESH, DEFAULT_ANGLE_MESH
 from .schroedinger import SchroedingerEquation
 from .basis import RelativeBasis, CustomBasis
 from .utility import eval_assoc_legendre
+
+@dataclass
+def NucleonNucleusXS:
+    r''' holds differential cross section, analyzing power, total cross section and reaction cross secton, all at a given energy '''
+    dsdo : np.array
+    Ay : np.array
+    xst : float
+    xsrxn : float
+
+
+@njit
+def xscalc(k : float,
+           deltas : np.array,
+           angles : np.array,
+           f_c : np.array = None,
+           sigl : np.array = None,
+           rutherford_xs : np.array = None,
+           P_l_theta : np.array = None,
+           P_1_l_theta : np.array = None,
+           is_spin_orbit : bool = None):
+    r''' Calculates:
+        - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
+        - analyzing power
+        - total and reacion cross sections in mb
+        Paramaters:
+            k : wavenumber in fm
+            deltas : phase shifts in radians
+            angles : grid of angles in radians on which to evaluate dsdo and Ay
+            f_c : Coulomb scattering amplitudes
+            sigl : Coulomb phase shifts
+            P_l_theta : Legendre polynmomials of cos(angles) for each partial wave, if pre-computed
+            P_1_l_theta : First associated Legendre function of cos(angles) for each partial wave, if pre-computed
+            is_spin_orbit : is it?
+    '''
+
+    if f_c is not None:
+        assert(sigl is not None)
+    else:
+        assert(rutherford is None)
+
+    if is_spin_orbit:
+        # If there is spin-orbit, the l=0 term for B has to be zero.
+        deltas_plus = np.array([d[0] for d in deltas])
+        deltas_minus = np.array([d[1] for d in deltas[1:]])
+        S_l_plus = np.exp(2j*deltas_plus)[:, np.newaxis]
+        S_l_minus = np.hstack((S_l_plus[0], np.exp(2j*deltas_minus)))[:, np.newaxis]
+    else:
+        # This ensures that A reduces to the non-spin-orbit formula, and B = 0.
+        deltas_plus = np.array([d for d in deltas])
+        S_l_plus = np.exp(2j*deltas_plus)[:, np.newaxis]
+        S_l_minus = S_l_plus.copy()
+
+    lmax = S_l_plus.shape[0]
+
+    if not P_l_theta:
+        P_l_theta = np.array([eval_legendre(l, np.cos(angles)) for l in range(lmax)])
+
+    if not P_1_l_theta:
+        P_l_theta = np.array([eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)])
+
+    xst = 0
+    xsrxn = 0
+    a = np.zeros_like(angles)
+    b = np.zeros_like(angles)
+
+    for l in range(lmax):
+        a += fc[l] + np.exp(2j*sigl[l]) * ((l+1) * (S_l_plus[l] - 1) + l*(S_l_minus[l] - 1)) * P_l_theta
+        b += np.exp(2j*sigl[l]) * (S_l_plus[l] - S_l_minus[l] ) * P_1_l_theta
+        xsrxn += np.real(
+            (l+1) * (1 - S_l_plus[l] * np.conj(S_l_plus[l]))
+          + l * (1 - S_l_minus[l] * np.conj(S_l_minus[l]))
+        )
+        xst += np.real(
+            (l+1) * (1 - np.real(S_l_plus[l]))
+          + l * (1 - np.real(S_l_minus[l]))
+        )
+
+    dsdo = np.real(a * np.conj(a) + b * np.conj(b))*10
+    Ay = np.real(a * np.conj(b) + b * np.conj(a))*10 / dsdo
+    xst *= 10*2*np.pi/k**2
+    xsrxn *= 10*np.pi/k**2
+
+    if rutherford_xs is not None:
+        dsdo = dsdo / rutherford_xs
+
+    return NucleonNucleusXS(dsdo, Ay, xst, xsrxn)
+
 
 class ScatteringAmplitudeEmulator:
 
@@ -308,22 +397,59 @@ will NOT be communicated to the user's own high-fidelity solver.
         # What do we do here when Coulomb and/or spin-orbit is present?
         if self.k_c > 0:
             raise Exception('The total cross section is infinite in the presence of Coulomb.')
-        
+
         k = self.rbes[0][0].interaction.momentum(theta)
         S_l_plus, S_l_minus = self.S_matrix_elements(self.exact_phase_shifts(theta))
 
         sum = np.sum(np.pi/k**2 * (2*self.ls + 2) * (1 - S_l_plus.real))
         sum += np.sum(np.pi/k**2 * (2*self.ls - 2) * (1 - S_l_minus.real))
 
-        return sum
+        return 10 * sum
 
+
+    def emulate_xs(self, theta : np.array, angles : np.array = None):
+        # get phase shifts and wavenumber
+        deltas = self.emulate_phase_shifts(theta)
+        k = self.rbes[0][0].interaction.momentum(theta)
+
+        # determine desired angle grid and precompute
+        # Legendre functions if necessary
+        if not angles:
+            angles = self.angles
+            P_l_costheta = self.P_l_costheta
+            P_1_l_costheta = self.P_1_l_costheta
+        else:
+            assert(np.max(angles) <= np.pi and np.min(angles) >= 0)
+            P_l_costheta = None
+            P_1_l_costheta = None
+
+        return xscalc(k, deltas, angles, self.f_c, self.sigma_l, self.rutherford, P_l_costheta, P_1_l_costheta, self.rbes[0][0].interaction.include_spin_orbit)
+
+
+    def exact_xs(self, theta : np.array, angles : np.array = None):
+        # get phase shifts and wavenumber
+        deltas = self.exact_phase_shifts(theta)
+        k = self.rbes[0][0].interaction.momentum(theta)
+
+        # determine desired angle grid and precompute
+        # Legendre functions if necessary
+        if not angles:
+            angles = self.angles
+            P_l_costheta = self.P_l_costheta
+            P_1_l_costheta = self.P_1_l_costheta
+        else:
+            assert(np.max(angles) <= np.pi and np.min(angles) >= 0)
+            P_l_costheta = None
+            P_1_l_costheta = None
+
+        return xscalc(k, deltas, angles, self.f_c, self.sigma_l, self.rutherford, P_l_costheta, P_1_l_costheta, self.rbes[0][0].interaction.include_spin_orbit)
 
     def save(self, filename):
         r'''Saves the emulator to the desired file.
-        
+
         Parameters:
             filename (string): name of file
-        
+
         '''
         with open(filename, 'wb') as f:
             pickle.dump(self, f)

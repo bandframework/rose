@@ -141,7 +141,7 @@ class ScatteringAmplitudeEmulator:
         use_svd: bool = True,
         s_mesh: np.array = DEFAULT_RHO_MESH,
         s_0: float = 6 * np.pi,
-        hf_tols: list = None,
+        hf_tols: list = [10E-9, 10E-9],
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
 

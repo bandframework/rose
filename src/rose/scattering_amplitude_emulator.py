@@ -134,7 +134,7 @@ will NOT be communicated to the user's own high-fidelity solver.
         self.sigma_l = np.angle(gamma(1 + self.ls + 1j*self.eta))
         sin2 = np.sin(self.angles/2)**2
         self.f_c = -self.eta / (2*k*sin2) * np.exp(-1j*self.eta*np.log(sin2) + 2j*self.sigma_l[0])
-        self.rutherford = self.eta**2 / (4*k**2*np.sin(self.angles/2)**4)
+        self.rutherford = 10 * self.eta**2 / (4*k**2*np.sin(self.angles/2)**4)
 
 
     def emulate_phase_shifts(self,
@@ -169,12 +169,12 @@ will NOT be communicated to the user's own high-fidelity solver.
 
 
     def dsdo(self, theta : np.array, deltas : np.array):
-        r'''Gives the differential cross section (dsigma/dOmega = dsdo).
+        r'''Gives the differential cross section (dsigma/dOmega = dsdo) in mb/Sr.
 
         Parameters:
             theta (ndarray): parameter-space vector
             deltas (ndarray): phase shifts
-        
+
         Returns:
             dsdo (ndarray): differential cross section (fm^2)
 
@@ -193,7 +193,7 @@ will NOT be communicated to the user's own high-fidelity solver.
             axis=0
         )
 
-        dsdo = (np.conj(A)*A + np.conj(B)*B).real
+        dsdo = 10*( (np.conj(A)*A + np.conj(B)*B).real )
         if self.k_c > 0:
             return dsdo / self.rutherford
         else:
@@ -203,7 +203,7 @@ will NOT be communicated to the user's own high-fidelity solver.
     def emulate_dsdo(self,
         theta: np.array
     ):
-        r'''Emulates the differential cross section (dsigma/dOmega = dsdo).
+        r'''Emulates the differential cross section (dsigma/dOmega = dsdo) in mb/Sr.
 
         Parameters:
             theta (ndarray): parameter-space vector
@@ -219,7 +219,7 @@ will NOT be communicated to the user's own high-fidelity solver.
     def exact_dsdo(self,
         theta: np.array
     ):
-        r'''Calculates the high-fidelity differential cross section (dsigma/dOmega = dsdo).
+        r'''Calculates the high-fidelity differential cross section (dsigma/dOmega = dsdo) in mb/Sr.
 
         Parameters:
             theta (ndarray): parameter-space vector
@@ -262,19 +262,19 @@ will NOT be communicated to the user's own high-fidelity solver.
         else:
             # This ensures that A reduces to the non-spin-orbit formula, and B = 0.
             S_l_minus = S_l_plus.copy()
-        
+
         return S_l_plus, S_l_minus
 
 
     def emulate_total_cross_section(self,
         theta: np.array
     ):
-        r'''Gives the "total" (angle-integrated) cross section.  See Eq. (63)
+        r'''Gives the "total" (angle-integrated) cross section in mb.  See Eq. (63)
             in Carlson's notes.
-        
+
         Parameters:
             theta (ndarray): parameter-space vector
-        
+
         Returns:
             cross_section (ndarray): emulated total cross section
 
@@ -282,25 +282,25 @@ will NOT be communicated to the user's own high-fidelity solver.
         # What do we do here when Coulomb and/or spin-orbit is present?
         if self.k_c > 0:
             raise Exception('The total cross section is infinite in the presence of Coulomb.')
-        
+
         k = self.rbes[0][0].interaction.momentum(theta)
         S_l_plus, S_l_minus = self.S_matrix_elements(self.emulate_phase_shifts(theta))
 
         sum = np.sum(np.pi/k**2 * (2*self.ls + 2) * (1 - S_l_plus.real))
         sum += np.sum(np.pi/k**2 * (2*self.ls - 2) * (1 - S_l_minus.real))
 
-        return sum
+        return 10 * sum
 
 
     def exact_total_cross_section(self,
         theta: np.array
     ):
-        r'''Gives the "total" (angle-integrated) cross section.  See Eq. (63)
+        r'''Gives the "total" (angle-integrated) cross section in mb.  See Eq. (63)
             in Carlson's notes.
-        
+
         Parameters:
             theta (ndarray): parameter-space vector
-        
+
         Returns:
             cross_section (ndarray): emulated total cross section
 

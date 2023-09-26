@@ -22,14 +22,14 @@ class NucleonNucleusXS:
     xsrxn: float
 
 
-@njit
+#@njit
 def xscalc(
     k: float,
     deltas: np.array,
     angles: np.array,
     f_c: np.array = None,
-    sigl: np.array = None,
-    rutherford_xs: np.array = None,
+    sigma_l: np.array = None,
+    rutherford: np.array = None,
     P_l_theta: np.array = None,
     P_1_l_theta: np.array = None,
     is_spin_orbit: bool = None,
@@ -43,16 +43,22 @@ def xscalc(
         deltas : phase shifts in radians
         angles : grid of angles in radians on which to evaluate dsdo and Ay
         f_c : Coulomb scattering amplitudes
-        sigl : Coulomb phase shifts
+        sigma_l : Coulomb phase shifts
+        rutherford : rutherford differential scattering cross section
         P_l_theta : Legendre polynmomials of cos(angles) for each partial wave, if pre-computed
         P_1_l_theta : First associated Legendre function of cos(angles) for each partial wave, if pre-computed
         is_spin_orbit : is it?
     """
 
     if f_c is not None:
-        assert sigl is not None
+        assert sigma_l is not None
     else:
+        f_c = np.zeros(len(deltas))
+        sigma_l = np.zeros(len(deltas))
         assert rutherford is None
+
+    if np.all(np.isclose(f_c, 0.)):
+        rutherford = None
 
     if is_spin_orbit:
         # If there is spin-orbit, the l=0 term for B has to be zero.
@@ -68,32 +74,32 @@ def xscalc(
 
     lmax = S_l_plus.shape[0]
 
-    if not P_l_theta:
+    if P_l_theta is None:
         P_l_theta = np.array([eval_legendre(l, np.cos(angles)) for l in range(lmax)])
 
-    if not P_1_l_theta:
+    if P_1_l_theta is None:
         P_l_theta = np.array(
             [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
         )
 
-    xst = 0
-    xsrxn = 0
-    a = np.zeros_like(angles)
-    b = np.zeros_like(angles)
+    xst = 0.
+    xsrxn = 0.
+    a = np.zeros_like(angles, dtype=complex)
+    b = np.zeros_like(angles, dtype=complex)
 
     for l in range(lmax):
         a += (
-            fc[l]
-            + np.exp(2j * sigl[l])
+            f_c[l]
+            + np.exp(2j * sigma_l[l])
             * ((l + 1) * (S_l_plus[l] - 1) + l * (S_l_minus[l] - 1))
-            * P_l_theta
+            * P_l_theta[l,:]
         )
-        b += np.exp(2j * sigl[l]) * (S_l_plus[l] - S_l_minus[l]) * P_1_l_theta
-        xsrxn += np.real(
-            (l + 1) * (1 - S_l_plus[l] * np.conj(S_l_plus[l]))
-            + l * (1 - S_l_minus[l] * np.conj(S_l_minus[l]))
+        b += np.exp(2j * sigma_l[l]) * (S_l_plus[l] - S_l_minus[l]) * P_1_l_theta[l,:]
+        xsrxn += (
+            (l + 1) * (1 - np.real(S_l_plus[l] * np.conj(S_l_plus[l])))
+            + l * (1 - np.real(S_l_minus[l] * np.conj(S_l_minus[l])))
         )
-        xst += np.real(
+        xst += (
             (l + 1) * (1 - np.real(S_l_plus[l])) + l * (1 - np.real(S_l_minus[l]))
         )
 
@@ -102,8 +108,8 @@ def xscalc(
     xst *= 10 * 2 * np.pi / k**2
     xsrxn *= 10 * np.pi / k**2
 
-    if rutherford_xs is not None:
-        dsdo = dsdo / rutherford_xs
+    if rutherford is not None:
+        dsdo = dsdo / rutherford
 
     return NucleonNucleusXS(dsdo, Ay, xst, xsrxn)
 

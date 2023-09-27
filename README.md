@@ -15,3 +15,4 @@ To install, run the following
 The primary class is `ReducedBasisEmulator`. To create an instance, minimally, an instance of the `Interaction` class, a set of training points, the energy, and angular momentum need to be specified. 
 
 For a full set of examples walking through emulation and calibration, check the [tutorials](docs/tutorials/) directory.
+

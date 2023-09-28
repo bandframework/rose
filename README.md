@@ -1,6 +1,6 @@
 # ROSE - The **R**educed-**O**rder **S**cattering **E**mulator
 
-ROSE makes it easy to build and train a scattering emulator. The project 
+ROSE makes it easy to build and train a scattering emulator. ROSE enables aspiring graduate students and long-suffering postdocs to emulate nuclear scattering observables with optical potentials, trading negligible amounts of accuracy for orders-of-magnitude gains in speed.
 
 For any bug reports or feature requests, please make use of the Github issues tab on the repository. We also welcome all pull requests for software, documentation, and user-contributed tutorials! 
 

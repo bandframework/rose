@@ -36,6 +36,7 @@ def xscalc(
     P_l_theta: np.array = None,
     P_1_l_theta: np.array = None,
     is_spin_orbit: bool = None,
+    l_cutoff_rel=1.0e-3,
 ):
     r"""Calculates:
     - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
@@ -77,6 +78,11 @@ def xscalc(
         S_l_minus = S_l_plus.copy()
 
     lmax = S_l_plus.shape[0]
+
+    Smag = np.real(S_l_plus * S_l_plus.conj() +  S_l_minus * S_l_minus.conj())
+
+    reldiff = np.array([ np.fabs(Smag[l]  - Smag[l-1]) /  Smag[l-1] for l in range(1,lmax)])
+    lmax = np.argmax( reldiff - l_cutoff_rel < 0  )
 
     if P_l_theta is None:
         P_l_theta = np.array([eval_legendre(l, np.cos(angles)) for l in range(lmax)])
@@ -145,6 +151,7 @@ class ScatteringAmplitudeEmulator:
         s_mesh: np.array = DEFAULT_RHO_MESH,
         s_0: float = 6 * np.pi,
         hf_tols: list = [10e-9, 10e-9],
+        l_cutoff_rel=1.0e-3,
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
 
@@ -161,6 +168,8 @@ class ScatteringAmplitudeEmulator:
             s_0 (float): $s$ point where the phase shift is extracted
             hf_tols (list): 2-element list passed to `SchroedingerEquation`;
                 [relative tolerance, absolute tolerance]
+            l_cutoff_rel : relative tolerance for change in scattering amplitudes between
+                partial waves, used to stop calculation ig higher partial waves are negligble
 
         Returns:
             sae (ScatteringAmplitudeEmulator): scattering amplitude emulator
@@ -181,7 +190,14 @@ class ScatteringAmplitudeEmulator:
             ]
             bases.append(basis_list)
 
-        return cls(interaction_space, bases, l_max, angles=angles, s_0=s_0)
+        return cls(
+            interaction_space,
+            bases,
+            l_max,
+            angles=angles,
+            s_0=s_0,
+            l_cutoff_rel=l_cutoff_rel,
+        )
 
     def __init__(
         self,
@@ -191,6 +207,7 @@ class ScatteringAmplitudeEmulator:
         angles: np.array = DEFAULT_ANGLE_MESH,
         s_0: float = 6 * np.pi,
         verbose: bool = True,
+        l_cutoff_rel=1.0e-3,
     ):
         r"""Trains a reduced-basis emulator that computes differential and total cross sections (from emulated phase shifts).
 
@@ -219,6 +236,7 @@ class ScatteringAmplitudeEmulator:
 
         """
         self.l_max = l_max
+        self.l_cutoff_rel = l_cutoff_rel
         self.angles = angles.copy()
         bases_types = [isinstance(bases[l], CustomBasis) for l in range(self.l_max + 1)]
         if np.any(bases_types) and verbose:
@@ -489,6 +507,7 @@ class ScatteringAmplitudeEmulator:
             P_l_costheta,
             P_1_l_costheta,
             self.rbes[0][0].interaction.include_spin_orbit,
+            self.l_cutoff_rel,
         )
 
     def exact_xs(self, theta: np.array, angles: np.array = None):
@@ -530,6 +549,7 @@ class ScatteringAmplitudeEmulator:
             P_l_costheta,
             P_1_l_costheta,
             self.rbes[0][0].interaction.include_spin_orbit,
+            self.l_cutoff_rel,
         )
 
     def save(self, filename):

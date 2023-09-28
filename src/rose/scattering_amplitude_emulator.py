@@ -38,20 +38,20 @@ def xscalc(
     is_spin_orbit: bool = None,
 ):
     r"""Calculates:
-        - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
-        - analyzing power
-        - total and reacion cross sections in mb
+    - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
+    - analyzing power
+    - total and reacion cross sections in mb
 
-        Paramaters:
-            k : wavenumber in fm
-            deltas : phase shifts in radians
-            angles : grid of angles in radians on which to evaluate dsdo and Ay
-            f_c : Coulomb scattering amplitudes
-            sigma_l : Coulomb phase shifts
-            rutherford : rutherford differential scattering cross section
-            P_l_theta : Legendre polynmomials of cos(angles) for each partial wave, if pre-computed
-            P_1_l_theta : First associated Legendre function of cos(angles) for each partial wave, if pre-computed
-            is_spin_orbit : is it?
+    Paramaters:
+        k : wavenumber in fm
+        deltas : phase shifts in radians
+        angles : grid of angles in radians on which to evaluate dsdo and Ay
+        f_c : Coulomb scattering amplitudes
+        sigma_l : Coulomb phase shifts
+        rutherford : rutherford differential scattering cross section
+        P_l_theta : Legendre polynmomials of cos(angles) for each partial wave, if pre-computed
+        P_1_l_theta : First associated Legendre function of cos(angles) for each partial wave, if pre-computed
+        is_spin_orbit : is it?
     """
 
     if f_c is not None:
@@ -61,7 +61,7 @@ def xscalc(
         sigma_l = np.zeros(len(deltas))
         assert rutherford is None
 
-    if np.all(np.isclose(f_c, 0.)):
+    if np.all(np.isclose(f_c, 0.0)):
         rutherford = None
 
     if is_spin_orbit:
@@ -86,8 +86,8 @@ def xscalc(
             [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
         )
 
-    xst = 0.
-    xsrxn = 0.
+    xst = 0.0
+    xsrxn = 0.0
     a = np.zeros_like(angles, dtype=complex)
     b = np.zeros_like(angles, dtype=complex)
 
@@ -96,19 +96,16 @@ def xscalc(
             f_c[l]
             + np.exp(2j * sigma_l[l])
             * ((l + 1) * (S_l_plus[l] - 1) + l * (S_l_minus[l] - 1))
-            * P_l_theta[l,:]
+            * P_l_theta[l, :]
         )
-        b += np.exp(2j * sigma_l[l]) * (S_l_plus[l] - S_l_minus[l]) * P_1_l_theta[l,:]
-        xsrxn += (
-            (l + 1) * (1 - np.real(S_l_plus[l] * np.conj(S_l_plus[l])))
-            + l * (1 - np.real(S_l_minus[l] * np.conj(S_l_minus[l])))
+        b += np.exp(2j * sigma_l[l]) * (S_l_plus[l] - S_l_minus[l]) * P_1_l_theta[l, :]
+        xsrxn += (l + 1) * (1 - np.real(S_l_plus[l] * np.conj(S_l_plus[l]))) + l * (
+            1 - np.real(S_l_minus[l] * np.conj(S_l_minus[l]))
         )
-        xst += (
-            (l + 1) * (1 - np.real(S_l_plus[l])) + l * (1 - np.real(S_l_minus[l]))
-        )
+        xst += (l + 1) * (1 - np.real(S_l_plus[l])) + l * (1 - np.real(S_l_minus[l]))
 
-    a /=  (2j * k)
-    b /=  (2j * k)
+    a /= 2j * k
+    b /= 2j * k
     dsdo = np.real(a * np.conj(a) + b * np.conj(b)) * 10
     Ay = np.real(a * np.conj(b) + b * np.conj(a)) * 10 / dsdo
     xst *= 10 * 2 * np.pi / k**2
@@ -147,7 +144,7 @@ class ScatteringAmplitudeEmulator:
         use_svd: bool = True,
         s_mesh: np.array = DEFAULT_RHO_MESH,
         s_0: float = 6 * np.pi,
-        hf_tols: list = [10E-9, 10E-9],
+        hf_tols: list = [10e-9, 10e-9],
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
 
@@ -317,15 +314,9 @@ class ScatteringAmplitudeEmulator:
             * self.P_l_costheta,
             axis=0,
         )
-        B = (
-            (1 / (2j * k))
-            * np.sum(
-                np.exp(2j * self.sigma_l)
-                * (S_l_plus - S_l_minus)
-                * self.P_1_l_costheta,
-                axis=0,
-            )
-
+        B = (1 / (2j * k)) * np.sum(
+            np.exp(2j * self.sigma_l) * (S_l_plus - S_l_minus) * self.P_1_l_costheta,
+            axis=0,
         )
 
         dsdo = 10 * (np.conj(A) * A + np.conj(B) * B).real
@@ -390,7 +381,7 @@ class ScatteringAmplitudeEmulator:
 
         return S_l_plus, S_l_minus
 
-    def total_cross_section(self, deltas : np.array):
+    def total_cross_section(self, deltas: np.array):
         r"""Gives the "total" (angle-integrated) cross section in mb. If the interaction
             is complex, alsom returns the reaction cross section. See Eq. (63) in Carlson's
             notes.
@@ -415,10 +406,19 @@ class ScatteringAmplitudeEmulator:
         xst += np.sum(np.pi / k**2 * (2 * self.ls - 2) * (1 - S_l_minus.real))
 
         if self.rbes[0][0].interaction.is_complex:
-            xsrxn = np.sum(np.pi / k**2 * (2 * self.ls + 2) * (1 - np.real( S_l_plus * S_l_plus.conj() )))
-            xsrxn += np.sum(np.pi / k**2 * (2 * self.ls - 2) * (1 - np.real( S_l_minus * S_l_minus.conj() )))
+            xsrxn = np.sum(
+                np.pi
+                / k**2
+                * (2 * self.ls + 2)
+                * (1 - np.real(S_l_plus * S_l_plus.conj()))
+            )
+            xsrxn += np.sum(
+                np.pi
+                / k**2
+                * (2 * self.ls - 2)
+                * (1 - np.real(S_l_minus * S_l_minus.conj()))
+            )
             return 10 * xst, 10 * xsrxn
-
 
         return 10 * xst
 
@@ -435,7 +435,7 @@ class ScatteringAmplitudeEmulator:
             reaction cross section (float): emulated reaction cross section
 
         """
-        return self.total_cross_section( self.emulate_phase_shifts(theta)  )
+        return self.total_cross_section(self.emulate_phase_shifts(theta))
 
     def exact_total_cross_section(self, theta: np.array):
         r"""Gives the "total" (angle-integrated) cross section in mb.  See Eq. (63)
@@ -448,22 +448,22 @@ class ScatteringAmplitudeEmulator:
             cross_section (ndarray): emulated total cross section
 
         """
-        return self.total_cross_section( self.exact_phase_shifts(theta)  )
+        return self.total_cross_section(self.exact_phase_shifts(theta))
 
     def emulate_xs(self, theta: np.array, angles: np.array = None):
-    r"""Emulates the:
-        - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
-        - analyzing power
-        - total and reacion cross sections in mb
+        r"""Emulates the:
+            - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
+            - analyzing power
+            - total and reacion cross sections in mb
 
-        Paramaters:
-            theta (ndarray) : interaction parameters
-            angles (ndarray) : (optional), angular grid on which to evaluate analyzing \
-            powers and differentiasl cross section
+            Paramaters:
+                theta (ndarray) : interaction parameters
+                angles (ndarray) : (optional), angular grid on which to evaluate analyzing \
+                powers and differentiasl cross section
 
-        Returns :
-            cross sections (NucleonNucleusXS) :
-    """
+            Returns :
+                cross sections (NucleonNucleusXS) :
+        """
         # get phase shifts and wavenumber
         deltas = self.emulate_phase_shifts(theta)
         k = self.rbes[0][0].interaction.momentum(theta)
@@ -492,19 +492,19 @@ class ScatteringAmplitudeEmulator:
         )
 
     def exact_xs(self, theta: np.array, angles: np.array = None):
-    r"""Calculates the exact:
-        - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
-        - analyzing power
-        - total and reacion cross sections in mb
+        r"""Calculates the exact:
+            - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
+            - analyzing power
+            - total and reacion cross sections in mb
 
-        Paramaters:
-            theta (ndarray) : interaction parameters
-            angles (ndarray) : (optional), angular grid on which to evaluate analyzing \
-            powers and differentiasl cross section
+            Paramaters:
+                theta (ndarray) : interaction parameters
+                angles (ndarray) : (optional), angular grid on which to evaluate analyzing \
+                powers and differentiasl cross section
 
-        Returns :
-            cross sections (NucleonNucleusXS) :
-    """
+            Returns :
+                cross sections (NucleonNucleusXS) :
+        """
         # get phase shifts and wavenumber
         deltas = self.exact_phase_shifts(theta)
         k = self.rbes[0][0].interaction.momentum(theta)

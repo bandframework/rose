@@ -107,6 +107,8 @@ def xscalc(
             (l + 1) * (1 - np.real(S_l_plus[l])) + l * (1 - np.real(S_l_minus[l]))
         )
 
+    a /=  (2j * k)
+    b /=  (2j * k)
     dsdo = np.real(a * np.conj(a) + b * np.conj(b)) * 10
     Ay = np.real(a * np.conj(b) + b * np.conj(a)) * 10 / dsdo
     xst *= 10 * 2 * np.pi / k**2
@@ -309,21 +311,21 @@ class ScatteringAmplitudeEmulator:
 
         S_l_plus, S_l_minus = self.S_matrix_elements(deltas)
 
-        A = self.f_c + 1 / (2j * k) * np.sum(
+        A = self.f_c + (1 / (2j * k)) * np.sum(
             np.exp(2j * self.sigma_l)
             * ((self.ls + 1) * (S_l_plus - 1) + self.ls * (S_l_minus - 1))
             * self.P_l_costheta,
             axis=0,
         )
         B = (
-            1
-            / (2j * k)
+            (1 / (2j * k))
             * np.sum(
                 np.exp(2j * self.sigma_l)
                 * (S_l_plus - S_l_minus)
                 * self.P_1_l_costheta,
                 axis=0,
             )
+
         )
 
         dsdo = 10 * (np.conj(A) * A + np.conj(B) * B).real

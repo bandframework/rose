@@ -15,7 +15,10 @@ from .utility import eval_assoc_legendre
 
 @dataclass
 class NucleonNucleusXS:
-    r"""holds differential cross section, analyzing power, total cross section and reaction cross secton, all at a given energy"""
+    r"""
+    Holds differential cross section, analyzing power, total cross section and reaction cross secton,
+    all at a given energy
+    """
     dsdo: np.array
     Ay: np.array
     xst: float
@@ -35,19 +38,20 @@ def xscalc(
     is_spin_orbit: bool = None,
 ):
     r"""Calculates:
-    - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
-    - analyzing power
-    - total and reacion cross sections in mb
-    Paramaters:
-        k : wavenumber in fm
-        deltas : phase shifts in radians
-        angles : grid of angles in radians on which to evaluate dsdo and Ay
-        f_c : Coulomb scattering amplitudes
-        sigma_l : Coulomb phase shifts
-        rutherford : rutherford differential scattering cross section
-        P_l_theta : Legendre polynmomials of cos(angles) for each partial wave, if pre-computed
-        P_1_l_theta : First associated Legendre function of cos(angles) for each partial wave, if pre-computed
-        is_spin_orbit : is it?
+        - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
+        - analyzing power
+        - total and reacion cross sections in mb
+
+        Paramaters:
+            k : wavenumber in fm
+            deltas : phase shifts in radians
+            angles : grid of angles in radians on which to evaluate dsdo and Ay
+            f_c : Coulomb scattering amplitudes
+            sigma_l : Coulomb phase shifts
+            rutherford : rutherford differential scattering cross section
+            P_l_theta : Legendre polynmomials of cos(angles) for each partial wave, if pre-computed
+            P_1_l_theta : First associated Legendre function of cos(angles) for each partial wave, if pre-computed
+            is_spin_orbit : is it?
     """
 
     if f_c is not None:
@@ -221,10 +225,10 @@ class ScatteringAmplitudeEmulator:
         if np.any(bases_types) and verbose:
             print(
                 """
-NOTE: When supplying a CustomBasis, the ROSE high-fidelity solver is \n
-instantiated for the sake of future evaluations.  Any requests to the solver \n
-will NOT be communicated to the user's own high-fidelity solver.
-"""
+                NOTE: When supplying a CustomBasis, the ROSE high-fidelity solver is \n
+                instantiated for the sake of future evaluations.  Any requests to the solver \n
+                will NOT be communicated to the user's own high-fidelity solver.
+                """
             )
         self.rbes = []
         for interaction_list, basis_list in zip(interaction_space.interactions, bases):
@@ -322,7 +326,7 @@ will NOT be communicated to the user's own high-fidelity solver.
             )
         )
 
-        dsdo = 10 * ((np.conj(A) * A + np.conj(B) * B).real)
+        dsdo = 10 * (np.conj(A) * A + np.conj(B) * B).real
         if self.k_c > 0:
             return dsdo / self.rutherford
         else:
@@ -384,30 +388,52 @@ will NOT be communicated to the user's own high-fidelity solver.
 
         return S_l_plus, S_l_minus
 
-    def emulate_total_cross_section(self, theta: np.array):
-        r"""Gives the "total" (angle-integrated) cross section in mb.  See Eq. (63)
-            in Carlson's notes.
+    def total_cross_section(self, deltas : np.array):
+        r"""Gives the "total" (angle-integrated) cross section in mb. If the interaction
+            is complex, alsom returns the reaction cross section. See Eq. (63) in Carlson's
+            notes.
 
         Parameters:
-            theta (ndarray): parameter-space vector
+            deltas (ndarry) : phase shifts for each partial wave
 
         Returns:
-            cross_section (ndarray): emulated total cross section
+            total cross section (float): emulated total cross section
+            reaction cross section (float): emulated reaction cross section
 
         """
-        # What do we do here when Coulomb and/or spin-orbit is present?
         if self.k_c > 0:
             raise Exception(
                 "The total cross section is infinite in the presence of Coulomb."
             )
 
         k = self.rbes[0][0].interaction.momentum(theta)
-        S_l_plus, S_l_minus = self.S_matrix_elements(self.emulate_phase_shifts(theta))
+        S_l_plus, S_l_minus = self.S_matrix_elements(deltas)
 
-        sum = np.sum(np.pi / k**2 * (2 * self.ls + 2) * (1 - S_l_plus.real))
-        sum += np.sum(np.pi / k**2 * (2 * self.ls - 2) * (1 - S_l_minus.real))
+        xst = np.sum(np.pi / k**2 * (2 * self.ls + 2) * (1 - S_l_plus.real))
+        xst += np.sum(np.pi / k**2 * (2 * self.ls - 2) * (1 - S_l_minus.real))
 
-        return 10 * sum
+        if self.rbes[0][0].interaction.is_complex:
+            xsrxn = np.sum(np.pi / k**2 * (2 * self.ls + 2) * (1 - np.real( S_l_plus * S_l_plus.conj() )))
+            xsrxn += np.sum(np.pi / k**2 * (2 * self.ls - 2) * (1 - np.real( S_l_minus * S_l_minus.conj() )))
+            return 10 * xst, 10 * xsrxn
+
+
+        return 10 * xst
+
+    def emulate_total_cross_section(self, theta: np.array):
+        r"""Gives the "total" (angle-integrated) cross section in mb. If the interaction
+            is complex, alsom returns the reaction cross section. See Eq. (63) in Carlson's
+            notes.
+
+        Parameters:
+            theta (ndarray): parameter-space vector
+
+        Returns:
+            total cross section (float): emulated total cross section
+            reaction cross section (float): emulated reaction cross section
+
+        """
+        return self.total_cross_section( self.emulate_phase_shifts(theta)  )
 
     def exact_total_cross_section(self, theta: np.array):
         r"""Gives the "total" (angle-integrated) cross section in mb.  See Eq. (63)
@@ -420,21 +446,22 @@ will NOT be communicated to the user's own high-fidelity solver.
             cross_section (ndarray): emulated total cross section
 
         """
-        # What do we do here when Coulomb and/or spin-orbit is present?
-        if self.k_c > 0:
-            raise Exception(
-                "The total cross section is infinite in the presence of Coulomb."
-            )
-
-        k = self.rbes[0][0].interaction.momentum(theta)
-        S_l_plus, S_l_minus = self.S_matrix_elements(self.exact_phase_shifts(theta))
-
-        sum = np.sum(np.pi / k**2 * (2 * self.ls + 2) * (1 - S_l_plus.real))
-        sum += np.sum(np.pi / k**2 * (2 * self.ls - 2) * (1 - S_l_minus.real))
-
-        return 10 * sum
+        return self.total_cross_section( self.exact_phase_shifts(theta)  )
 
     def emulate_xs(self, theta: np.array, angles: np.array = None):
+    r"""Emulates the:
+        - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
+        - analyzing power
+        - total and reacion cross sections in mb
+
+        Paramaters:
+            theta (ndarray) : interaction parameters
+            angles (ndarray) : (optional), angular grid on which to evaluate analyzing \
+            powers and differentiasl cross section
+
+        Returns :
+            cross sections (NucleonNucleusXS) :
+    """
         # get phase shifts and wavenumber
         deltas = self.emulate_phase_shifts(theta)
         k = self.rbes[0][0].interaction.momentum(theta)
@@ -463,6 +490,19 @@ will NOT be communicated to the user's own high-fidelity solver.
         )
 
     def exact_xs(self, theta: np.array, angles: np.array = None):
+    r"""Calculates the exact:
+        - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
+        - analyzing power
+        - total and reacion cross sections in mb
+
+        Paramaters:
+            theta (ndarray) : interaction parameters
+            angles (ndarray) : (optional), angular grid on which to evaluate analyzing \
+            powers and differentiasl cross section
+
+        Returns :
+            cross sections (NucleonNucleusXS) :
+    """
         # get phase shifts and wavenumber
         deltas = self.exact_phase_shifts(theta)
         k = self.rbes[0][0].interaction.momentum(theta)

@@ -34,7 +34,7 @@ def phase_shift_metric(
     thetas = np.array([bd.theta for bd in benchmark_data])
 
     wave_functions = np.array([bd.phi for bd in benchmark_data])
-    phase_shifts = np.array([phase_shift_interp(u, rbe.s_mesh, rbe.l, rbe.s_0) for u in wave_functions])
+    phase_shifts = np.array([phase_shift_interp(u, rbe.s_mesh, rbe.l, rbe.interaction.eta, rbe.s_0) for u in wave_functions])
 
     emulated_phase_shifts = np.array([rbe.emulate_phase_shift(theta) for theta in thetas])
 

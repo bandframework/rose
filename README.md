@@ -1,45 +1,18 @@
-# ROSE
+# ROSE - The **R**educed-**O**rder **S**cattering **E**mulator
 
-**R**educed-**O**rder **S**cattering **E**mulator
+ROSE makes it easy to build and train a scattering emulator. The project 
 
-ROSE makes it easy to build and train a scattering emulator.
+For any bug reports or feature requests, please make use of the Github issues tab on the repository. We also welcome all pull requests for software, documentation, and user-contributed tutorials! 
 
-The primary class is `ReducedBasisEmulator`. To create an instance, minimally, an instance of the `Interaction` class, a set of training points, the energy, and angular momentum need to be specified. For example,
+## Installation
 
-```
-import rose
+To install, run the following 
 
-energy = 50 # MeV
-ell = 0 # S waves
+`pip install nuclear-rose`
 
-# We are varying two parameters of the Minnesota potential, so the training
-# space is an array of 2-component arrays
-training_points = np.array([
-    [119.51219512195122, -14.634146341463415],
-    [139.02439024390245, -4.878048780487805],
-    [158.53658536585365, -48.78048780487805],
-    [178.0487804878049, -117.07317073170732],
-    [197.5609756097561, -131.70731707317074],
-    [217.0731707317073, -126.82926829268293],
-    [236.58536585365854, -82.92682926829268],
-    [256.0975609756098, -175.609756097561],
-    [275.609756097561, -19.51219512195122],
-    [295.1219512195122, -170.73170731707316]
-])
+## Usage
 
-# The Minnesota potential has already been hard-coded in ROSE as
-# rose.MN_Potential.
-rbe = rose.ReducedBasisEmulator(
-    rose.MN_Potential,
-    training_points,
-    energy,
-    ell
-)
+The primary class is `ReducedBasisEmulator`. To create an instance, minimally, an instance of the `Interaction` class, a set of training points, the energy, and angular momentum need to be specified. 
 
-# Now, to get a the wave function or phase shift at a new point in parameter
-# space, we simply call...
-theta = np.array([200, -91.85])
-phi = rbe.emulate_wave_function(theta)
-# or...
-delta = rbe.emulate_phase_shift(theta)
-```
+For a full set of examples walking through emulation and calibration, check the [tutorials](docs/tutorials/) directory.
+

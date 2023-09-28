@@ -1,20 +1,29 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rose"
-version = "1.0"
+name = "nuclear-rose"
+dynamic = ["version", "dependencies"]
 authors = [
-  {name="Daniel Odell", email="dodell@ohio.edo"},
-  {name="Pablo Giuliani", email="giulia27@msu.edu"}
+  {name="Daniel Odell"},
+  {name="Pablo Giuliani"},
+  {name="Kyle Godbey"},
+  {name="Kyle Beyer"},
+  {name="Moses Y.-H. Chan"}
 ]
-description = "Emulator for quantum scattering."
+description = "The Reduced-Order Scattering Emulator (rose) is a user-friendly software for building efficient surrogate models for nuclear scattering."
 readme = "README.md"
 license = { file="LICENSE" }
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
 ]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools_scm]
+write_to = "src/rose/__version__.py"

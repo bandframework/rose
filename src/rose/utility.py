@@ -1,11 +1,21 @@
 '''
 Useful utility functions that I don't want to clutter up other modules with.
 '''
+from enum import Enum
+
 import numpy as np
 import numpy.typing as npt
 from scipy.sparse import diags, lil_matrix
 from scipy.misc import derivative
 from scipy.special import eval_legendre
+
+from .constants import MASS_N, MASS_P, HBARC, AMU
+
+
+class Projectile(Enum):
+    neutron = 0
+    proton = 1
+
 
 def finite_difference_first_derivative(
     s_mesh: npt.ArrayLike,
@@ -93,19 +103,24 @@ def eval_assoc_legendre(n, x):
             return -(1-x**2)**(1/2) * derivative(lambda z: eval_legendre(n, z), x, dx=1e-9)
 
 
-def kinematics(A: int, Z: int,  energy_lab: float):
+def nucleon_nucleus_kinematics(A: int, Z: int,  energy_lab: float, p : Projectile):
     """
     calculates the reduced mass, and the COM frame kinetic energy
-    and wavenumber for a neutron scattering on a target nuclide
+    and wavenumber for a nucleon scattering on a target nuclide (A,Z)
     Parameters:
         A : mass number of target
         Z : proton number of target
         energy_lab: bombarding energy in the lab frame [MeV]
+        p : projectile type
+    Returns:
+        mu (float) : reduced mass in MeV/c^2
+        energy_com (float) : center-of-mass frame energy in MeV
+        k (float) : center-of-mass frame wavenumber in fm^-1
+
     """
     N = A - Z
 
-    #TODO use a table
-    # semi-empirical mass formula
+    #TODO use a table rather than semi-empirical mass formula
     delta = 0
     if N%2 == 0 and Z%2 == 0:
         delta = 12.0 / np.sqrt(A)
@@ -120,8 +135,15 @@ def kinematics(A: int, Z: int,  energy_lab: float):
       + delta
     )
 
-    target_mass = Z * MASS_P + N * MASS_N - Eb
-    mu = target_mass * MASS_N / (target_mass + MASS_N)
-    energy_com = target_mass / (MASS_N + target_mass) * energy_lab
+    target_mass = Z * MASS_P + N * MASS_N - Eb # MeV/c^2
+
+    if p == Projectile.neutron:
+        mu = target_mass * MASS_N / (target_mass + MASS_N)
+        energy_com = target_mass / (MASS_N + target_mass) * energy_lab
+    elif p == Projectile.neutron:
+        mu = target_mass * MASS_P / (target_mass + MASS_P)
+        energy_com = target_mass / (MASS_P + target_mass) * energy_lab
+
+    k = np.sqrt(2 * mu * energy_com) / HBARC
 
     return mu, energy_com, k

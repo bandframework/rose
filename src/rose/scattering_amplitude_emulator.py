@@ -25,16 +25,16 @@ class NucleonNucleusXS:
     xsrxn: float
 
 
-#@njit
+@njit
 def xscalc(
     k: float,
     deltas: np.array,
     angles: np.array,
+    P_l_theta: np.array,
+    P_1_l_theta: np.array,
     f_c: np.array = None,
     sigma_l: np.array = None,
     rutherford: np.array = None,
-    P_l_theta: np.array = None,
-    P_1_l_theta: np.array = None,
     is_spin_orbit: bool = None,
     l_cutoff_rel=1.0e-3,
 ):
@@ -85,14 +85,6 @@ def xscalc(
         [np.fabs(Smag[l] - Smag[l - 1]) / Smag[l - 1] for l in range(1, lmax)]
     )
     lmax = np.argmax(reldiff - l_cutoff_rel < 0)
-
-    if P_l_theta is None:
-        P_l_theta = np.array([eval_legendre(l, np.cos(angles)) for l in range(lmax)])
-
-    if P_1_l_theta is None:
-        P_l_theta = np.array(
-            [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
-        )
 
     xst = 0.0
     xsrxn = 0.0
@@ -504,18 +496,20 @@ class ScatteringAmplitudeEmulator:
             P_1_l_costheta = self.P_1_l_costheta
         else:
             assert np.max(angles) <= np.pi and np.min(angles) >= 0
-            P_l_costheta = None
-            P_1_l_costheta = None
+            P_l_costheta = np.array([eval_legendre(l, np.cos(angles)) for l in range(lmax)])
+            P_l_costheta = np.array(
+                [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
+            )
 
         return xscalc(
             k,
             deltas,
             angles,
+            P_l_costheta,
+            P_1_l_costheta,
             self.f_c,
             self.sigma_l,
             self.rutherford,
-            P_l_costheta,
-            P_1_l_costheta,
             self.rbes[0][0].interaction.include_spin_orbit,
             self.l_cutoff_rel,
         )
@@ -546,18 +540,20 @@ class ScatteringAmplitudeEmulator:
             P_1_l_costheta = self.P_1_l_costheta
         else:
             assert np.max(angles) <= np.pi and np.min(angles) >= 0
-            P_l_costheta = None
-            P_1_l_costheta = None
+            P_l_costheta = np.array([eval_legendre(l, np.cos(angles)) for l in range(lmax)])
+            P_l_costheta = np.array(
+                [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
+            )
 
         return xscalc(
             k,
             deltas,
             angles,
+            P_l_costheta,
+            P_1_l_costheta,
             self.f_c,
             self.sigma_l,
             self.rutherford,
-            P_l_costheta,
-            P_1_l_costheta,
             self.rbes[0][0].interaction.include_spin_orbit,
             self.l_cutoff_rel,
         )

@@ -209,13 +209,14 @@ class InteractionSpace:
             R_C (float): Coulomb "cutoff" radius
             is_complex (bool): Is the interaction complex?
             spin_orbit_potential (Callable[[float,ndarray,float],float]): coordinate-space, spin-orbit potential; $V_{\rm SO}(s, \alpha, 2\ell\cdot s$)
-        
+
         Returns:
             instance (InteractionSpace): instance of InteractionSpace
-        
+
         Attributes:
             interaction (list): list of `Interaction`s
         '''
+        self.l_max = l_max
         self.interactions = []
         if spin_orbit_potential is None:
             for l in range(l_max+1):

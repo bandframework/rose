@@ -144,7 +144,7 @@ class ScatteringAmplitudeEmulator:
         cls,
         interaction_space: InteractionSpace,
         theta_train: np.array,
-        l_max: int,
+        l_max: int = None,
         angles: np.array = DEFAULT_ANGLE_MESH,
         n_basis: int = 4,
         use_svd: bool = True,
@@ -175,6 +175,8 @@ class ScatteringAmplitudeEmulator:
             sae (ScatteringAmplitudeEmulator): scattering amplitude emulator
 
         """
+        if l_max is None:
+            l_max = interaction_space.l_max
         bases = []
         for interaction_list in tqdm(interaction_space.interactions):
             basis_list = [
@@ -203,7 +205,7 @@ class ScatteringAmplitudeEmulator:
         self,
         interaction_space: InteractionSpace,
         bases: list,
-        l_max: int,
+        l_max: int = None,
         angles: np.array = DEFAULT_ANGLE_MESH,
         s_0: float = 6 * np.pi,
         verbose: bool = True,
@@ -235,6 +237,8 @@ class ScatteringAmplitudeEmulator:
             rutherford (ndarray): Rutherford scattering
 
         """
+        if l_max is None:
+            l_max = interaction_space.l_max
         self.l_max = l_max
         self.l_cutoff_rel = l_cutoff_rel
         self.angles = angles.copy()

@@ -71,18 +71,18 @@ class SchroedingerEquation:
         '''
 
         C_l = Gamow_factor(l, self.interaction.eta(alpha))
-        S_C = self.interaction.momentum(alpha) * self.interaction.R_C
+        S_C = self.interaction.momentum(alpha) * self.interaction.R_C(alpha)
 
         if rho_0 is None:
             rho_0 = (phi_threshold / C_l) ** (1/(l+1))
         phi_0 = C_l * rho_0**(l+1)
         phi_prime_0 = C_l * (l+1) * rho_0**l
-        
+
         if self.interaction.is_complex:
             initial_conditions = np.array([phi_0+0j, phi_prime_0+0j])
         else:
             initial_conditions = np.array([phi_0, phi_prime_0])
-        
+
         sol = solve_ivp(
             lambda s, phi: np.array([phi[1],
                 (self.interaction.tilde(s, alpha) + \

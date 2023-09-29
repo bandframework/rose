@@ -331,7 +331,7 @@ class KDGlobal():
         and COM-frame energy, returns params in form useable by EnergizedKoningDelaroche
         """
 
-        mu, Ecom, k = kinematics(A, Z, Elab)
+        mu, Ecom, k = nucleon_nucleus_kinematics(A, Z, Elab)
         eta = 0
         if self.projectile == Projectile.neutron:
             k_c = ALPHA * Z * mu

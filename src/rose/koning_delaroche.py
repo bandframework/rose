@@ -134,7 +134,7 @@ def KD_simple_so(r, alpha, lds):
         1j*wso/MASS_PION**2/r*woods_saxon_prime_safe(r, rwso, awso)
 
 
-class KoningDelaroche(InteractionEIM):
+class KoningDelaroche(InteractionEIMSpace):
     r'''Koning-Delaroche potential (without energy-dependent strength
     coefficients) for arbitrary systems defined by `mu`, `energy`, `ell`, `Z_1`,
     and `Z_2`.
@@ -144,6 +144,7 @@ class KoningDelaroche(InteractionEIM):
         ell: int,
         energy: float,
         training_info: np.array,
+        l_max = 20,
         n_basis: int = 8,
         explicit_training: bool = False,
         n_train: int = 1000,
@@ -177,20 +178,22 @@ class KoningDelaroche(InteractionEIM):
         Returns:
             instance (KoningDelaroche): instance of the class
 
-        ''' 
+        '''
         super().__init__(
             KD_simple_so, NUM_PARAMS, mu, ell, energy, training_info=training_info, Z_1=0, Z_2=0,
+            l_max = lmax,
             is_complex=True, n_basis=n_basis,
             explicit_training=explicit_training, n_train=n_train,
             rho_mesh=rho_mesh, match_points=match_points
         )
 
 
-class EnergizedKoningDelaroche(EnergizedInteractionEIM):
+class EnergizedKoningDelaroche(EnergizedInteractionEIMSpace):
     def __init__(self,
         mu: float,
         ell: int,
         training_info: np.array,
+        l_max = 20,
         n_basis: int = 8,
         explicit_training: bool = False,
         n_train: int = 1000,
@@ -228,6 +231,7 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIM):
         '''
         super().__init__(
             KD_simple_so, NUM_PARAMS, mu, ell, training_info=training_info, Z_1=0, Z_2=0,
+            l_max = lmax,
             is_complex=True, n_basis=n_basis,
             explicit_training=explicit_training, n_train=n_train,
             rho_mesh=rho_mesh, match_points=match_points
@@ -344,6 +348,9 @@ class KDGlobal():
             delta *= -1.
             factor *= -1
 
+        # fermi energy
+        Ef = self.Ef_0 + self.Ef_A * A
+
         # real central depth
         v1 = self.v1_0 - self.v1_asymm * delta - self.v1_A * A
         v2 = self.v2_0 - self.v2_A * A * factor
@@ -392,13 +399,11 @@ class KDGlobal():
         rwso = rso
         awso = aso
 
-
-        # fermi energy
-        Ef = self.Ef_0 + self.Ef_A * A
-
         # Coulomb radius
-        rc0 = self.rc_0 + self.rc_A * A**(-2./3.) + self.rc_A2 * A**(-5./3.)
-        R_C = rc0 * A **(1./3.)
+        R_C = 0
+        if self.projectile == Projectile.proton:
+            rc0 = self.rc_0 + self.rc_A * A**(-2./3.) + self.rc_A2 * A**(-5./3.)
+            R_C = rc0 * A **(1./3.)
 
         # 15 params total
         params = np.array(

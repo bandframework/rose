@@ -212,8 +212,8 @@ class EnergizedInteractionEIMSpace(InteractionSpace):
         coordinate_space_potential: Callable[[float, np.array], float], # V(r, theta)
         n_theta: int, # How many parameters does the interaction have?
         mu: float, # reduced mass (MeV)
-        l_max: int,
         training_info: np.array,
+        l_max: int = 20,
         Z_1: int = 0, # atomic number of particle 1
         Z_2: int = 0, # atomic number of particle 2
         R_C: float = 0.0, # Coulomb "cutoff"
@@ -226,13 +226,13 @@ class EnergizedInteractionEIMSpace(InteractionSpace):
         match_points: np.array = None
     ):
         r'''Generates a list of $\ell$-specific, energy-emulated, EIMed interactions.
-        
+
         Parameters:
             coordinate_space_potential (Callable[[float,ndarray],float]): V(r, theta)
             n_theta (int): number of parameters
             mu (float): reduced mass
-            l_max (int): maximum angular momentum
             training_info (ndarray): See `InteractionEIM` documentation.
+            l_max (int): maximum angular momentum
             Z_1 (int): charge of particle 1
             Z_2 (int): charge of particle 2
             R_C (float): Coulomb "cutoff" radius

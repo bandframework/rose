@@ -11,8 +11,8 @@ from pathlib import Path
 import json
 import numpy as np
 
-from .interaction_eim import InteractionEIM
-from .energized_interaction_eim import EnergizedInteractionEIM
+from .interaction_eim import InteractionEIMSpace
+from .energized_interaction_eim import EnergizedInteractionEIMSpace
 from .constants import DEFAULT_RHO_MESH, MASS_PION, HBARC, ALPHA
 from .utility import nucleon_nucleus_kinematics, Projectile
 

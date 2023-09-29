@@ -7,14 +7,23 @@ paper](https://www.sciencedirect.com/science/article/pii/S0375947402013210) for
 details. Equation references are with respect to (w.r.t.) this paper.
 '''
 
+from enum import Enum
+from pathlib import Path
+
+import json
 import numpy as np
 
 from .interaction_eim import InteractionEIM
 from .energized_interaction_eim import EnergizedInteractionEIM
-from .constants import DEFAULT_RHO_MESH, MASS_PION
+from .constants import DEFAULT_RHO_MESH, MASS_PION, HBARC, ALPHA
 
 MAX_ARG = np.log(1/1e-16)
 NUM_PARAMS = 15
+
+class Projectile(Enum):
+    neutron = 0
+    proton = 1
+
 
 def Vv(E, v1, v2, v3, v4, Ef):
     r'''energy-dependent, volume-central strength - real term, Eq. (7)
@@ -219,13 +228,233 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIM):
             rho_mesh (ndarray):  $\rho$ (or $s$) grid values
             match_points (ndarray): $\rho$ points at which we demand the EIMed
                 potential match the true potential
-        
+
         Returns:
             instance (EnergizedKoningDelaroche): instance of the class
-        ''' 
+        '''
         super().__init__(
             KD_simple_so, NUM_PARAMS, mu, ell, training_info=training_info, Z_1=0, Z_2=0,
             is_complex=True, n_basis=n_basis,
             explicit_training=explicit_training, n_train=n_train,
             rho_mesh=rho_mesh, match_points=match_points
         )
+
+
+
+class KDGlobal(EnergizedInteractionEIM):
+    r"""Optical potential in Koning-Delaroche form."""
+
+    def __init__(projectile : Projectile, param_fpath: Path = None):
+        if param_fpath is None:
+            param_fpath = pathlib.Path(__file__).parent.resolve() /  Path("../../data/KD_default.json")
+
+        if projectile == Projectile.neutron:
+            tag = "_n"
+        elif projectile == Projectile::proton:
+            tag = "_p"
+
+        self.projectile = projectile
+
+        self.param_fpath = param_fpath
+        with open(self.param_fpath) as f:
+            data = json.load(f)
+
+            # real central depth
+            self.v1_0 = data["KDHartreeFock_V1_0"]
+            self.v1_asymm = data["KDHartreeFock_V1_asymm"]
+            self.v1_A = data["KDHartreeFock_V1_A"]
+            self.v2_0 = data["KDHartreeFock_V2_0" + tag]
+            self.v2_A = data["KDHartreeFock_V2_A" + tag]
+            self.v3_0 = data["KDHartreeFock_V3_0" + tag]
+            self.v3_A = data["KDHartreeFock_V3_A" + tag]
+            self.v4_0 = data["KDHartreeFock_V4_0"]
+
+            # real central form
+            self.rv_0 = data["KDHartreeFock_r_0"]
+            self.rv_A = data["KDHartreeFock_r_A"]
+            self.av_0 = data["KDHartreeFock_a_0"]
+            self.av_A = data["KDHartreeFock_a_A"]
+
+            # imag volume depth
+            self.w1_0 = data["KDImagVolume_W1_0" + tag]
+            self.w1_A = data["KDImagVolume_W1_A" + tag]
+            self.w2_0 = data["KDImagVolume_W2_0" ]
+            self.w2_A = data["KDImagVolume_W2_A" ]
+
+            # imag surface depth
+            self.d1_0 = data["KDImagSurface_D1_0"]
+            self.d1_asymm = data["KDImagSurface_D1_asymm"]
+            self.d2_0 = data["KDImagSurface_D2_0"]
+            self.d2_A = data["KDImagSurface_D2_A"]
+            self.d2_A2 = data["KDImagSurface_D2_A2"]
+            self.d2_A3 = data["KDImagSurface_D2_A3"]
+            self.d3_0 = data["KDImagSurface_D3_0"]
+
+            # imag surface form
+            self.rd_0 = data["KDImagSurface_r_0"]
+            self.rd_A = data["KDImagSurface_r_A"]
+            self.ad_0 = data["KDImagSurface_a_0" + tag]
+            self.ad_A = data["KDImagSurface_a_A" + tag]
+
+            # real spin orbit depth
+            self.Vso1_0 = data["KDRealSpinOrbit_V1_0"]
+            self.Vso1_A = data["KDRealSpinOrbit_V1_A"]
+            self.Vso2_0 = data["KDRealSpinOrbit_V2_0"]
+
+            # imag spin orbit form
+            self.Wso1_0 = data["KDImagSpinOrbit_W1_0"]
+            self.Wso2_0 = data["KDImagSpinOrbit_W2_0"]
+
+            # spin orbit form
+            self.rso_0 = data["KDRealSpinOrbit_r_0"]
+            self.rso_A = data["KDRealSpinOrbit_r_A"]
+            self.aso_0 = data["KDRealSpinOrbit_a_0"]
+
+            # fermi energy
+            if self.projectile == Projectile::neutron:
+                self.Ef_0 = 11.2814
+                self.Ef_A = 0.02646
+            else:
+                self.Ef_0 = −8.4075
+                self.Ef_A = 1.01378
+
+            # Coulomb
+            if self.projectile == Projectile::proton:
+                self.rc_0 = data["KDCoulomb_r_C_0"]
+                self.rc_A = data["KDCoulomb_r_C_A"]
+                self.rc_A2 = data["KDCoulomb_r_C_A2"]
+
+
+
+    def get_params(A, Z, Elab):
+        """
+        Calculates Koning-Delaroche global neutron-nucleus OMP parameters for given A, Z,
+        and COM-frame energy, returns params in form useable by EnergizedKoningDelaroche
+        """
+
+        mu, Ecom, K = self.kinematics(A, Z, elab)
+        eta = 0
+        if self.projectile == Projectile::neutron:
+            k_c = ALPHA * Z * mu
+            eta = k_c / k
+
+        N = A - Z
+        delta = (N - Z) / A
+        factor = 1
+        if self.projectile == Projectile::proton:
+            delta *= -1.
+            factor *= -1
+
+        # real central depth
+        v1 = self.v1_0 - self.v1_asymm * delta - self.v1_A * A
+        v2 = self.v2_0 - self.v2_A * A * factor
+        v3 = self.v3_0 - self.v3_A * A * factor
+        v4 = self.v4_0
+        vv = Vv(Ecom, v1, v2, v3, v4, Ef)
+
+        # real central form
+        rv = self.rv_0 - self.rv_A * A ** (-1. / 3.)
+        av = self.av_0 - self.av_A * A
+
+        # imag volume depth
+        w1 = self.w1_0 + self.w1_A * A
+        w2 = self.w2_0 + self.w2_A * A
+        wv = Wv(Ecom, w1, w2, Ef)
+
+        # imag volume form
+        rwv = rv
+        awv = av
+
+        # imag surface depth
+        d1 = self.d1_0 + self.d1_asymm * delta
+        d2 = self.d2_0 + self.d2_A / (1 + np.exp((A - self.d2_A3) / self.d2_A2))
+        d3 = self.d3_0
+        wd = Wd(Ecom, d1, d2, d3, Ef)
+
+        # imag surface form
+        rd = self.rd_0 - self.rd_A * A ** (1. / 3.)
+        ad = self.ad_0 - self.ad_A * A * factor
+
+        # real spin orbit depth
+        vso1 = self.Vso1_0 + self.Vso1_A * A
+        vso2 = self.Vso2_0
+        vso = Vso(Ecom, vso1, vso2, Ef)
+
+        # real spin orbit form
+        rso = self.rso_0 - self.rso_A * A ** (-1. / 3.)
+        aso = self.aso_0
+
+        # imag spin orbit form
+        wso1 = self.Wso1_0
+        wso2 = self.Wso2_0
+        wso = Wso(Ecom, wso1, wso2, Ef)
+
+        # imag spin orbit form
+        rwso = rso
+        awso = aso
+
+
+        # fermi energy
+        Ef = self.Ef_0 + self.Ef_A * A
+
+        # Coulomb radius
+        rc0 = self.rc_0 + self.rc_A * A**(-2./3.) + self.rc_A2 * A**(-5./3.)
+        R_C = rc0 * A **(1./3.)
+
+        # 15 params total
+        params = np.array(
+            [
+                vv,
+                rv * A ** (1. / 3.),
+                av,
+                wv,
+                rwv * A ** (1. / 3.),
+                awv,
+                wd,
+                rd * A ** (1. / 3.),
+                ad,
+                vso,
+                rso * A ** (1. / 3.),
+                aso,
+                wso,
+                rwso * A ** (1. / 3.),
+                awso,
+            ]
+        )
+
+        return (mu, Ecom, k, eta, R_C), params,
+
+
+
+    def kinematics(A: int, Z: int,  energy_lab: float):
+        """
+        calculates the reduced mass, and the COM frame kinetic energy
+        and wavenumber for a neutron scattering on a target nuclide
+        Parameters:
+            A : mass number of target
+            Z : proton number of target
+            energy_lab: bombarding energy in the lab frame [MeV]
+        """
+        N = A - Z
+
+        #TODO use a table
+        # semi-empirical mass formula
+        delta = 0
+        if N%2 == 0 and Z%2 == 0:
+            delta = 12.0 / np.sqrt(A)
+        elif N%2 != 0 and Z%2 != 0:
+            delta = - 12.0 / np.sqrt(A)
+
+        Eb = (
+            15.8 * A
+          - 18.3 * A**(2/3)
+          - 0.714 * Z*(Z-1)/(A**(1/3))
+          - 23.2 * (N-Z)**2/A
+          + delta
+        )
+
+        target_mass = Z * MASS_P + N * MASS_N - Eb
+        mu = target_mass * MASS_N / (target_mass + MASS_N)
+        energy_com = target_mass / (MASS_N + target_mass) * energy_lab
+
+        return mu, energy_com, k

@@ -55,7 +55,6 @@ class Interaction:
         self.ell = ell
         self.k_c = ALPHA * Z_1*Z_2 * self.mu
         self.R_C = R_C
-        # self.eta = ALPHA * Z_1 * Z_2 * self.mu / self.k
         self.is_complex = is_complex
         self.spin_orbit_term = spin_orbit_term
 
@@ -147,28 +146,41 @@ class Interaction:
         r'''Sommerfeld parameter. Implemented as a function to support energy
         emulation (where the energy could be a part of the parameter vector,
         `alpha`).
-        
+
         Parameters:
             alpha (ndarray): parameter vector
-        
+
         Returns:
             eta (float): Sommerfeld parametere
         '''
         return self.sommerfeld
-    
+
 
     def momentum(self, alpha: np.array):
         r'''Momentum. Implemented as a function to support energy emulation
         (where the energy/momentum could be a part of the parameter vector,
         `alpha`).
-        
+
         Parameters:
             alpha (ndarray): parameter vector
-        
+
         Returns:
             k (float): center-of-mass, scattering momentum
         '''
         return self.k
+
+    def R_C(self, alpha : np.array):
+        r'''Coulomb cutoff. Implemented as a function to support energy emulation
+        (where the energy/momentum could be a part of the parameter vector,
+        `alpha`).
+
+        Parameters:
+            alpha (ndarray): parameter vector
+
+        Returns:
+            R_C (float): Coulomb cutoff
+        '''
+        return self.R_C
 
 
 class InteractionSpace:

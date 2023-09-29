@@ -99,9 +99,7 @@ def xscalc(
             * P_l_theta[l, :]
         ) / (2j * k)
         b += (
-            np.exp(2j * sigma_l[l])
-            * (S_l_plus[l] - S_l_minus[l])
-            * P_1_l_theta[l, :]
+            np.exp(2j * sigma_l[l]) * (S_l_plus[l] - S_l_minus[l]) * P_1_l_theta[l, :]
         ) / (2j * k)
 
         # cross sections
@@ -496,7 +494,9 @@ class ScatteringAmplitudeEmulator:
             P_1_l_costheta = self.P_1_l_costheta
         else:
             assert np.max(angles) <= np.pi and np.min(angles) >= 0
-            P_l_costheta = np.array([eval_legendre(l, np.cos(angles)) for l in range(lmax)])
+            P_l_costheta = np.array(
+                [eval_legendre(l, np.cos(angles)) for l in range(lmax)]
+            )
             P_l_costheta = np.array(
                 [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
             )
@@ -540,7 +540,9 @@ class ScatteringAmplitudeEmulator:
             P_1_l_costheta = self.P_1_l_costheta
         else:
             assert np.max(angles) <= np.pi and np.min(angles) >= 0
-            P_l_costheta = np.array([eval_legendre(l, np.cos(angles)) for l in range(lmax)])
+            P_l_costheta = np.array(
+                [eval_legendre(l, np.cos(angles)) for l in range(lmax)]
+            )
             P_l_costheta = np.array(
                 [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
             )

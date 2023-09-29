@@ -1,11 +1,15 @@
-r'''
+r"""
 Some helpful utilities for training an emulator
-'''
+"""
 
+import numpy as np
 from scipy.stats import qmc
 
-def sample_params_LHC(N : int, central_vals : np.array, scale : float = 0.5, seed : int = None):
-    r'''
+
+def sample_params_LHC(
+    N: int, central_vals: np.array, scale: float = 0.5, seed: int = None
+):
+    r"""
     Sampling parameters from a finite box in parameter space around some central values using the Latin hypercube method
     Parameters:
         N : number of samples
@@ -15,11 +19,15 @@ def sample_params_LHC(N : int, central_vals : np.array, scale : float = 0.5, see
         seed : RNG seed. If None, uses entropy from the system
     Returns:
         (ndarray) : N samples
-    '''
-    bounds = np.array([
-        central_vals - np.fabs(central_vals * scale),
-        central_vals + np.fabs(central_vals * scale),
-    ])
-    return qmc.scale(qmc.LatinHypercube(d=parameters.size, seed=seed).random(N), bounds[:, 0], bounds[:, 1])
-
-
+    """
+    bounds = np.array(
+        [
+            central_vals - np.fabs(central_vals * scale),
+            central_vals + np.fabs(central_vals * scale),
+        ]
+    )
+    return qmc.scale(
+        qmc.LatinHypercube(d=parameters.size, seed=seed).random(N),
+        bounds[:, 0],
+        bounds[:, 1],
+    )

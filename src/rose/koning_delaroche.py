@@ -250,7 +250,7 @@ class KDGlobal(EnergizedInteractionEIM):
 
         if projectile == Projectile.neutron:
             tag = "_n"
-        elif projectile == Projectile::proton:
+        elif projectile == Projectile.proton:
             tag = "_p"
 
         self.projectile = projectile
@@ -311,15 +311,15 @@ class KDGlobal(EnergizedInteractionEIM):
             self.aso_0 = data["KDRealSpinOrbit_a_0"]
 
             # fermi energy
-            if self.projectile == Projectile::neutron:
+            if self.projectile == Projectile.neutron:
                 self.Ef_0 = 11.2814
                 self.Ef_A = 0.02646
             else:
-                self.Ef_0 = −8.4075
+                self.Ef_0 = -8.4075
                 self.Ef_A = 1.01378
 
             # Coulomb
-            if self.projectile == Projectile::proton:
+            if self.projectile == Projectile.proton:
                 self.rc_0 = data["KDCoulomb_r_C_0"]
                 self.rc_A = data["KDCoulomb_r_C_A"]
                 self.rc_A2 = data["KDCoulomb_r_C_A2"]
@@ -334,14 +334,14 @@ class KDGlobal(EnergizedInteractionEIM):
 
         mu, Ecom, K = self.kinematics(A, Z, elab)
         eta = 0
-        if self.projectile == Projectile::neutron:
+        if self.projectile == Projectile.neutron:
             k_c = ALPHA * Z * mu
             eta = k_c / k
 
         N = A - Z
         delta = (N - Z) / A
         factor = 1
-        if self.projectile == Projectile::proton:
+        if self.projectile == Projectile.proton:
             delta *= -1.
             factor *= -1
 

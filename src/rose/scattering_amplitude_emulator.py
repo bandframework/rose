@@ -79,10 +79,12 @@ def xscalc(
 
     lmax = S_l_plus.shape[0]
 
-    Smag = np.real(S_l_plus * S_l_plus.conj() +  S_l_minus * S_l_minus.conj())
+    Smag = np.real(S_l_plus * S_l_plus.conj() + S_l_minus * S_l_minus.conj())
 
-    reldiff = np.array([ np.fabs(Smag[l]  - Smag[l-1]) /  Smag[l-1] for l in range(1,lmax)])
-    lmax = np.argmax( reldiff - l_cutoff_rel < 0  )
+    reldiff = np.array(
+        [np.fabs(Smag[l] - Smag[l - 1]) / Smag[l - 1] for l in range(1, lmax)]
+    )
+    lmax = np.argmax(reldiff - l_cutoff_rel < 0)
 
     if P_l_theta is None:
         P_l_theta = np.array([eval_legendre(l, np.cos(angles)) for l in range(lmax)])
@@ -94,24 +96,26 @@ def xscalc(
 
     xst = 0.0
     xsrxn = 0.0
-    a = np.zeros_like(angles, dtype=complex)
+    a = np.zeros_like(angles, dtype=complex) + f_c
     b = np.zeros_like(angles, dtype=complex)
 
     for l in range(lmax):
         a += (
-            f_c[l]
-            + np.exp(2j * sigma_l[l])
+            np.exp(2j * sigma_l[l])
             * ((l + 1) * (S_l_plus[l] - 1) + l * (S_l_minus[l] - 1))
             * P_l_theta[l, :]
+        ) / (2j * k)
+        b += (
+            np.exp(2j * sigma_l[l])
+            * (S_l_plus[l] - S_l_minus[l])
+            * P_1_l_theta[l, :]
+            / (2j * k)
         )
-        b += np.exp(2j * sigma_l[l]) * (S_l_plus[l] - S_l_minus[l]) * P_1_l_theta[l, :]
         xsrxn += (l + 1) * (1 - np.real(S_l_plus[l] * np.conj(S_l_plus[l]))) + l * (
             1 - np.real(S_l_minus[l] * np.conj(S_l_minus[l]))
         )
         xst += (l + 1) * (1 - np.real(S_l_plus[l])) + l * (1 - np.real(S_l_minus[l]))
 
-    a /= 2j * k
-    b /= 2j * k
     dsdo = np.real(a * np.conj(a) + b * np.conj(b)) * 10
     Ay = np.real(a * np.conj(b) + b * np.conj(a)) * 10 / dsdo
     xst *= 10 * 2 * np.pi / k**2

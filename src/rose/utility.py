@@ -140,7 +140,7 @@ def nucleon_nucleus_kinematics(A: int, Z: int,  energy_lab: float, p : Projectil
     if p == Projectile.neutron:
         mu = target_mass * MASS_N / (target_mass + MASS_N)
         energy_com = target_mass / (MASS_N + target_mass) * energy_lab
-    elif p == Projectile.neutron:
+    elif p == Projectile.proton:
         mu = target_mass * MASS_P / (target_mass + MASS_P)
         energy_com = target_mass / (MASS_P + target_mass) * energy_lab
 

@@ -71,7 +71,7 @@ class SchroedingerEquation:
         '''
 
         C_l = Gamow_factor(l, self.interaction.eta(alpha))
-        S_C = self.interaction.momentum(alpha) * self.interaction.R_C(alpha)
+        S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
         if rho_0 is None:
             rho_0 = (phi_threshold / C_l) ** (1/(l+1))

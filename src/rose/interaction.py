@@ -169,7 +169,7 @@ class Interaction:
         '''
         return self.k
 
-    def R_C(self, alpha : np.array):
+    def coulomb_cutoff(self, alpha : np.array):
         r'''Coulomb cutoff. Implemented as a function to support energy emulation
         (where the energy/momentum could be a part of the parameter vector,
         `alpha`).

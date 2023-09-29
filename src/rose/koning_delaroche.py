@@ -14,7 +14,7 @@ import numpy as np
 from .interaction_eim import InteractionEIM
 from .energized_interaction_eim import EnergizedInteractionEIM
 from .constants import DEFAULT_RHO_MESH, MASS_PION, HBARC, ALPHA
-from .utility import kinematic, Projectile
+from .utility import nucleon_nucleus_kinematics, Projectile
 
 MAX_ARG = np.log(1/1e-16)
 NUM_PARAMS = 15

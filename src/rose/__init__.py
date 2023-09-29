@@ -10,6 +10,7 @@ from .free_solutions import phase_shift
 from .basis import CustomBasis, RelativeBasis
 from .koning_delaroche import KoningDelaroche, EnergizedKoningDelaroche
 from . import koning_delaroche
+from . import training
 from .spin_orbit import SpinOrbitTerm
 
 from .__version__ import __version__

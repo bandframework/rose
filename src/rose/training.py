@@ -25,9 +25,9 @@ def sample_params_LHC(
             central_vals - np.fabs(central_vals * scale),
             central_vals + np.fabs(central_vals * scale),
         ]
-    )
+    ).T
     return qmc.scale(
-        qmc.LatinHypercube(d=parameters.size, seed=seed).random(N),
+        qmc.LatinHypercube(d=central_vals.size, seed=seed).random(N),
         bounds[:, 0],
         bounds[:, 1],
     )

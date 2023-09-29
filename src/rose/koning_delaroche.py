@@ -236,9 +236,14 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIM):
 
 
 class KDGlobal():
-    r"""Optical potential in Koning-Delaroche form."""
+    r"""Global optical potential in Koning-Delaroche form."""
 
     def __init__(self, projectile : Projectile, param_fpath: Path = None):
+        r'''
+        Parameters:
+            projectile : neutron or proton?
+            param_fpath : path to json file encoding parameter values. Defaults to data/KD_default.json
+        '''
         if param_fpath is None:
             param_fpath = Path(__file__).parent.resolve() /  Path("../../data/KD_default.json")
 

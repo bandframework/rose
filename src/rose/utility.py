@@ -91,3 +91,37 @@ def eval_assoc_legendre(n, x):
             return np.zeros(x.size)
         else:
             return -(1-x**2)**(1/2) * derivative(lambda z: eval_legendre(n, z), x, dx=1e-9)
+
+
+def kinematics(A: int, Z: int,  energy_lab: float):
+    """
+    calculates the reduced mass, and the COM frame kinetic energy
+    and wavenumber for a neutron scattering on a target nuclide
+    Parameters:
+        A : mass number of target
+        Z : proton number of target
+        energy_lab: bombarding energy in the lab frame [MeV]
+    """
+    N = A - Z
+
+    #TODO use a table
+    # semi-empirical mass formula
+    delta = 0
+    if N%2 == 0 and Z%2 == 0:
+        delta = 12.0 / np.sqrt(A)
+    elif N%2 != 0 and Z%2 != 0:
+        delta = - 12.0 / np.sqrt(A)
+
+    Eb = (
+        15.8 * A
+      - 18.3 * A**(2/3)
+      - 0.714 * Z*(Z-1)/(A**(1/3))
+      - 23.2 * (N-Z)**2/A
+      + delta
+    )
+
+    target_mass = Z * MASS_P + N * MASS_N - Eb
+    mu = target_mass * MASS_N / (target_mass + MASS_N)
+    energy_com = target_mass / (MASS_N + target_mass) * energy_lab
+
+    return mu, energy_com, k

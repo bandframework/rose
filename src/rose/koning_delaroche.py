@@ -16,6 +16,7 @@ import numpy as np
 from .interaction_eim import InteractionEIM
 from .energized_interaction_eim import EnergizedInteractionEIM
 from .constants import DEFAULT_RHO_MESH, MASS_PION, HBARC, ALPHA
+from .utility import kinematics
 
 MAX_ARG = np.log(1/1e-16)
 NUM_PARAMS = 15
@@ -241,12 +242,12 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIM):
 
 
 
-class KDGlobal(EnergizedInteractionEIM):
+class KDGlobal():
     r"""Optical potential in Koning-Delaroche form."""
 
-    def __init__(projectile : Projectile, param_fpath: Path = None):
+    def __init__(self, projectile : Projectile, param_fpath: Path = None):
         if param_fpath is None:
-            param_fpath = pathlib.Path(__file__).parent.resolve() /  Path("../../data/KD_default.json")
+            param_fpath = Path(__file__).parent.resolve() /  Path("../../data/KD_default.json")
 
         if projectile == Projectile.neutron:
             tag = "_n"
@@ -326,13 +327,13 @@ class KDGlobal(EnergizedInteractionEIM):
 
 
 
-    def get_params(A, Z, Elab):
+    def get_params(self, A, Z, Elab):
         """
         Calculates Koning-Delaroche global neutron-nucleus OMP parameters for given A, Z,
         and COM-frame energy, returns params in form useable by EnergizedKoningDelaroche
         """
 
-        mu, Ecom, K = self.kinematics(A, Z, elab)
+        mu, Ecom, K = kinematics(A, Z, Elab)
         eta = 0
         if self.projectile == Projectile.neutron:
             k_c = ALPHA * Z * mu
@@ -424,37 +425,3 @@ class KDGlobal(EnergizedInteractionEIM):
 
         return (mu, Ecom, k, eta, R_C), params,
 
-
-
-    def kinematics(A: int, Z: int,  energy_lab: float):
-        """
-        calculates the reduced mass, and the COM frame kinetic energy
-        and wavenumber for a neutron scattering on a target nuclide
-        Parameters:
-            A : mass number of target
-            Z : proton number of target
-            energy_lab: bombarding energy in the lab frame [MeV]
-        """
-        N = A - Z
-
-        #TODO use a table
-        # semi-empirical mass formula
-        delta = 0
-        if N%2 == 0 and Z%2 == 0:
-            delta = 12.0 / np.sqrt(A)
-        elif N%2 != 0 and Z%2 != 0:
-            delta = - 12.0 / np.sqrt(A)
-
-        Eb = (
-            15.8 * A
-          - 18.3 * A**(2/3)
-          - 0.714 * Z*(Z-1)/(A**(1/3))
-          - 23.2 * (N-Z)**2/A
-          + delta
-        )
-
-        target_mass = Z * MASS_P + N * MASS_N - Eb
-        mu = target_mass * MASS_N / (target_mass + MASS_N)
-        energy_com = target_mass / (MASS_N + target_mass) * energy_lab
-
-        return mu, energy_com, k

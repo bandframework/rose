@@ -6,8 +6,6 @@ See the [Koning-Delaroche
 paper](https://www.sciencedirect.com/science/article/pii/S0375947402013210) for
 details. Equation references are with respect to (w.r.t.) this paper.
 '''
-
-from enum import Enum
 from pathlib import Path
 
 import json
@@ -16,15 +14,10 @@ import numpy as np
 from .interaction_eim import InteractionEIM
 from .energized_interaction_eim import EnergizedInteractionEIM
 from .constants import DEFAULT_RHO_MESH, MASS_PION, HBARC, ALPHA
-from .utility import kinematics
+from .utility import kinematic, Projectile
 
 MAX_ARG = np.log(1/1e-16)
 NUM_PARAMS = 15
-
-class Projectile(Enum):
-    neutron = 0
-    proton = 1
-
 
 def Vv(E, v1, v2, v3, v4, Ef):
     r'''energy-dependent, volume-central strength - real term, Eq. (7)
@@ -333,7 +326,7 @@ class KDGlobal():
         and COM-frame energy, returns params in form useable by EnergizedKoningDelaroche
         """
 
-        mu, Ecom, K = kinematics(A, Z, Elab)
+        mu, Ecom, k = kinematics(A, Z, Elab)
         eta = 0
         if self.projectile == Projectile.neutron:
             k_c = ALPHA * Z * mu

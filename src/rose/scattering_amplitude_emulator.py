@@ -100,6 +100,7 @@ def xscalc(
     b = np.zeros_like(angles, dtype=complex)
 
     for l in range(lmax):
+        # scattering amplitudes
         a += (
             np.exp(2j * sigma_l[l])
             * ((l + 1) * (S_l_plus[l] - 1) + l * (S_l_minus[l] - 1))
@@ -109,8 +110,9 @@ def xscalc(
             np.exp(2j * sigma_l[l])
             * (S_l_plus[l] - S_l_minus[l])
             * P_1_l_theta[l, :]
-            / (2j * k)
-        )
+        ) / (2j * k)
+
+        # cross sections
         xsrxn += (l + 1) * (1 - np.real(S_l_plus[l] * np.conj(S_l_plus[l]))) + l * (
             1 - np.real(S_l_minus[l] * np.conj(S_l_minus[l]))
         )

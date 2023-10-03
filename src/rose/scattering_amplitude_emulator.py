@@ -58,12 +58,13 @@ def xscalc(
 
     if f_c is not None:
         assert sigma_l is not None
+        sigma_l = sigma_l[..., 0]
     else:
-        f_c = np.zeros(len(deltas), dtype=np.cdouble)
-        sigma_l = np.zeros(len(deltas), dtype=np.cdouble)
+        f_c = np.zeros_like(angles, dtype=np.cdouble)
+        sigma_l = np.zeros_like(angles, dtype=np.double)
         assert rutherford is None
 
-    if np.all(np.isclose(f_c, 0.0 )):
+    if np.all(f_c <= 1e-16 * (1 + 1j)):
         rutherford = None
 
     if is_spin_orbit:

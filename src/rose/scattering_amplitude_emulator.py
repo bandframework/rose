@@ -32,6 +32,7 @@ def xscalc(
     angles: np.array,
     P_l_theta: np.array,
     P_1_l_theta: np.array,
+    lmax,
     f_c: np.array = None,
     sigma_l: np.array = None,
     rutherford: np.array = None,
@@ -58,11 +59,11 @@ def xscalc(
     if f_c is not None:
         assert sigma_l is not None
     else:
-        f_c = np.zeros(len(deltas))
-        sigma_l = np.zeros(len(deltas))
+        f_c = np.zeros(len(deltas), dtype=np.cdouble)
+        sigma_l = np.zeros(len(deltas), dtype=np.cdouble)
         assert rutherford is None
 
-    if np.all(np.isclose(f_c, 0.0)):
+    if np.all(np.isclose(f_c, 0.0 )):
         rutherford = None
 
     if is_spin_orbit:
@@ -77,8 +78,6 @@ def xscalc(
         S_l_plus = np.exp(2j * deltas_plus)[:, np.newaxis]
         S_l_minus = S_l_plus.copy()
 
-    lmax = S_l_plus.shape[0]
-
     Smag = np.real(S_l_plus * S_l_plus.conj() + S_l_minus * S_l_minus.conj())
 
     reldiff = np.array(
@@ -88,8 +87,8 @@ def xscalc(
 
     xst = 0.0
     xsrxn = 0.0
-    a = np.zeros_like(angles, dtype=complex) + f_c
-    b = np.zeros_like(angles, dtype=complex)
+    a = np.zeros_like(angles, dtype=np.cdouble) + f_c
+    b = np.zeros_like(angles, dtype=np.cdouble)
 
     for l in range(lmax):
         # scattering amplitudes
@@ -116,7 +115,7 @@ def xscalc(
     if rutherford is not None:
         dsdo = dsdo / rutherford
 
-    return NucleonNucleusXS(dsdo, Ay, xst, xsrxn)
+    return dsdo, Ay, xst, xsrxn
 
 
 class ScatteringAmplitudeEmulator:
@@ -501,17 +500,20 @@ class ScatteringAmplitudeEmulator:
                 [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
             )
 
-        return xscalc(
-            k,
-            deltas,
-            angles,
-            P_l_costheta,
-            P_1_l_costheta,
-            self.f_c,
-            self.sigma_l,
-            self.rutherford,
-            self.rbes[0][0].interaction.include_spin_orbit,
-            self.l_cutoff_rel,
+        return NucleonNucleusXS(
+            *xscalc(
+                k,
+                deltas,
+                angles,
+                P_l_costheta,
+                P_1_l_costheta,
+                self.l_max,
+                self.f_c,
+                self.sigma_l,
+                self.rutherford,
+                self.rbes[0][0].interaction.include_spin_orbit,
+                self.l_cutoff_rel,
+            )
         )
 
     def exact_xs(self, theta: np.array, angles: np.array = None):
@@ -547,17 +549,20 @@ class ScatteringAmplitudeEmulator:
                 [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
             )
 
-        return xscalc(
-            k,
-            deltas,
-            angles,
-            P_l_costheta,
-            P_1_l_costheta,
-            self.f_c,
-            self.sigma_l,
-            self.rutherford,
-            self.rbes[0][0].interaction.include_spin_orbit,
-            self.l_cutoff_rel,
+        return NucleonNucleusXS(
+            *xscalc(
+                k,
+                deltas,
+                angles,
+                P_l_costheta,
+                P_1_l_costheta,
+                self.l_max,
+                self.f_c,
+                self.sigma_l,
+                self.rutherford,
+                self.rbes[0][0].interaction.include_spin_orbit,
+                self.l_cutoff_rel,
+            )
         )
 
     def save(self, filename):

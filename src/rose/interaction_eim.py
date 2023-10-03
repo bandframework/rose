@@ -238,13 +238,14 @@ class InteractionEIMSpace(InteractionSpace):
             rho_mesh (ndarray): discrete $\rho$ points
             match_points (ndarray): $\rho$ points where agreement with the true
                 potential is enforced
-        
+
         Returns:
             instance (InteractionEIMSpace): instance of InteractionEIMSpace
-        
+
         Attributes:
             interactions (list): list of `InteractionEIM`s
         '''
+        self.l_max = l_max
         self.interactions = []
         if spin_orbit_potential is None:
             for l in range(l_max+1):

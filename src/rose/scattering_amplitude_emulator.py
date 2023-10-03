@@ -25,7 +25,7 @@ class NucleonNucleusXS:
     xsrxn: float
 
 
-@njit
+# @njit
 def xscalc(
     k: float,
     deltas: np.array,
@@ -67,16 +67,16 @@ def xscalc(
     if np.all(f_c <= 1e-16 * (1 + 1j)):
         rutherford = None
 
+    deltas_plus = np.array([d[0] for d in deltas], dtype=np.cdouble)
+    S_l_plus = np.exp(2j * deltas_plus)
     if is_spin_orbit:
         # If there is spin-orbit, the l=0 term for B has to be zero.
-        deltas_plus = np.array([d[0] for d in deltas])
-        deltas_minus = np.array([d[1] for d in deltas[1:]])
-        S_l_plus = np.exp(2j * deltas_plus)[:, np.newaxis]
-        S_l_minus = np.hstack((S_l_plus[0], np.exp(2j * deltas_minus)))[:, np.newaxis]
+        deltas_minus = np.array([d[1] for d in deltas[1:]], dtype=np.cdouble)
+        S_l_minus = np.zeros(S_l_plus.shape, dtype=np.cdouble)
+        S_l_minus[1:] = np.exp(2j * deltas_minus)
+        S_l_minus[0] = S_l_plus[0]
     else:
         # This ensures that A reduces to the non-spin-orbit formula, and B = 0.
-        deltas_plus = np.array([d for d in deltas])
-        S_l_plus = np.exp(2j * deltas_plus)[:, np.newaxis]
         S_l_minus = S_l_plus.copy()
 
     Smag = np.real(S_l_plus * S_l_plus.conj() + S_l_minus * S_l_minus.conj())

@@ -12,5 +12,6 @@ from .koning_delaroche import KoningDelaroche, EnergizedKoningDelaroche
 from . import koning_delaroche
 from . import training
 from .spin_orbit import SpinOrbitTerm
+from .utility import nucleon_nucleus_kinematics, Projectile, Projectile
 
 from .__version__ import __version__

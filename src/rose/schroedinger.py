@@ -11,7 +11,7 @@ from scipy.integrate import solve_ivp
 
 from .interaction import Interaction
 from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
-from .utility import regular_inverse_s
+from .utility import regular_inverse_s, numerov_kernel
 
 # Default values for solving the SE.
 DEFAULT_R_MIN = 1e-12  # fm
@@ -106,6 +106,123 @@ class SchroedingerEquation:
         )
 
         return sol.sol
+
+    def phi_numerov(
+        self,
+        alpha: np.array,  # interaction parameters
+        s_mesh: np.array,  # mesh on which to calculate phi
+        l: int = 0,  # angular momentum
+        N = 1E4,
+        phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
+    ):
+        r"""Solves the reduced, radial Schrödinger equation with the Numerov method
+        Parameters:
+            alpha (ndarray): parameter vector
+            s_endpts (ndarray): lower and upper bounds of the $s$ mesh.
+            l (int): angular momentum
+            rho_0 (float): initial $\rho$ (or $s$) value; starting point for the
+                solver
+            phi_threshold (float): minimum $\phi$ value; The wave function is
+                considered zero below this value.
+
+        Returns:
+            array (ndarray): 2-column matrix; The first column is the $r$ values.
+                The second is the reduced radial wavefunction, $u(r)$. (The optional
+                third - based on return_uprime - is $u^\prime(r)$.)
+        """
+        C_l = Gamow_factor(l, self.interaction.eta(alpha))
+        S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
+
+        rho_0 = s_mesh[0]
+        assert rho_0 >= 1e-16 and rho_0 < s_mesh[1]
+        phi_0 = C_l * rho_0 ** (l + 1)
+        phi_prime_0 = C_l * (l + 1) * rho_0**l
+
+        if self.interaction.is_complex:
+            initial_conditions = np.array([phi_0 * (1 + 1j), phi_prime_0 * (1+1j)])
+        else:
+            initial_conditions = np.array([phi_0, phi_prime_0])
+
+        dx = s_mesh[1] - s_mesh[0]
+        initial_conditions[1] = initial_conditions[0] + dx * initial_conditions[1]
+
+        def g(s):
+            return (
+              self.interaction.tilde(s, alpha)
+            + 2 * self.interaction.eta(alpha) * regular_inverse_s(s, S_C)
+            + l * (l + 1) / s**2
+            - 1.0
+            )
+
+        phi = numerov_kernel( (s_mesh[0], s_mesh[1]), initial_conditions, N, g )
+        return phi
+
+
+    def delta_numerov(
+        self,
+        alpha: np.array,  # interaction parameters
+        s : np.array,  # channel radius at which to evaluate R-matrix
+        l: int = 0,  # angular momentum
+        N = 1E4,
+        phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
+    ):
+        r"""Solves the reduced, radial Schrödinger equation with the Numerov method
+        Parameters:
+            alpha (ndarray): parameter vector
+            s_endpts (ndarray): lower and upper bounds of the $s$ mesh.
+            l (int): angular momentum
+            rho_0 (float): initial $\rho$ (or $s$) value; starting point for the
+                solver
+            phi_threshold (float): minimum $\phi$ value; The wave function is
+                considered zero below this value.
+
+        Returns:
+            array (ndarray): 2-column matrix; The first column is the $r$ values.
+                The second is the reduced radial wavefunction, $u(r)$. (The optional
+                third - based on return_uprime - is $u^\prime(r)$.)
+        """
+        C_l = Gamow_factor(l, self.interaction.eta(alpha))
+        S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
+
+        rho_0 = (phi_threshold / C_l) ** (1 / (l + 1))
+        phi_0 = C_l * rho_0 ** (l + 1)
+        phi_prime_0 = C_l * (l + 1) * rho_0**l
+
+        if self.interaction.is_complex:
+            initial_conditions = np.array([phi_0 * (1 + 1j), phi_prime_0 * (1+1j)])
+        else:
+            initial_conditions = np.array([phi_0, phi_prime_0])
+
+        s_mesh = np.linspace(phi_0, s, N)
+        dx = s_mesh[1] - s_mesh[0]
+        initial_conditions[1] = initial_conditions[0] + dx * initial_conditions[1]
+
+        def g(s):
+            return (
+              self.interaction.tilde(s, alpha)
+            + 2 * self.interaction.eta(alpha) * regular_inverse_s(s, S_C)
+            + l * (l + 1) / s**2
+            - 1.0
+            )
+
+        phi = numerov_kernel( (s_mesh[0], s_mesh[1]), initial_conditions, N, g )
+        u = phi[-1]
+        rl = 1 / s_0 * (u[0] / u[1])
+        return (
+            np.log(
+                (
+                    H_minus(s_0, l, self.interaction.eta(alpha))
+                    - s_0 * rl * H_minus_prime(s_0, l, self.interaction.eta(alpha))
+                )
+                / (
+                    H_plus(s_0, l, self.interaction.eta(alpha))
+                    - s_0 * rl * H_plus_prime(s_0, l, self.interaction.eta(alpha))
+                )
+            )
+            / 2j
+        )
+
+
 
     def delta(
         self,

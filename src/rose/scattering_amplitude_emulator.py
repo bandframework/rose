@@ -25,7 +25,7 @@ class NucleonNucleusXS:
     xsrxn: float
 
 
-# @njit
+@njit
 def xs_calc_neutral(
     k: float,
     angles: np.array,
@@ -61,7 +61,7 @@ def xs_calc_neutral(
     return dsdo, Ay, xst, xsrxn
 
 
-# @njit
+@njit
 def xs_calc_coulomb(
     k: float,
     angles: np.array,

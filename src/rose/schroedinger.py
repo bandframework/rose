@@ -112,7 +112,7 @@ class SchroedingerEquation:
         alpha: np.array,  # interaction parameters
         s_mesh: np.array,  # mesh on which to calculate phi
         l: int = 0,  # angular momentum
-        N = 1E4,
+        N=1e4,
         phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
     ):
         r"""Solves the reduced, radial Schrödinger equation with the Numerov method
@@ -139,7 +139,7 @@ class SchroedingerEquation:
         phi_prime_0 = C_l * (l + 1) * rho_0**l
 
         if self.interaction.is_complex:
-            initial_conditions = np.array([phi_0 * (1 + 1j), phi_prime_0 * (1+1j)])
+            initial_conditions = np.array([phi_0 * (1 + 1j), phi_prime_0 * (1 + 1j)])
         else:
             initial_conditions = np.array([phi_0, phi_prime_0])
 
@@ -148,22 +148,21 @@ class SchroedingerEquation:
 
         def g(s):
             return (
-              self.interaction.tilde(s, alpha)
-            + 2 * self.interaction.eta(alpha) * regular_inverse_s(s, S_C)
-            + l * (l + 1) / s**2
-            - 1.0
+                self.interaction.tilde(s, alpha)
+                + 2 * self.interaction.eta(alpha) * regular_inverse_s(s, S_C)
+                + l * (l + 1) / s**2
+                - 1.0
             )
 
-        phi = numerov_kernel( (s_mesh[0], s_mesh[1]), initial_conditions, N, g )
+        phi = numerov_kernel((s_mesh[0], s_mesh[1]), initial_conditions, N, g)
         return phi
-
 
     def delta_numerov(
         self,
         alpha: np.array,  # interaction parameters
-        s : np.array,  # channel radius at which to evaluate R-matrix
+        s: np.array,  # channel radius at which to evaluate R-matrix
         l: int = 0,  # angular momentum
-        N = 1E4,
+        N=1e4,
         phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
     ):
         r"""Solves the reduced, radial Schrödinger equation with the Numerov method
@@ -189,7 +188,7 @@ class SchroedingerEquation:
         phi_prime_0 = C_l * (l + 1) * rho_0**l
 
         if self.interaction.is_complex:
-            initial_conditions = np.array([phi_0 * (1 + 1j), phi_prime_0 * (1+1j)])
+            initial_conditions = np.array([phi_0 * (1 + 1j), phi_prime_0 * (1 + 1j)])
         else:
             initial_conditions = np.array([phi_0, phi_prime_0])
 
@@ -199,13 +198,13 @@ class SchroedingerEquation:
 
         def g(s):
             return (
-              self.interaction.tilde(s, alpha)
-            + 2 * self.interaction.eta(alpha) * regular_inverse_s(s, S_C)
-            + l * (l + 1) / s**2
-            - 1.0
+                self.interaction.tilde(s, alpha)
+                + 2 * self.interaction.eta(alpha) * regular_inverse_s(s, S_C)
+                + l * (l + 1) / s**2
+                - 1.0
             )
 
-        phi = numerov_kernel( (s_mesh[0], s_mesh[1]), initial_conditions, N, g )
+        phi = numerov_kernel((s_mesh[0], s_mesh[1]), initial_conditions, N, g)
         u = phi[-1]
         rl = 1 / s_0 * (u[0] / u[1])
         return (
@@ -221,8 +220,6 @@ class SchroedingerEquation:
             )
             / 2j
         )
-
-
 
     def delta(
         self,
@@ -264,7 +261,6 @@ class SchroedingerEquation:
             )
             / 2j
         )
-
 
     def phi(
         self,

@@ -108,8 +108,7 @@ def eval_assoc_legendre(n, x):
 
 
 def get_AME_binding_energy(A, Z):
-    r""" Calculates binding in MeV/c^2 given mass number, A, proton number, Z, by AME2020 lookup
-    """
+    r"""Calculates binding in MeV/c^2 given mass number, A, proton number, Z, by AME2020 lookup"""
     # look up nuclide in AME2020 table
     ame_table_fpath = Path(__file__).parent.resolve() / Path(
         "../../data/mass_1.mas20.txt"
@@ -125,8 +124,7 @@ def get_AME_binding_energy(A, Z):
 
 
 def semiempirical_binding_energy(A, Z):
-    r""" Calculates binding in MeV/c^2 given mass number, A, proton number, Z, by semi-empriical mass fomrula
-    """
+    r"""Calculates binding in MeV/c^2 given mass number, A, proton number, Z, by semi-empriical mass fomrula"""
     N = A - Z
     delta = 0
     if N % 2 == 0 and Z % 2 == 0:
@@ -145,8 +143,8 @@ def semiempirical_binding_energy(A, Z):
 
 
 def get_binding_energy(A, Z):
-    r""" Calculates binding in MeV/c^2 given mass number, A, proton number, Z, by AME2020 lookup if possible,
-         or semi-empriical mass fomrula if not
+    r"""Calculates binding in MeV/c^2 given mass number, A, proton number, Z, by AME2020 lookup if possible,
+    or semi-empriical mass fomrula if not
     """
     Eb = get_AME_binding_energy(A, Z)
     if Eb is None:
@@ -155,7 +153,7 @@ def get_binding_energy(A, Z):
 
 
 def mass(A, Z, Eb):
-    r""" Calculates rest mass in MeV/c^2 given mass number, A, proton number, Z, and binding energy in MeV/c^2 """
+    r"""Calculates rest mass in MeV/c^2 given mass number, A, proton number, Z, and binding energy in MeV/c^2"""
     N = A - Z
     return Z * MASS_P + N * MASS_N - Eb
 
@@ -167,19 +165,19 @@ def numerov_kernel(
     g: Callable[[np.double], np.double],
 ):
     r"""Solves the the equation y'' + g(x)  y = 0 via the Numerov method,
-        for complex functions over real domain
+    for complex functions over real domain
 
-        Returns:
-            value of y at domain[0] + N*dx ~ domain[1] if grid_output == False,
-            else a np.array of y values of size N, corresponding to the x points
-            domain[0], domain[0] + dx, ..., domain[0] + N*dx
+    Returns:
+        value of y at domain[0] + N*dx ~ domain[1] if grid_output == False,
+        else a np.array of y values of size N, corresponding to the x points
+        domain[0], domain[0] + dx, ..., domain[0] + N*dx
 
-        Parameters:
-            domain :
-            initial_conditions :
-            dx :
-            g :
-            grid_output :
+    Parameters:
+        domain :
+        initial_conditions :
+        dx :
+        g :
+        grid_output :
     """
     # initialize domain
     xmin, xmax = domain
@@ -201,6 +199,7 @@ def numerov_kernel(
     y = np.empty(N, dtype=np.cdouble)
     y[0] = ynm
     y[1] = yn
+
     def forward_stepy(n, ynm, yn, ynp):
         y[n] = ynp
         return yn, ynp
@@ -225,7 +224,7 @@ def kinematics(
     E_lab: float,
     binding_model: Callable[[int, int], float] = get_binding_energy,
 ):
-    r""" Calculates the reduced mass, COM frame kinetic energy and wavenumber for a projectile (A,Z)
+    r"""Calculates the reduced mass, COM frame kinetic energy and wavenumber for a projectile (A,Z)
     scattering on a target nuclide (A,Z), with binding energies from binding_model, which defaults
     to lookup in AME2020 mass table. Uses relatavistic approximation of Ingemarsson, 1974:
     https://doi.org/10.1088/0031-8949/9/3/004

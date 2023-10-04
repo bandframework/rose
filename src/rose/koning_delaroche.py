@@ -14,7 +14,7 @@ import numpy as np
 from .interaction_eim import InteractionEIMSpace
 from .energized_interaction_eim import EnergizedInteractionEIMSpace
 from .constants import DEFAULT_RHO_MESH, MASS_PION, HBARC, ALPHA
-from .utility import nucleon_nucleus_kinematics, Projectile
+from .utility import kinematics, Projectile
 
 MAX_ARG = np.log(1/1e-16)
 NUM_PARAMS = 15
@@ -255,6 +255,8 @@ class KDGlobal():
             tag = "_n"
         elif projectile == Projectile.proton:
             tag = "_p"
+        else:
+            raise RuntimeError("KDGlobal is defined only for neutron and proton projectiles")
 
         self.projectile = projectile
 
@@ -335,9 +337,14 @@ class KDGlobal():
         and COM-frame energy, returns params in form useable by EnergizedKoningDelaroche
         """
 
-        mu, Ecom, k = nucleon_nucleus_kinematics(A, Z, Elab, self.projectile)
-        eta = 0
         if self.projectile == Projectile.neutron:
+            projectile = (1,0)
+        elif self.projectile == Projectile.proton:
+            projectile = (1,1)
+
+        mu, Ecom, k = kinematics((A, Z), projectile, Elab)
+        eta = 0
+        if self.projectile == Projectile.proton:
             k_c = ALPHA * Z * mu
             eta = k_c / k
 

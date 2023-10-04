@@ -8,6 +8,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from pathlib import Path
+from numba import njit
 
 from scipy.sparse import diags, lil_matrix
 from scipy.misc import derivative
@@ -157,6 +158,65 @@ def mass(A, Z, Eb):
     r""" Calculates rest mass in MeV/c^2 given mass number, A, proton number, Z, and binding energy in MeV/c^2 """
     N = A - Z
     return Z * MASS_P + N * MASS_N - Eb
+
+
+def numerov_kernel(
+    domain: tuple,
+    initial_conditions: tuple,
+    N: int,
+    g: Callable[[np.double], np.double],
+):
+    r"""Solves the the equation y'' + g(x)  y = 0 via the Numerov method,
+        for complex functions over real domain
+
+        Returns:
+            value of y at domain[0] + N*dx ~ domain[1] if grid_output == False,
+            else a np.array of y values of size N, corresponding to the x points
+            domain[0], domain[0] + dx, ..., domain[0] + N*dx
+
+        Parameters:
+            domain :
+            initial_conditions :
+            dx :
+            g :
+            grid_output :
+    """
+    # initialize domain
+    xmin, xmax = domain
+    dx = (xmax - xmin) / float(N)
+
+    xnm = xmin
+    xn = xmin + dx
+    xnp = xn + dx
+
+    # intial conditions
+    ynm, yn = initial_conditions
+
+    # convenient factor
+    f = dx * dx / 12.0
+
+    def forward_stepx(xnm, xn, xnp):
+        return xnm + dx, xn + dx, xnp + dx
+
+    y = np.empty(N, dtype=np.cdouble)
+    y[0] = ynm
+    y[1] = yn
+    def forward_stepy(n, ynm, yn, ynp):
+        y[n] = ynp
+        return yn, ynp
+
+    for n in range(2, N):
+        # determine next y
+        gnm = g(xnm)
+        gn = g(xn)
+        gnp = g(xnp)
+        ynp = (2 * yn * (1.0 - 5.0 * f * gn) - ynm * (1.0 + f * gnm)) / (1.0 + f * gnp)
+
+        # forward step
+        xnm, xn, xnp = forward_stepx(xnm, xn, xnp)
+        ynm, yn = forward_stepy(n, ynm, yn, ynp)
+
+    return y
 
 
 def kinematics(

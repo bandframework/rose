@@ -121,10 +121,49 @@ class SchroedingerEquation:
         u = solution(s_0)
         rl = 1/s_0 * (u[0]/u[1])
         return np.log(
-            (H_minus(s_0, l, self.interaction.eta(alpha)) - s_0*rl*H_minus_prime(s_0, l, self.interaction.eta(alpha))) / 
+            (H_minus(s_0, l, self.interaction.eta(alpha)) - s_0*rl*H_minus_prime(s_0, l, self.interaction.eta(alpha))) /
             (H_plus(s_0, l, self.interaction.eta(alpha)) - s_0*rl*H_plus_prime(s_0, l, self.interaction.eta(alpha)))
         ) / 2j
 
+
+    def numerov_solver(v : callable[[float],float], h : float, a : float, l : int, mu : float, E : float):
+        r'''
+        Solves the radial Schrodinger eqn using the Numerov method
+        Parameters:
+            v : a callable function that takes the dimensonless radius s=k*r,
+                and returns the interaction potential in MeV
+            h : radial step size in k*r [dimensionless]
+            a : channel radius in k*r [dimensionless]
+            l : orbital angular momentum quantum number
+            mu : reduced mass in MeV/c^2
+            E  : COM frame kinetic energy in MeV
+        '''
+
+        N = int(round(a / h)) - 1 # number of steps
+        sgrid = np.linspace(h,a,N)
+        u = np.zeros_like(rgrid, dtype=complex)  # array for solution
+
+        # set complex initial conditions
+        u[0] = 1 + 1j
+        u[1] = 1 + 1j
+
+        # set up w and v on radial grid
+        vgrid = v(rgrid)
+        wgrid = 2*mu/HBARC**2 * (E - vgrid) - l*(l+1)/rgrid**2
+
+        # define convenient constant
+        hr = h**2 / 12
+
+        # forward Euler solve for r in  [h , a]
+        for i in range(1, N - 1):
+            num = (
+                2 * u[i] - u[i - 1]
+                - hr * (10 * wgrid[i] * u[i] + wgrid[i - 1] * u[i - 1])
+            )
+            den = 1 + hr * wgrid[i + 1]
+            u[i + 1] = num / den
+
+        return u
 
     def phi(self,
         alpha: np.array, # interaction parameters

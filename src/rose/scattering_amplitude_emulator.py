@@ -26,68 +26,54 @@ class NucleonNucleusXS:
 
 
 # @njit
-def xscalc(
+def xs_calc_neutral(
     k: float,
-    deltas: np.array,
     angles: np.array,
+    S_l_plus: np.array,
+    S_l_minus: np.array,
     P_l_theta: np.array,
     P_1_l_theta: np.array,
     lmax,
-    f_c: np.array = None,
-    sigma_l: np.array = None,
-    rutherford: np.array = None,
-    is_spin_orbit: bool = None,
-    l_cutoff_rel=1.0e-3,
 ):
-    r"""Calculates:
-    - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
-    - analyzing power
-    - total and reacion cross sections in mb
-
-    Paramaters:
-        k : wavenumber in fm
-        deltas : phase shifts in radians
-        angles : grid of angles in radians on which to evaluate dsdo and Ay
-        f_c : Coulomb scattering amplitudes
-        sigma_l : Coulomb phase shifts
-        rutherford : rutherford differential scattering cross section
-        P_l_theta : Legendre polynmomials of cos(angles) for each partial wave, if pre-computed
-        P_1_l_theta : First associated Legendre function of cos(angles) for each partial wave, if pre-computed
-        is_spin_orbit : is it?
-    """
-
-    if f_c is not None:
-        assert sigma_l is not None
-        sigma_l = sigma_l[..., 0]
-    else:
-        f_c = np.zeros_like(angles, dtype=np.cdouble)
-        sigma_l = np.zeros_like(angles, dtype=np.double)
-        assert rutherford is None
-
-    if np.all(f_c <= 1e-16 * (1 + 1j)):
-        rutherford = None
-
-    deltas_plus = np.array([d[0] for d in deltas], dtype=np.cdouble)
-    S_l_plus = np.exp(2j * deltas_plus)
-    if is_spin_orbit:
-        # If there is spin-orbit, the l=0 term for B has to be zero.
-        deltas_minus = np.array([d[1] for d in deltas[1:]], dtype=np.cdouble)
-        S_l_minus = np.zeros(S_l_plus.shape, dtype=np.cdouble)
-        S_l_minus[1:] = np.exp(2j * deltas_minus)
-        S_l_minus[0] = S_l_plus[0]
-    else:
-        # This ensures that A reduces to the non-spin-orbit formula, and B = 0.
-        S_l_minus = S_l_plus.copy()
-
-    Smag = np.real(S_l_plus * S_l_plus.conj() + S_l_minus * S_l_minus.conj())
-
-    reldiff = np.array(
-        [np.fabs(Smag[l] - Smag[l - 1]) / Smag[l - 1] for l in range(1, lmax)]
-    )
-    lmax = np.argmax(reldiff - l_cutoff_rel < 0)
-
     xst = 0.0
     xsrxn = 0.0
+    a = np.zeros_like(angles, dtype=np.cdouble)
+    b = np.zeros_like(angles, dtype=np.cdouble)
+
+    for l in range(lmax):
+        # scattering amplitudes
+        a += (
+            ((l + 1) * (S_l_plus[l] - 1) + l * (S_l_minus[l] - 1)) * P_l_theta[l, :]
+        ) / (2j * k)
+        b += ((S_l_plus[l] - S_l_minus[l]) * P_1_l_theta[l, :]) / (2j * k)
+
+        # cross sections
+        xsrxn += (l + 1) * (1 - np.real(S_l_plus[l] * np.conj(S_l_plus[l]))) + l * (
+            1 - np.real(S_l_minus[l] * np.conj(S_l_minus[l]))
+        )
+        xst += (l + 1) * (1 - np.real(S_l_plus[l])) + l * (1 - np.real(S_l_minus[l]))
+
+    dsdo = np.real(a * np.conj(a) + b * np.conj(b)) * 10
+    Ay = np.real(a * np.conj(b) + b * np.conj(a)) * 10 / dsdo
+    xst *= 10 * 2 * np.pi / k**2
+    xsrxn *= 10 * np.pi / k**2
+
+    return dsdo, Ay, xst, xsrxn
+
+
+# @njit
+def xs_calc_coulomb(
+    k: float,
+    angles: np.array,
+    S_l_plus: np.array,
+    S_l_minus: np.array,
+    P_l_theta: np.array,
+    P_1_l_theta: np.array,
+    lmax,
+    f_c: np.array,
+    sigma_l: np.array,
+    rutherford: np.array,
+):
     a = np.zeros_like(angles, dtype=np.cdouble) + f_c
     b = np.zeros_like(angles, dtype=np.cdouble)
 
@@ -102,21 +88,12 @@ def xscalc(
             np.exp(2j * sigma_l[l]) * (S_l_plus[l] - S_l_minus[l]) * P_1_l_theta[l, :]
         ) / (2j * k)
 
-        # cross sections
-        xsrxn += (l + 1) * (1 - np.real(S_l_plus[l] * np.conj(S_l_plus[l]))) + l * (
-            1 - np.real(S_l_minus[l] * np.conj(S_l_minus[l]))
-        )
-        xst += (l + 1) * (1 - np.real(S_l_plus[l])) + l * (1 - np.real(S_l_minus[l]))
-
     dsdo = np.real(a * np.conj(a) + b * np.conj(b)) * 10
     Ay = np.real(a * np.conj(b) + b * np.conj(a)) * 10 / dsdo
-    xst *= 10 * 2 * np.pi / k**2
-    xsrxn *= 10 * np.pi / k**2
 
-    if rutherford is not None:
-        dsdo = dsdo / rutherford
+    dsdo = dsdo / rutherford
 
-    return dsdo, Ay, xst, xsrxn
+    return dsdo, Ay, None, None
 
 
 class ScatteringAmplitudeEmulator:
@@ -477,45 +454,14 @@ class ScatteringAmplitudeEmulator:
             Paramaters:
                 theta (ndarray) : interaction parameters
                 angles (ndarray) : (optional), angular grid on which to evaluate analyzing \
-                powers and differentiasl cross section
+                powers and differential cross section
 
             Returns :
                 cross sections (NucleonNucleusXS) :
         """
         # get phase shifts and wavenumber
         deltas = self.emulate_phase_shifts(theta)
-        k = self.rbes[0][0].interaction.momentum(theta)
-
-        # determine desired angle grid and precompute
-        # Legendre functions if necessary
-        if not angles:
-            angles = self.angles
-            P_l_costheta = self.P_l_costheta
-            P_1_l_costheta = self.P_1_l_costheta
-        else:
-            assert np.max(angles) <= np.pi and np.min(angles) >= 0
-            P_l_costheta = np.array(
-                [eval_legendre(l, np.cos(angles)) for l in range(lmax)]
-            )
-            P_l_costheta = np.array(
-                [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
-            )
-
-        return NucleonNucleusXS(
-            *xscalc(
-                k,
-                deltas,
-                angles,
-                P_l_costheta,
-                P_1_l_costheta,
-                self.l_max,
-                self.f_c,
-                self.sigma_l,
-                self.rutherford,
-                self.rbes[0][0].interaction.include_spin_orbit,
-                self.l_cutoff_rel,
-            )
-        )
+        return self.calculate_xs(deltas, theta, angles)
 
     def exact_xs(self, theta: np.array, angles: np.array = None):
         r"""Calculates the exact:
@@ -526,13 +472,37 @@ class ScatteringAmplitudeEmulator:
             Paramaters:
                 theta (ndarray) : interaction parameters
                 angles (ndarray) : (optional), angular grid on which to evaluate analyzing \
-                powers and differentiasl cross section
+                powers and differential cross section
 
             Returns :
                 cross sections (NucleonNucleusXS) :
         """
         # get phase shifts and wavenumber
         deltas = self.exact_phase_shifts(theta)
+        return self.calculate_xs(deltas, theta, angles)
+
+    def calculate_xs(self, deltas: np.array, theta: np.array, angles: np.array = None):
+        r"""Calculates the:
+            - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
+            - analyzing power
+            - total and reacion cross sections in mb
+
+            Paramaters:
+                theta (ndarray) : the phase shifts
+                theta (ndarray) : interaction parameters
+                angles (ndarray) : (optional), angular grid on which to evaluate analyzing \
+                powers and differential cross section
+
+            Returns :
+                cross sections (NucleonNucleusXS) :
+        """
+        S_l_plus, S_l_minus = self.S_matrix_elements(deltas)
+        Smag = np.real(S_l_plus * S_l_plus.conj() + S_l_minus * S_l_minus.conj())
+        reldiff = np.array(
+            [np.fabs(Smag[l] - Smag[l - 1]) / Smag[l - 1] for l in range(1, self.l_max)]
+        )
+        lmax = np.min((self.l_max, np.argmax(reldiff - self.l_cutoff_rel < 0)))
+
         k = self.rbes[0][0].interaction.momentum(theta)
 
         # determine desired angle grid and precompute
@@ -546,25 +516,37 @@ class ScatteringAmplitudeEmulator:
             P_l_costheta = np.array(
                 [eval_legendre(l, np.cos(angles)) for l in range(lmax)]
             )
-            P_l_costheta = np.array(
+            P_1_l_costheta = np.array(
                 [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
             )
 
-        return NucleonNucleusXS(
-            *xscalc(
-                k,
-                deltas,
-                angles,
-                P_l_costheta,
-                P_1_l_costheta,
-                self.l_max,
-                self.f_c,
-                self.sigma_l,
-                self.rutherford,
-                self.rbes[0][0].interaction.include_spin_orbit,
-                self.l_cutoff_rel,
+        if self.rbes[0][0].interaction.eta(theta) >= 0:
+            return NucleonNucleusXS(
+                *xs_calc_coulomb(
+                    k,
+                    angles,
+                    S_l_plus,
+                    S_l_minus,
+                    P_l_costheta,
+                    P_1_l_costheta,
+                    self.l_max,
+                    self.f_c,
+                    self.sigma_l,
+                    self.rutherford,
+                )
             )
-        )
+        else:
+            return NucleonNucleusXS(
+                *xs_calc_neutral(
+                    k,
+                    angles,
+                    S_l_plus,
+                    S_l_minus,
+                    P_l_costheta,
+                    P_1_l_costheta,
+                    self.l_max,
+                )
+            )
 
     def save(self, filename):
         r"""Saves the emulator to the desired file.

@@ -5,6 +5,9 @@ from enum import Enum
 
 import numpy as np
 import numpy.typing as npt
+import pandas as pd
+from pathlib import Path
+
 from scipy.sparse import diags, lil_matrix
 from scipy.misc import derivative
 from scipy.special import eval_legendre
@@ -120,20 +123,30 @@ def nucleon_nucleus_kinematics(A: int, Z: int,  energy_lab: float, p : Projectil
     """
     N = A - Z
 
-    #TODO use a table rather than semi-empirical mass formula
-    delta = 0
-    if N%2 == 0 and Z%2 == 0:
-        delta = 12.0 / np.sqrt(A)
-    elif N%2 != 0 and Z%2 != 0:
-        delta = - 12.0 / np.sqrt(A)
+    # look up nuclide in AME2020 table
+    ame_table_fpath = Path(__file__).parent.resolve() / Path("../../data/mass_1.mas20.txt")
+    assert ame_table_fpath.is_file()
+    df = pd.read_csv(ame_table_fpath, delim_whitespace=True)
+    mask = ((df['A'] == A) & (df['Z'] == Z))
+    if mask.any():
+        # use AME if data exists
+        # format is Eb/A [keV/nucleon]
+        Eb = float(df[mask]['BINDING_ENERGY/A'])*A/1E3
+    else:
+        # Use semi-empirical mass formula
+        delta = 0
+        if N%2 == 0 and Z%2 == 0:
+            delta = 12.0 / np.sqrt(A)
+        elif N%2 != 0 and Z%2 != 0:
+            delta = - 12.0 / np.sqrt(A)
 
-    Eb = (
-        15.8 * A
-      - 18.3 * A**(2/3)
-      - 0.714 * Z*(Z-1)/(A**(1/3))
-      - 23.2 * (N-Z)**2/A
-      + delta
-    )
+        Eb = (
+            15.8 * A
+          - 18.3 * A**(2/3)
+          - 0.714 * Z*(Z-1)/(A**(1/3))
+          - 23.2 * (N-Z)**2/A
+          + delta
+        )
 
     target_mass = Z * MASS_P + N * MASS_N - Eb # MeV/c^2
 

@@ -124,7 +124,7 @@ class ScatteringAmplitudeEmulator:
         s_mesh: np.array = DEFAULT_RHO_MESH,
         s_0: float = 6 * np.pi,
         rk_tols: list = [10e-9, 10e-9],
-        Numerov_grid_size: int = 1e4,
+        numerov_grid_size: int = 1e4,
         solver_method: str = "Runge-Kutta",
         l_cutoff_rel: float = 1.0e-3,
     ):
@@ -143,7 +143,7 @@ class ScatteringAmplitudeEmulator:
             s_0 (float): $s$ point where the phase shift is extracted
             rk_tols (list): 2-element list passed to `SchroedingerEquation`; used for training
                 [relative tolerance, absolute tolerance]
-            Numerov_grid_size (int) : grid size passed to `SchroedingerEquation`; used for training
+            numerov_grid_size (int) : grid size passed to `SchroedingerEquation`; used for training
             solver_method (str) : high-fidelity solver method passed to `SchroedingerEquation`;
                 used for training
             l_cutoff_rel : relative tolerance for change in scattering amplitudes between
@@ -163,7 +163,7 @@ class ScatteringAmplitudeEmulator:
                         interaction,
                         solver_method = solver_method,
                         RK_tolerances = rk_tols,
-                        Numerov_grid_size = Numerov_grid_size,
+                        numerov_grid_size = numerov_grid_size,
                     ),
                     theta_train,
                     s_mesh,

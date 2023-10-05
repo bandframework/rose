@@ -32,7 +32,7 @@ class SchroedingerEquation:
         interaction: Interaction,
         solver_method="Runge-Kutta",
         RK_tolerances: list = [1e-12, 1e-12],
-        Numerov_grid_size=1e4,
+        numerov_grid_size=1e4,
     ):
         r"""Solves the Shrödinger equation for local, complex potentials.
 
@@ -48,14 +48,14 @@ class SchroedingerEquation:
         self.solver_method = solver_method
         if self.solver_method == "Runge-Kutta":
             pass  # this is default
-        elif self.solver_method == "Numerov":
+        elif self.solver_method == "numerov":
             pass  # TODO
         else:
             raise NotImplementedError(
-                "Currently, only Numerov and Runge-Kutta solvers are available"
+                "Currently, only numerov and Runge-Kutta solvers are available"
             )
 
-        self.Numerov_grid_size = Numerov_grid_size
+        self.numerov_grid_size = numerov_grid_size
         self.interaction = interaction
         self.rel_tol = RK_tolerances[0]
         self.abs_tol = RK_tolerances[1]
@@ -100,7 +100,7 @@ class SchroedingerEquation:
         phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
     ):
         r"""Computes the reduced, radial wave function $\phi$ (or $u$) on `s_mesh` using the
-        Numerov method
+        numerov method
 
         Parameters:
             alpha (ndarray): parameter vector
@@ -115,7 +115,7 @@ class SchroedingerEquation:
 
         """
         if N is None:
-            N = self.Numerov_grid_size
+            N = self.numerov_grid_size
 
         # determine initial conditions
         rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l, rho_0)
@@ -145,7 +145,7 @@ class SchroedingerEquation:
         N=None,
         phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
     ):
-        r"""Solves the reduced, radial Schrödinger equation with the Numerov method
+        r"""Solves the reduced, radial Schrödinger equation with the numerov method
         Parameters:
             alpha (ndarray): parameter vector
             s_endpts (ndarray): lower and upper bounds of the $s$ mesh.
@@ -161,7 +161,7 @@ class SchroedingerEquation:
                 third - based on return_uprime - is $u^\prime(r)$.)
         """
         if N is None:
-            N = self.Numerov_grid_size
+            N = self.numerov_grid_size
 
         # determine initial conditions
         rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l)

@@ -123,8 +123,10 @@ class ScatteringAmplitudeEmulator:
         use_svd: bool = True,
         s_mesh: np.array = DEFAULT_RHO_MESH,
         s_0: float = 6 * np.pi,
-        hf_tols: list = [10e-9, 10e-9],
-        l_cutoff_rel=1.0e-3,
+        rk_tols: list = [10e-9, 10e-9],
+        Numerov_grid_size: int = 1e4,
+        solver_method: str = "Runge-Kutta",
+        l_cutoff_rel: float = 1.0e-3,
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
 
@@ -139,8 +141,11 @@ class ScatteringAmplitudeEmulator:
             use_svd (bool): Use principal components of training wave functions?
             s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
             s_0 (float): $s$ point where the phase shift is extracted
-            hf_tols (list): 2-element list passed to `SchroedingerEquation`;
+            rk_tols (list): 2-element list passed to `SchroedingerEquation`; used for training
                 [relative tolerance, absolute tolerance]
+            Numerov_grid_size (int) : grid size passed to `SchroedingerEquation`; used for training
+            solver_method (str) : high-fidelity solver method passed to `SchroedingerEquation`;
+                used for training
             l_cutoff_rel : relative tolerance for change in scattering amplitudes between
                 partial waves, used to stop calculation ig higher partial waves are negligble
 
@@ -154,7 +159,10 @@ class ScatteringAmplitudeEmulator:
         for interaction_list in tqdm(interaction_space.interactions):
             basis_list = [
                 RelativeBasis(
-                    SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
+                    SchroedingerEquation(
+                        interaction,
+                        solver_method,
+                    ),
                     theta_train,
                     s_mesh,
                     n_basis,
@@ -195,6 +203,8 @@ class ScatteringAmplitudeEmulator:
                 emulate the cross section.
             s_0 (float): $s$ point where the phase shift is extracted
             verbose (bool): Do you want the class to print out warnings?
+            l_cutoff_rel : relative tolerance for change in scattering amplitudes between
+                partial waves, used to stop calculation ig higher partial waves are negligble
 
         Attributes:
             l_max (int): maximum angular momentum
@@ -210,11 +220,13 @@ class ScatteringAmplitudeEmulator:
             rutherford (ndarray): Rutherford scattering
 
         """
+        # partial waves
         if l_max is None:
             l_max = interaction_space.l_max
         self.l_max = l_max
         self.l_cutoff_rel = l_cutoff_rel
-        self.angles = angles.copy()
+
+        # construct bases
         bases_types = [isinstance(bases[l], CustomBasis) for l in range(self.l_max + 1)]
         if np.any(bases_types) and verbose:
             print(
@@ -234,6 +246,7 @@ class ScatteringAmplitudeEmulator:
             )
 
         # Let's precompute the things we can.
+        self.angles = angles.copy()
         self.ls = np.arange(self.l_max + 1)[:, np.newaxis]
         self.P_l_costheta = eval_legendre(self.ls, np.cos(self.angles))
         self.P_1_l_costheta = np.array(

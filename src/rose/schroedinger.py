@@ -38,8 +38,11 @@ class SchroedingerEquation:
 
         Parameters:
             interaction (Interaction): See [Interaction documentation](interaction.md).
-            RK_tolerances (list): 2-element list of numbers: the relative
-                tolerance, `rel_tol`, and the absolute tolerance `abs_tol`
+            solver_method= (str) : method for high-fidelty solver
+            RK_tolerances (list): 2-element list of numbers specifying tolerances for the
+                Runge-Kutta solver: the relative tolerance and the  absolute tolerance
+            numerov_grid_size (int) : the number of grid points in the radial mesh to use
+                for the Numerov solver
 
         Returns:
             solver (SchroedingerEquation): instance of `SchroedingerEquation`
@@ -48,11 +51,11 @@ class SchroedingerEquation:
         self.solver_method = solver_method
         if self.solver_method == "Runge-Kutta":
             pass  # this is default
-        elif self.solver_method == "numerov":
+        elif self.solver_method == "Numerov":
             pass  # TODO
         else:
             raise NotImplementedError(
-                "Currently, only numerov and Runge-Kutta solvers are available"
+                "Currently, only Numerov and Runge-Kutta solvers are available"
             )
 
         self.numerov_grid_size = numerov_grid_size
@@ -100,7 +103,7 @@ class SchroedingerEquation:
         phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
     ):
         r"""Computes the reduced, radial wave function $\phi$ (or $u$) on `s_mesh` using the
-        numerov method
+        Numerov method
 
         Parameters:
             alpha (ndarray): parameter vector
@@ -145,7 +148,7 @@ class SchroedingerEquation:
         N=None,
         phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
     ):
-        r"""Solves the reduced, radial Schrödinger equation with the numerov method
+        r"""Solves the reduced, radial Schrödinger equation with the Numerov method
         Parameters:
             alpha (ndarray): parameter vector
             s_endpts (ndarray): lower and upper bounds of the $s$ mesh.

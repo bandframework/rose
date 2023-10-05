@@ -159,44 +159,43 @@ def mass(A, Z, Eb):
 
 
 def numerov_kernel(
-    domain: tuple,
+    x_grid : np.array ,
     initial_conditions: tuple,
-    N: int,
     g: Callable[[np.double], np.double],
 ):
     r"""Solves the the equation y'' + g(x)  y = 0 via the Numerov method,
     for complex functions over real domain
 
     Returns:
-        value of y at domain[0] + N*dx ~ domain[1] if grid_output == False,
-        else a np.array of y values of size N, corresponding to the x points
-        domain[0], domain[0] + dx, ..., domain[0] + N*dx
+    value of y evaluated at the points x_grid
 
     Parameters:
-        domain :
-        initial_conditions :
-        dx :
-        g :
-        grid_output :
+        x_grid : the grid of points on which to run the solver and evaluate the solution.
+                 Must be evenly spaced and monotonically increasing.
+        initial_conditions : the value of y and y' at the minimum of x_grid
+        g : callable for g(x)
     """
     # initialize domain
-    xmin, xmax = domain
-    dx = (xmax - xmin) / float(N)
-
-    xnm = xmin
-    xn = xmin + dx
-    xnp = xn + dx
-
-    # intial conditions
-    ynm, yn = initial_conditions
+    xmin, xmax = x_grid[0], x_grid[-1]
+    dx = x_grid[1] - x_grid[0]
 
     # convenient factor
     f = dx * dx / 12.0
 
+    # intialize domain walker
+    xnm = xmin
+    xn = xmin + dx
+    xnp = xn + dx
+
     def forward_stepx(xnm, xn, xnp):
         return xnm + dx, xn + dx, xnp + dx
 
-    y = np.empty(N, dtype=np.cdouble)
+    # intial conditions
+    ynm = initial_conditions
+    yn = ynm + initial_conditions[1] * dx
+
+    # initialize range walker
+    y = np.empty(x_grid.shape, dtype=np.cdouble)
     y[0] = ynm
     y[1] = yn
 

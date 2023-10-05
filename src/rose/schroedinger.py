@@ -60,22 +60,25 @@ class SchroedingerEquation:
         self.rel_tol = RK_tolerances[0]
         self.abs_tol = RK_tolerances[1]
 
-    def initial_conditions(self, phi_threshold, rho_0=None):
+    def initial_conditions(
+        self, alpha: np.array, phi_threshold: float, l: int, rho_0=None
+    ):
         r"""
         Returns:
             initial_conditions (tuple) : initial conditions [phi, phi'] at rho_0
 
         Parameters:
+            alpha (ndarray): parameter vector
             rho_0 (float): starting point for the solver
             phi_threshold (float): minimum $\phi$ value; The wave function is
                 considered zero below this value.
         """
 
-        if rho_0 is None:
-            rho_0 = (phi_threshold / C_l) ** (1 / (l + 1))
 
         C_l = Gamow_factor(l, self.interaction.eta(alpha))
-        S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
+
+        if rho_0 is None:
+            rho_0 = (phi_threshold / C_l) ** (1 / (l + 1))
 
         phi_0 = C_l * rho_0 ** (l + 1)
         phi_prime_0 = C_l * (l + 1) * rho_0**l
@@ -115,7 +118,8 @@ class SchroedingerEquation:
             N = self.Numerov_grid_size
 
         # determine initial conditions
-        rho_0, initial_conditions = self.initial_conditions(phi_threshold, rho_0)
+        rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l, rho_0)
+        S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
         def g(s):
             return (
@@ -160,10 +164,9 @@ class SchroedingerEquation:
             N = self.Numerov_grid_size
 
         # determine initial conditions
-        rho_0, initial_conditions = self.initial_conditions(phi_threshold)
+        rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l)
+        S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
         s_mesh = np.linspace(rho_0, s_endpts[-1], N)
-        dx = s_mesh[1] - s_mesh[0]
-        initial_conditions[1] = initial_conditions[0] + dx * initial_conditions[1]
 
         def g(s):
             return (
@@ -218,7 +221,8 @@ class SchroedingerEquation:
                 third - based on return_uprime - is $u^\prime(r)$.)
         """
 
-        initial_conditions = self.initial_conditions(phi_threshold, rho_0)
+        rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l, rho_0)
+        S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
         sol = solve_ivp(
             lambda s, phi: np.array(
@@ -351,7 +355,7 @@ class SchroedingerEquation:
             phi (ndarray): reduced, radial wave function
 
         """
-        return self.phi_RK(alpha, s_mesh, l, rho_0, phi_threshold, RK_solver_kwargs)
+        return self.phi_RK(alpha, s_mesh, l, rho_0, phi_threshold, **RK_solver_kwargs)
 
     def delta(
         self,
@@ -376,7 +380,7 @@ class SchroedingerEquation:
                 wave function
 
         """
-        return self.delta_RK(alpha, s_endpts, l, s_0, RK_solver_kwargs)
+        return self.delta_RK(alpha, s_endpts, l, s_0, **RK_solver_kwargs)
 
 
 def Gamow_factor(l, eta):

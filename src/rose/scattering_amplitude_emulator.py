@@ -161,7 +161,9 @@ class ScatteringAmplitudeEmulator:
                 RelativeBasis(
                     SchroedingerEquation(
                         interaction,
-                        solver_method,
+                        solver_method = solver_method,
+                        RK_tolerances = rk_tols,
+                        Numerov_grid_size = Numerov_grid_size,
                     ),
                     theta_train,
                     s_mesh,

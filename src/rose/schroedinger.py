@@ -49,15 +49,6 @@ class SchroedingerEquation:
 
         """
         self.solver_method = solver_method
-        if self.solver_method == "Runge-Kutta":
-            pass  # this is default
-        elif self.solver_method == "Numerov":
-            pass  # TODO
-        else:
-            raise NotImplementedError(
-                "Currently, only Numerov and Runge-Kutta solvers are available"
-            )
-
         self.numerov_grid_size = numerov_grid_size
         self.interaction = interaction
         self.rel_tol = RK_tolerances[0]
@@ -87,7 +78,7 @@ class SchroedingerEquation:
         phi_prime_0 = C_l * (l + 1) * rho_0**l
 
         if self.interaction.is_complex:
-            initial_conditions = np.array([phi_0 * (1 + 1j), phi_prime_0 * (1 + 1j)])
+            initial_conditions = np.array([phi_0 * (1 + 0j), phi_prime_0 * (1 + 0j)])
         else:
             initial_conditions = np.array([phi_0, phi_prime_0])
 
@@ -98,7 +89,6 @@ class SchroedingerEquation:
         alpha: np.array,  # interaction parameters
         s_mesh: np.array,  # mesh on which to calculate phi
         l: int = 0,  # angular momentum
-        N=None,
         rho_0=None,  # initial rho value ("effective zero")
         phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
     ):
@@ -117,15 +107,16 @@ class SchroedingerEquation:
             phi (ndarray): reduced, radial wave function
 
         """
-        if N is None:
-            N = self.numerov_grid_size
-
         # determine initial conditions
+        if rho_0 is None:
+            rho_0 = (phi_threshold / Gamow_factor(l, self.interaction.eta(alpha))) ** (
+                1 / (l + 1)
+            )
         rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l, rho_0)
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
         def g(s):
-            return (
+            return -(
                 self.interaction.tilde(s, alpha)
                 + 2 * self.interaction.eta(alpha) * regular_inverse_s(s, S_C)
                 + l * (l + 1) / s**2
@@ -134,7 +125,6 @@ class SchroedingerEquation:
 
         y = numerov_kernel(s_mesh, initial_conditions, g)
         mask = np.where(s_mesh < rho_0)[0]
-        y = solution(s_mesh)[0]
         y[mask] = 0
         return y
         return phi
@@ -145,8 +135,8 @@ class SchroedingerEquation:
         s_endpts: np.array,  # [s_min, s_max]; phi(s) is calculated on this interval
         l: int,  # angular momentum
         s_0: float,  # phaseshift is extracted at phi(s_0)
-        N=None,
         phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
+        numerov_grid_size=None,
     ):
         r"""Solves the reduced, radial Schrödinger equation with the Numerov method
         Parameters:
@@ -163,16 +153,20 @@ class SchroedingerEquation:
                 The second is the reduced radial wavefunction, $u(r)$. (The optional
                 third - based on return_uprime - is $u^\prime(r)$.)
         """
-        if N is None:
-            N = self.numerov_grid_size
+        if Numerov_grid_size is None:
+            Numerov_grid_size = self.numerov_grid_size
 
         # determine initial conditions
+        if rho_0 is None:
+            rho_0 = (phi_threshold / Gamow_factor(l, self.interaction.eta(alpha))) ** (
+                1 / (l + 1)
+            )
         rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l)
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
-        s_mesh = np.linspace(rho_0, s_endpts[-1], N)
+        s_mesh = np.linspace(rho_0, s_endpts[-1], Numerov_grid_size)
 
         def g(s):
-            return (
+            return -(
                 self.interaction.tilde(s, alpha)
                 + 2 * self.interaction.eta(alpha) * regular_inverse_s(s, S_C)
                 + l * (l + 1) / s**2
@@ -204,7 +198,7 @@ class SchroedingerEquation:
         l: int = 0,  # angular momentum
         rho_0=None,  # initial rho value ("effective zero")
         phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
-        **RK_solver_kwargs,
+        **kwargs,
     ):
         r"""Solves the reduced, radial Schrödinger equation using the builtin in Runge-Kutta
             solver in scipy.integrate.solve_ivp
@@ -245,7 +239,7 @@ class SchroedingerEquation:
             rtol=self.rel_tol,
             atol=self.abs_tol,
             dense_output=True,
-            **RK_solver_kwargs,
+            **kwargs,
         )
 
         return sol.sol
@@ -256,10 +250,10 @@ class SchroedingerEquation:
         s_endpts: np.array,  # [s_min, s_max]; phi(s) is calculated on this interval
         l: int,  # angular momentum
         s_0: float,  # phaseshift is extracted at phi(s_0)
-        **RK_solver_kwargs,  # passed to solve_se_RK
+        **kwargs,  # passed to solve_se_RK
     ):
         r"""Calculates the $\ell$-th partial wave phase shift at the specified energy.
-        RK_solver_kwargs are passed to solve_se_RK
+        kwargs are passed to solve_se_RK
 
         Parameters:
             alpha (ndarray): parameter vector
@@ -274,7 +268,7 @@ class SchroedingerEquation:
 
         """
         # Should s_endpts be [s_min, s_endpts[1]]?
-        solution = self.solve_se_RK(alpha, s_endpts, l=l, **RK_solver_kwargs)
+        solution = self.solve_se_RK(alpha, s_endpts, l=l, **kwargs)
         u = solution(s_0)
         rl = 1 / s_0 * (u[0] / u[1])
         return (
@@ -298,7 +292,7 @@ class SchroedingerEquation:
         l: int,  # angular momentum
         rho_0: float = None,  # What do we call "zero"?
         phi_threshold: float = PHI_THRESHOLD,
-        **RK_solver_kwargs,  # passed to solve_se_RK
+        **kwargs,  # passed to solve_se_RK
     ):
         r"""Computes the reduced, radial wave function $\phi$ (or $u$) on `s_mesh` using the
         built-in Runge-Kutta solver in scipy.integrate.solve_ivp.
@@ -326,7 +320,7 @@ class SchroedingerEquation:
             l,
             rho_0=rho_0,
             phi_threshold=phi_threshold,
-            **RK_solver_kwargs,
+            **kwargs,
         )
 
         mask = np.where(s_mesh < rho_0)[0]
@@ -341,7 +335,7 @@ class SchroedingerEquation:
         l: int,  # angular momentum
         rho_0: float = None,  # What do we call "zero"?
         phi_threshold: float = PHI_THRESHOLD,
-        **RK_solver_kwargs,  # passed to solve_se_RK
+        **kwargs,  # passed to solver
     ):
         r"""Computes the reduced, radial wave function $\phi$ (or $u$) on `s_mesh` using the
         the solver specified by self.solver_method
@@ -358,7 +352,10 @@ class SchroedingerEquation:
             phi (ndarray): reduced, radial wave function
 
         """
-        return self.phi_RK(alpha, s_mesh, l, rho_0, phi_threshold, **RK_solver_kwargs)
+        if self.solver_method == "Runge-Kutta":
+            return self.phi_RK(alpha, s_mesh, l, rho_0 = rho_0, phi_threshold=phi_threshold, **kwargs)
+        elif self.solver_method == "Numerov":
+            return self.phi_numerov(alpha, s_mesh, l, rho_0=rho_0, phi_threshold=phi_threshold, **kwargs)
 
     def delta(
         self,
@@ -366,7 +363,7 @@ class SchroedingerEquation:
         s_endpts: np.array,  # [s_min, s_max]; phi(s) is calculated on this interval
         l: int,  # angular momentum
         s_0: float,  # phaseshift is extracted at phi(s_0)
-        **RK_solver_kwargs,  # passed to solve_se_RK
+        **kwargs,  # passed to solver
     ):
         r"""Calculates the $\ell$-th partial wave phase shift at the specified energy using
             the solver specified by self.solver_method
@@ -383,7 +380,11 @@ class SchroedingerEquation:
                 wave function
 
         """
-        return self.delta_RK(alpha, s_endpts, l, s_0, **RK_solver_kwargs)
+
+        if self.solver_method == "Runge-Kutta":
+            return self.delta_RK(alpha, s_endpts, l, s_0, **kwargs)
+        elif self.solver_method == "Numerov":
+            return self.delta_numerov(alpha, s_endpts, l, s_0, N=N, phi_threshold=phi_threshold)
 
 
 def Gamow_factor(l, eta):

@@ -191,7 +191,7 @@ def numerov_kernel(
         return xnm + dx, xn + dx, xnp + dx
 
     # intial conditions
-    ynm = initial_conditions
+    ynm = initial_conditions[0]
     yn = ynm + initial_conditions[1] * dx
 
     # initialize range walker
@@ -203,7 +203,7 @@ def numerov_kernel(
         y[n] = ynp
         return yn, ynp
 
-    for n in range(2, N):
+    for n in range(2, y.shape[0]):
         # determine next y
         gnm = g(xnm)
         gn = g(xn)

@@ -1,7 +1,7 @@
 import pickle
 from typing import Callable
 
-import numpy as np 
+import numpy as np
 import numpy.typing as npt
 from scipy.interpolate import interp1d
 from mpmath import coulombf
@@ -10,36 +10,35 @@ from .constants import HBARC
 from .schroedinger import SchroedingerEquation
 from .energized_interaction_eim import EnergizedInteractionEIM
 
+
 class Basis:
-    '''Base class / template
-    '''
+    """Base class / template"""
 
     @classmethod
     def load(cls, filename):
-        r'''Loads a previously saved Basis.
-        
-        '''
-        with open(filename, 'rb') as f:
+        r"""Loads a previously saved Basis."""
+        with open(filename, "rb") as f:
             basis = pickle.load(f)
         return basis
 
-
-    def __init__(self,
+    def __init__(
+        self,
         solver: SchroedingerEquation,
         theta_train: np.array,
         rho_mesh: np.array,
         n_basis: int,
-        l: int
+        l: int,
+        solver_method="Runge-Kutta",
     ):
-        r'''Builds a reduced basis.
-        
+        r"""Builds a reduced basis.
+
         Parameters:
             solver (SchroedingerEquation): high-fidelity solver
             theta_train (ndarray): training space
             rho_mesh (ndarray): discrete $s=kr$ mesh points
             n_basis (int): number of states in the expansion
             l (int): orbital angular momentum
-        
+
         Attributes:
             solver (SchroedingerEquation): high-fidelity solver
             theta_train (ndarray): training space
@@ -47,58 +46,59 @@ class Basis:
             n_basis (int): number of states in the expansion
             l (int): orbital angular momentum
 
-        '''
+        """
+        self.solver_method = solver_method
         self.solver = solver
         self.theta_train = np.copy(theta_train)
         self.rho_mesh = np.copy(rho_mesh)
         self.n_basis = n_basis
         self.l = l
-    
 
     def phi_hat(self, coefficients):
-        r'''Emulated wave function.
-        
+        r"""Emulated wave function.
+
         Every basis should know how to reconstruct hat{phi} from a set of
         coefficients. However, this is going to be different for each basis, so
         we will leave it up to the subclasses to implement this.
 
         Parameters:
             coefficients (ndarray): expansion coefficients
-        
+
         Returns:
             phi_hat (ndarray): approximate wave function
 
-        '''
+        """
         raise NotImplementedError
-    
 
     def save(self, filename):
-        '''Saves a basis to file.
-        
+        """Saves a basis to file.
+
         Parameters:
             filename (string): name of file
 
-        '''
-        with open(filename, 'wb') as f:
+        """
+        with open(filename, "wb") as f:
             pickle.dump(self, f)
-    
+
 
 class RelativeBasis(Basis):
-    def __init__(self,
+    def __init__(
+        self,
         solver: SchroedingerEquation,
         theta_train: np.array,
         rho_mesh: np.array,
         n_basis: int,
         l: int,
         use_svd: bool,
-        phi_0_energy: float = None
+        phi_0_energy: float = None,
+        solver_method="Runge-Kutta",
     ):
-        r'''Builds a "relative" reduced basis. This is the default choice.
+        r"""Builds a "relative" reduced basis. This is the default choice.
 
         $$
         \phi_{\rm HF} \approx \hat{\phi} = \phi_0 + \sum_i c_i \tilde{\phi}_i~.
         $$
-        
+
         Parameters:
             solver (SchroedingerEquation): high-fidelity solver
             theta_train (ndarray): training space
@@ -107,7 +107,8 @@ class RelativeBasis(Basis):
             l (int): orbital angular momentum
             use_svd (bool): Use principal components for $\tilde{\phi}$?
             phi_0_energy (float): energy at which $\phi_0$ is calculated
-        
+            solver_method (string) : Runge-Kutta or Numerov
+
         Attributes:
             solver (SchroedingerEquation): high-fidelity solver
             theta_train (ndarray): training space
@@ -121,12 +122,21 @@ class RelativeBasis(Basis):
             singular_values (ndarray): singular values from SVD
             vectors (ndarray): copy of `pillars`
 
-        '''
+        """
 
-        super().__init__(solver, theta_train, rho_mesh, n_basis, l)
+        super().__init__(
+            solver, theta_train, rho_mesh, n_basis, l, solver_method=solver_method
+        )
+
+        if solver_method == "Runge-Kutta":
+            self.phi_exact = lambda theta, l: self.solver.phi(theta, self.rho_mesh, l)
+        elif solver_method == "Numerov":
+            self.phi_exact = lambda theta, l: self.solver.phi_numerov(
+                theta, self.rho_mesh, l
+            )
 
         if phi_0_energy:
-            k = np.sqrt(2*self.solver.interaction.mu*phi_0_energy/HBARC)
+            k = np.sqrt(2 * self.solver.interaction.mu * phi_0_energy / HBARC)
             eta = self.solver.interaction.k_c / k
         else:
             if isinstance(self.solver.interaction, EnergizedInteractionEIM):
@@ -138,51 +148,53 @@ class RelativeBasis(Basis):
                 # If the phi_0 energy is not specified, we're only going to work
                 # with non-Coulombic systems (for now).
                 eta = 0.0
-        
-        # Returns Bessel functions when eta = 0.
-        self.phi_0 = np.array([coulombf(self.l, eta, rho) for rho in self.rho_mesh], dtype=np.float64)
 
-        self.all_vectors = np.array([
-            self.solver.phi(theta, self.rho_mesh, l) - self.phi_0 for theta in theta_train
-        ]).T
+        # Returns Bessel functions when eta = 0.
+        self.phi_0 = np.array(
+            [coulombf(self.l, eta, rho) for rho in self.rho_mesh], dtype=np.float64
+        )
+
+        self.all_vectors = np.array(
+            [self.get_phi(theta, l) - self.phi_0 for theta in theta_train]
+        ).T
         self.pillars = self.all_vectors.copy()
 
         if use_svd:
             U, S, _ = np.linalg.svd(self.all_vectors, full_matrices=False)
             self.singular_values = np.copy(S)
             self.pillars = np.copy(U)
-        
-        self.vectors = np.copy(self.pillars[:, :self.n_basis])
-    
+
+        self.vectors = np.copy(self.pillars[:, : self.n_basis])
 
     def phi_hat(self, coefficients):
-        r'''Emulated wave function.
-        
+        r"""Emulated wave function.
+
         Parameters:
             coefficients (ndarray): expansion coefficients
-        
+
         Returns:
             phi_hat (ndarray): approximate wave function
 
-        '''
+        """
         return self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
 
 
 class CustomBasis(Basis):
-    def __init__(self,
-        solutions: np.array, # HF solutions, columns
-        phi_0: np.array, # "offset", generates inhomogeneous term
-        rho_mesh: np.array, # rho mesh; MUST BE EQUALLY SPACED POINTS!!!
+    def __init__(
+        self,
+        solutions: np.array,  # HF solutions, columns
+        phi_0: np.array,  # "offset", generates inhomogeneous term
+        rho_mesh: np.array,  # rho mesh; MUST BE EQUALLY SPACED POINTS!!!
         n_basis: int,
-        ell: int, # angular momentum, l
-        use_svd: bool
+        ell: int,  # angular momentum, l
+        use_svd: bool,
     ):
-        r'''Builds a custom basis. Allows the user to supply their own.
+        r"""Builds a custom basis. Allows the user to supply their own.
 
         $$
         \phi_{\rm HF} \approx \hat{\phi} = \phi_0 + \sum_i c_i \tilde{\phi}_i~.
         $$
-        
+
         Parameters:
             solutions (ndarray): HF solutions
             phi_0 (ndarray): free solution (no interaction)
@@ -190,7 +202,7 @@ class CustomBasis(Basis):
             n_basis (int): number of states in the expansion
             ell (int): orbital angular momentum
             use_svd (bool): Use principal components for $\tilde{\phi}$?
-        
+
         Attributes:
             solver (SchroedingerEquation): not specified or assumed at construction
             theta_train (ndarray): not specified or assumed at construction
@@ -205,7 +217,7 @@ class CustomBasis(Basis):
             phi_0_interp (interp1d): interpolating function for $\phi_0$
             vectors_interp (interp1d): interpolating functions for vectors (basis states)
 
-        '''
+        """
 
         super().__init__(None, None, rho_mesh, n_basis, ell)
 
@@ -221,28 +233,31 @@ class CustomBasis(Basis):
         self.phi_0 = phi_0.copy()
 
         if use_svd:
-            U, S, _ = np.linalg.svd(self.solutions - self.phi_0[:, np.newaxis], full_matrices=False)
+            U, S, _ = np.linalg.svd(
+                self.solutions - self.phi_0[:, np.newaxis], full_matrices=False
+            )
             self.singular_values = S.copy()
             self.pillars = U.copy()
         else:
             self.singular_values = None
-        
-        self.vectors = self.pillars[:, :self.n_basis].copy()
-        
+
+        self.vectors = self.pillars[:, : self.n_basis].copy()
+
         # interpolating functions
         # To extrapolate or not to extrapolate?
-        self.phi_0_interp = interp1d(self.rho_mesh, self.phi_0, kind='cubic')
-        self.vectors_interp = [interp1d(self.rho_mesh, row, kind='cubic') for row in self.vectors.T]
-    
+        self.phi_0_interp = interp1d(self.rho_mesh, self.phi_0, kind="cubic")
+        self.vectors_interp = [
+            interp1d(self.rho_mesh, row, kind="cubic") for row in self.vectors.T
+        ]
 
     def phi_hat(self, coefficients):
-        r'''Emulated wave function.
-        
+        r"""Emulated wave function.
+
         Parameters:
             coefficients (ndarray): expansion coefficients
-        
+
         Returns:
             phi_hat (ndarray): approximate wave function
 
-        '''
+        """
         return self.phi_0 + np.sum(coefficients * self.vectors, axis=1)

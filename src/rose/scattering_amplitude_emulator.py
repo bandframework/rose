@@ -9,7 +9,7 @@ from .interaction import InteractionSpace
 from .reduced_basis_emulator import ReducedBasisEmulator
 from .constants import DEFAULT_RHO_MESH, DEFAULT_ANGLE_MESH
 from .schroedinger import SchroedingerEquation
-from .basis import RelativeBasis, CustomBasis
+from .basis import RelativeBasis, CustomBasis, Basis
 from .utility import eval_assoc_legendre
 
 
@@ -113,6 +113,56 @@ class ScatteringAmplitudeEmulator:
         return sae
 
     @classmethod
+    def HIFI_solver(
+        cls,
+        interaction_space: InteractionSpace,
+        l_max: int = None,
+        angles: np.array = DEFAULT_ANGLE_MESH,
+        s_0: float = 6 * np.pi,
+        verbose: bool = True,
+        l_cutoff_rel: float = 1.0e-3,
+        **solver_kwargs,
+    ):
+        r"""Sets up a ScatteringAmplitudeEmulator without any emulation capabilities, for use purely
+            as a high-fidelity solver, for which the exact_* functions will be used.
+
+        Parameters:
+            interaction_space (InteractionSpace): local interaction up to (and including $\ell_\max$)
+            l_max (int): maximum angular momentum to include in the sum approximating the cross section
+            angles (ndarray): Differential cross sections are functions of the
+                angles. These are the specific values at which the user wants to
+                emulate the cross section.
+            s_0 (float): $s$ point where the phase shift is extracted
+            verbose (bool): Do you want the class to print out warnings?
+            l_cutoff_rel : relative tolerance for change in scattering amplitudes between
+                partial waves, used to stop calculation ig higher partial waves are negligble
+            solver_kwargs : passed to SchroedingerEquation
+
+        Returns:
+            sae (ScatteringAmplitudeEmulator): scattering amplitude emulator
+
+        """
+        bases = []
+        for interaction_list in interaction_space.interactions:
+            basis_list = []
+            for interaction in interaction_list:
+                solver = SchroedingerEquation(interaction, **solver_kwargs)
+                basis = Basis(solver, None, np.array([0, 20]), None, interaction.ell)
+                basis_list.append(basis)
+            bases.append(basis_list)
+
+        return cls(
+            interaction_space,
+            bases,
+            l_max,
+            angles,
+            s_0=s_0,
+            verbose=verbose,
+            l_cutoff_rel=l_cutoff_rel,
+            initialize_emulator=False,
+        )
+
+    @classmethod
     def from_train(
         cls,
         interaction_space: InteractionSpace,
@@ -161,9 +211,9 @@ class ScatteringAmplitudeEmulator:
                 RelativeBasis(
                     SchroedingerEquation(
                         interaction,
-                        solver_method = solver_method,
-                        RK_tolerances = rk_tols,
-                        numerov_grid_size = numerov_grid_size,
+                        solver_method=solver_method,
+                        RK_tolerances=rk_tols,
+                        numerov_grid_size=numerov_grid_size,
                     ),
                     theta_train,
                     s_mesh,
@@ -193,6 +243,7 @@ class ScatteringAmplitudeEmulator:
         s_0: float = 6 * np.pi,
         verbose: bool = True,
         l_cutoff_rel=1.0e-3,
+        initialize_emulator=True,
     ):
         r"""Trains a reduced-basis emulator that computes differential and total cross sections (from emulated phase shifts).
 
@@ -207,6 +258,7 @@ class ScatteringAmplitudeEmulator:
             verbose (bool): Do you want the class to print out warnings?
             l_cutoff_rel : relative tolerance for change in scattering amplitudes between
                 partial waves, used to stop calculation ig higher partial waves are negligble
+            initialize_emulator : build the low-order emulator (True required for emulation)
 
         Attributes:
             l_max (int): maximum angular momentum
@@ -242,7 +294,12 @@ class ScatteringAmplitudeEmulator:
         for interaction_list, basis_list in zip(interaction_space.interactions, bases):
             self.rbes.append(
                 [
-                    ReducedBasisEmulator(interaction, basis, s_0=s_0)
+                    ReducedBasisEmulator(
+                        interaction,
+                        basis,
+                        s_0=s_0,
+                        initialize_emulator=initialize_emulator,
+                    )
                     for (interaction, basis) in zip(interaction_list, basis_list)
                 ]
             )
@@ -303,38 +360,6 @@ class ScatteringAmplitudeEmulator:
             [rbe.exact_phase_shift(theta) for rbe in rbe_list] for rbe_list in self.rbes
         ]
 
-    def dsdo(self, theta: np.array, deltas: np.array):
-        r"""Gives the differential cross section (dsigma/dOmega = dsdo) in mb/Sr.
-
-        Parameters:
-            theta (ndarray): parameter-space vector
-            deltas (ndarray): phase shifts
-
-        Returns:
-            dsdo (ndarray): differential cross section (fm^2)
-
-        """
-        k = self.rbes[0][0].interaction.momentum(theta)
-
-        S_l_plus, S_l_minus = self.S_matrix_elements(deltas)
-
-        A = self.f_c + (1 / (2j * k)) * np.sum(
-            np.exp(2j * self.sigma_l)
-            * ((self.ls + 1) * (S_l_plus - 1) + self.ls * (S_l_minus - 1))
-            * self.P_l_costheta,
-            axis=0,
-        )
-        B = (1 / (2j * k)) * np.sum(
-            np.exp(2j * self.sigma_l) * (S_l_plus - S_l_minus) * self.P_1_l_costheta,
-            axis=0,
-        )
-
-        dsdo = 10 * (np.conj(A) * A + np.conj(B) * B).real
-        if self.k_c > 0:
-            return dsdo / self.rutherford
-        else:
-            return dsdo
-
     def emulate_dsdo(self, theta: np.array):
         r"""Emulates the differential cross section (dsigma/dOmega = dsdo) in mb/Sr.
 
@@ -360,77 +385,6 @@ class ScatteringAmplitudeEmulator:
         """
         deltas = self.exact_phase_shifts(theta)
         return self.dsdo(theta, deltas)
-
-    def emulate_wave_functions(self, theta: np.array):
-        r"""Gives the wave functions for each partial wave.  Returns a list of
-            arrays.  Order is [l=0, l=1, ..., l=l_max-1].
-
-        Parameters:
-            theta (ndarray): parameter-space vector
-
-        Returns:
-            wave_functions (list): emulated wave functions
-
-
-        """
-        return [[x.emulate_wave_function(theta) for x in rbe] for rbe in self.rbes]
-
-    def S_matrix_elements(self, deltas: list):
-        deltas_plus = np.array([d[0] for d in deltas])
-        deltas_minus = np.array([d[1] for d in deltas[1:]])
-
-        S_l_plus = np.exp(2j * deltas_plus)[:, np.newaxis]
-        if self.rbes[0][0].interaction.include_spin_orbit:
-            # If there is spin-orbit, the l=0 term for B has to be zero.
-            S_l_minus = np.hstack((S_l_plus[0], np.exp(2j * deltas_minus)))[
-                :, np.newaxis
-            ]
-        else:
-            # This ensures that A reduces to the non-spin-orbit formula, and B = 0.
-            S_l_minus = S_l_plus.copy()
-
-        return S_l_plus, S_l_minus
-
-    def total_cross_section(self, deltas: np.array):
-        r"""Gives the "total" (angle-integrated) cross section in mb. If the interaction
-            is complex, alsom returns the reaction cross section. See Eq. (63) in Carlson's
-            notes.
-
-        Parameters:
-            deltas (ndarry) : phase shifts for each partial wave
-
-        Returns:
-            total cross section (float): emulated total cross section
-            reaction cross section (float): emulated reaction cross section
-
-        """
-        if self.k_c > 0:
-            raise Exception(
-                "The total cross section is infinite in the presence of Coulomb."
-            )
-
-        k = self.rbes[0][0].interaction.momentum(theta)
-        S_l_plus, S_l_minus = self.S_matrix_elements(deltas)
-
-        xst = np.sum(np.pi / k**2 * (2 * self.ls + 2) * (1 - S_l_plus.real))
-        xst += np.sum(np.pi / k**2 * (2 * self.ls - 2) * (1 - S_l_minus.real))
-
-        if self.rbes[0][0].interaction.is_complex:
-            xsrxn = np.sum(
-                np.pi
-                / k**2
-                * (2 * self.ls + 2)
-                * (1 - np.real(S_l_plus * S_l_plus.conj()))
-            )
-            xsrxn += np.sum(
-                np.pi
-                / k**2
-                * (2 * self.ls - 2)
-                * (1 - np.real(S_l_minus * S_l_minus.conj()))
-            )
-            return 10 * xst, 10 * xsrxn
-
-        return 10 * xst
 
     def emulate_total_cross_section(self, theta: np.array):
         r"""Gives the "total" (angle-integrated) cross section in mb. If the interaction
@@ -495,6 +449,130 @@ class ScatteringAmplitudeEmulator:
         # get phase shifts and wavenumber
         deltas = self.exact_phase_shifts(theta)
         return self.calculate_xs(deltas, theta, angles)
+
+    def emulate_wave_functions(self, theta: np.array):
+        r"""Gives the wave functions for each partial wave.  Returns a list of
+            arrays.  Order is [l=0, l=1, ..., l=l_max-1].
+
+        Parameters:
+            theta (ndarray): parameter-space vector
+
+        Returns:
+            wave_functions (list): emulated wave functions
+
+
+        """
+        return [[x.emulate_wave_function(theta) for x in rbe] for rbe in self.rbes]
+
+    def exact_wave_functions(self, theta: np.array, **solver_kwargs):
+        r"""Gives the wave functions for each partial wave.  Returns a list of
+            arrays.  Order is [l=0, l=1, ..., l=l_max-1].
+
+        Parameters:
+            theta (ndarray): parameter-space vector
+            solver_kwargs (ndarray): passed to SchroedingerEquation.phi
+
+        Returns:
+            wave_functions (list): emulated wave functions
+
+
+        """
+        return [
+            [
+                x.basis.solver.phi(theta, x.s_mesh, x.interaction.ell, **solver_kwargs)
+                for x in rbe
+            ]
+            for rbe in self.rbes
+        ]
+
+    def dsdo(self, theta: np.array, deltas: np.array):
+        r"""Gives the differential cross section (dsigma/dOmega = dsdo) in mb/Sr.
+
+        Parameters:
+            theta (ndarray): parameter-space vector
+            deltas (ndarray): phase shifts
+
+        Returns:
+            dsdo (ndarray): differential cross section (fm^2)
+
+        """
+        k = self.rbes[0][0].interaction.momentum(theta)
+
+        S_l_plus, S_l_minus = self.S_matrix_elements(deltas)
+
+        A = self.f_c + (1 / (2j * k)) * np.sum(
+            np.exp(2j * self.sigma_l)
+            * ((self.ls + 1) * (S_l_plus - 1) + self.ls * (S_l_minus - 1))
+            * self.P_l_costheta,
+            axis=0,
+        )
+        B = (1 / (2j * k)) * np.sum(
+            np.exp(2j * self.sigma_l) * (S_l_plus - S_l_minus) * self.P_1_l_costheta,
+            axis=0,
+        )
+
+        dsdo = 10 * (np.conj(A) * A + np.conj(B) * B).real
+        if self.k_c > 0:
+            return dsdo / self.rutherford
+        else:
+            return dsdo
+
+    def S_matrix_elements(self, deltas: list):
+        deltas_plus = np.array([d[0] for d in deltas])
+        deltas_minus = np.array([d[1] for d in deltas[1:]])
+
+        S_l_plus = np.exp(2j * deltas_plus)[:, np.newaxis]
+        if self.rbes[0][0].interaction.include_spin_orbit:
+            # If there is spin-orbit, the l=0 term for B has to be zero.
+            S_l_minus = np.hstack((S_l_plus[0], np.exp(2j * deltas_minus)))[
+                :, np.newaxis
+            ]
+        else:
+            # This ensures that A reduces to the non-spin-orbit formula, and B = 0.
+            S_l_minus = S_l_plus.copy()
+
+        return S_l_plus, S_l_minus
+
+    def total_cross_section(self, deltas: np.array):
+        r"""Gives the "total" (angle-integrated) cross section in mb. If the interaction
+            is complex, alsom returns the reaction cross section. See Eq. (63) in Carlson's
+            notes.
+
+        Parameters:
+            deltas (ndarry) : phase shifts for each partial wave
+
+        Returns:
+            total cross section (float): emulated total cross section
+            reaction cross section (float): emulated reaction cross section
+
+        """
+        if self.k_c > 0:
+            raise Exception(
+                "The total cross section is infinite in the presence of Coulomb."
+            )
+
+        k = self.rbes[0][0].interaction.momentum(theta)
+        S_l_plus, S_l_minus = self.S_matrix_elements(deltas)
+
+        xst = np.sum(np.pi / k**2 * (2 * self.ls + 2) * (1 - S_l_plus.real))
+        xst += np.sum(np.pi / k**2 * (2 * self.ls - 2) * (1 - S_l_minus.real))
+
+        if self.rbes[0][0].interaction.is_complex:
+            xsrxn = np.sum(
+                np.pi
+                / k**2
+                * (2 * self.ls + 2)
+                * (1 - np.real(S_l_plus * S_l_plus.conj()))
+            )
+            xsrxn += np.sum(
+                np.pi
+                / k**2
+                * (2 * self.ls - 2)
+                * (1 - np.real(S_l_minus * S_l_minus.conj()))
+            )
+            return 10 * xst, 10 * xsrxn
+
+        return 10 * xst
 
     def calculate_xs(self, deltas: np.array, theta: np.array, angles: np.array = None):
         r"""Calculates the:

@@ -49,7 +49,7 @@ class SchroedingerEquation:
 
         """
         self.solver_method = solver_method
-        self.numerov_grid_size = numerov_grid_size
+        self.numerov_grid_size = int(numerov_grid_size)
         self.interaction = interaction
         self.rel_tol = RK_tolerances[0]
         self.abs_tol = RK_tolerances[1]

@@ -68,11 +68,12 @@ class SchroedingerEquation:
                 considered zero below this value.
         """
 
-
         C_l = Gamow_factor(l, self.interaction.eta(alpha))
 
         if rho_0 is None:
-            rho_0 = (phi_threshold / C_l) ** (1 / (l + 1))
+            rho_0 = (phi_threshold / Gamow_factor(l, self.interaction.eta(alpha))) ** (
+                1 / (l + 1)
+            )
 
         phi_0 = C_l * rho_0 ** (l + 1)
         phi_prime_0 = C_l * (l + 1) * rho_0**l
@@ -83,6 +84,27 @@ class SchroedingerEquation:
             initial_conditions = np.array([phi_0, phi_prime_0])
 
         return rho_0, initial_conditions
+
+    def radial_se_deriv2(self, s, l, alpha, S_C):
+        r"""
+        Returns:
+
+            (float) : RHS of the scaled SE, with the LHS being the second derivative operator.
+            This value, multiplied by the value of the radial wavefunction, gives its second derivative
+
+        Parameters:
+            alpha (ndarray): parameter vector
+            s (float): values of dimensionless radial coordinate $s=kr$
+            l (int): angular momentum
+            S_C (float) : Coulomb cutoff (charge radius)
+
+        """
+        return (
+            self.interaction.tilde(s, alpha)
+            + 2 * self.interaction.eta(alpha) * regular_inverse_s(s, S_C)
+            + l * (l + 1) / s**2
+            - 1.0
+        )
 
     def phi_numerov(
         self,
@@ -97,7 +119,7 @@ class SchroedingerEquation:
 
         Parameters:
             alpha (ndarray): parameter vector
-            s_mesh (ndarray): values of $s$ at which $\phi$ is calculated - must be uniform grid
+            s_mesh (ndarray): values of $s$ at which $\phi$ is evaluated
             l (int): angular momentum
             rho_0 (float): starting point for the solver
             phi_threshold (float): minimum $\phi$ value; The wave function is
@@ -108,37 +130,33 @@ class SchroedingerEquation:
 
         """
         # determine initial conditions
-        if rho_0 is None:
-            rho_0 = (phi_threshold / Gamow_factor(l, self.interaction.eta(alpha))) ** (
-                1 / (l + 1)
-            )
-        rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l, rho_0)
+        rho_0, initial_conditions = self.initial_conditions(
+            alpha, phi_threshold, l, rho_0
+        )
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
         def g(s):
-            return -(
-                self.interaction.tilde(s, alpha)
-                + 2 * self.interaction.eta(alpha) * regular_inverse_s(s, S_C)
-                + l * (l + 1) / s**2
-                - 1.0
-            )
+            return -self.radial_se_deriv2(s, l, alpha, S_C)
 
-        y = numerov_kernel(s_mesh, initial_conditions, g)
-        mask = np.where(s_mesh < rho_0)[0]
+        calc_mesh = np.linspace(s_mesh[0], s_mesh[-1], self.numerov_grid_size)
+
+        y = numerov_kernel(calc_mesh, initial_conditions, g)
+        mask = np.where(calc_mesh < rho_0)[0]
         y[mask] = 0
-        return y
-        return phi
 
-    def delta_numerov(
+        return np.interp(s_mesh, calc_mesh, y)
+
+    def numerov_rmatrix(
         self,
         alpha: np.array,  # interaction parameters
         s_endpts: np.array,  # [s_min, s_max]; phi(s) is calculated on this interval
         l: int,  # angular momentum
         s_0: float,  # phaseshift is extracted at phi(s_0)
         phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
-        numerov_grid_size=None,
     ):
-        r"""Solves the reduced, radial Schrödinger equation with the Numerov method
+        r"""Calculates the $\ell$-th partial wave R-matrix element at the specified energy,
+            using the Numerov method for integrating the Radial SE
+
         Parameters:
             alpha (ndarray): parameter vector
             s_endpts (ndarray): lower and upper bounds of the $s$ mesh.
@@ -149,47 +167,22 @@ class SchroedingerEquation:
                 considered zero below this value.
 
         Returns:
-            array (ndarray): 2-column matrix; The first column is the $r$ values.
-                The second is the reduced radial wavefunction, $u(r)$. (The optional
-                third - based on return_uprime - is $u^\prime(r)$.)
+            rl (float)  : r-matrix element, or logarithmic derivative of wavefunction at the channel
+                radius; s_0
         """
-        if Numerov_grid_size is None:
-            Numerov_grid_size = self.numerov_grid_size
-
         # determine initial conditions
-        if rho_0 is None:
-            rho_0 = (phi_threshold / Gamow_factor(l, self.interaction.eta(alpha))) ** (
-                1 / (l + 1)
-            )
         rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l)
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
         s_mesh = np.linspace(rho_0, s_endpts[-1], Numerov_grid_size)
 
         def g(s):
-            return -(
-                self.interaction.tilde(s, alpha)
-                + 2 * self.interaction.eta(alpha) * regular_inverse_s(s, S_C)
-                + l * (l + 1) / s**2
-                - 1.0
-            )
+            return -self.radial_se_deriv2(s, l, alpha, S_C)
 
         y = numerov_kernel(s_mesh, initial_conditions, g)
         u = interp1d(s_mesh[-10:], y[-10:], bounds_error=False)
         s_0 = s_mesh[-1]
         rl = 1 / s_0 * (u(s_0 - dx) / derivative(u, s_0 - dx, 1.0e-6))
-        return (
-            np.log(
-                (
-                    H_minus(s_0, l, self.interaction.eta(alpha))
-                    - s_0 * rl * H_minus_prime(s_0, l, self.interaction.eta(alpha))
-                )
-                / (
-                    H_plus(s_0, l, self.interaction.eta(alpha))
-                    - s_0 * rl * H_plus_prime(s_0, l, self.interaction.eta(alpha))
-                )
-            )
-            / 2j
-        )
+        return rl
 
     def solve_se_RK(
         self,
@@ -213,28 +206,22 @@ class SchroedingerEquation:
                 considered zero below this value.
 
         Returns:
-            array (ndarray): 2-column matrix; The first column is the $r$ values.
-                The second is the reduced radial wavefunction, $u(r)$. (The optional
-                third - based on return_uprime - is $u^\prime(r)$.)
+            sol  (scipy.integrate.OdeSolution) : the radial wavefunction
+            and its first derivative; see https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.OdeSolution.html#scipy.integrate.OdeSolution
         """
-
-        rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l, rho_0)
+        rho_0, initial_conditions = self.initial_conditions(
+            alpha, phi_threshold, l, rho_0
+        )
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
         sol = solve_ivp(
             lambda s, phi: np.array(
                 [
                     phi[1],
-                    (
-                        self.interaction.tilde(s, alpha)
-                        + 2 * self.interaction.eta(alpha) * regular_inverse_s(s, S_C)
-                        + l * (l + 1) / s**2
-                        - 1.0
-                    )
-                    * phi[0],
+                    self.radial_se_deriv2(s, l, alpha, S_C) * phi[0],
                 ]
             ),
-            s_endpts,
+            [rho_0, s_endpts[1]],
             initial_conditions,
             rtol=self.rel_tol,
             atol=self.abs_tol,
@@ -244,7 +231,7 @@ class SchroedingerEquation:
 
         return sol.sol
 
-    def delta_RK(
+    def RK_rmatrix(
         self,
         alpha: np.array,  # interaction parameters
         s_endpts: np.array,  # [s_min, s_max]; phi(s) is calculated on this interval
@@ -252,8 +239,9 @@ class SchroedingerEquation:
         s_0: float,  # phaseshift is extracted at phi(s_0)
         **kwargs,  # passed to solve_se_RK
     ):
-        r"""Calculates the $\ell$-th partial wave phase shift at the specified energy.
-        kwargs are passed to solve_se_RK
+        r"""Calculates the $\ell$-th partial wave R-matrix element at the specified energy.
+            using the Runge-Kutta method for integrating the Radial SE. kwargs are passed to
+            solve_se_RK.
 
         Parameters:
             alpha (ndarray): parameter vector
@@ -263,27 +251,15 @@ class SchroedingerEquation:
                 less than the second element in `s_endpts`)
 
         Returns:
-            delta (float): phase shift extracted from the reduced, radial
-                wave function
+            rl (float)  : r-matrix element, or logarithmic derivative of wavefunction at the channel
+                radius; s_0
 
         """
         # Should s_endpts be [s_min, s_endpts[1]]?
         solution = self.solve_se_RK(alpha, s_endpts, l=l, **kwargs)
         u = solution(s_0)
         rl = 1 / s_0 * (u[0] / u[1])
-        return (
-            np.log(
-                (
-                    H_minus(s_0, l, self.interaction.eta(alpha))
-                    - s_0 * rl * H_minus_prime(s_0, l, self.interaction.eta(alpha))
-                )
-                / (
-                    H_plus(s_0, l, self.interaction.eta(alpha))
-                    - s_0 * rl * H_plus_prime(s_0, l, self.interaction.eta(alpha))
-                )
-            )
-            / 2j
-        )
+        return rl
 
     def phi_RK(
         self,
@@ -295,7 +271,7 @@ class SchroedingerEquation:
         **kwargs,  # passed to solve_se_RK
     ):
         r"""Computes the reduced, radial wave function $\phi$ (or $u$) on `s_mesh` using the
-        built-in Runge-Kutta solver in scipy.integrate.solve_ivp.
+        Runge-Kutta method
 
         Parameters:
             alpha (ndarray): parameter vector
@@ -313,7 +289,6 @@ class SchroedingerEquation:
             rho_0 = (phi_threshold / Gamow_factor(l, self.interaction.eta(alpha))) ** (
                 1 / (l + 1)
             )
-
         solution = self.solve_se_RK(
             alpha,
             [rho_0, s_mesh[-1]],
@@ -323,7 +298,7 @@ class SchroedingerEquation:
             **kwargs,
         )
 
-        mask = np.where(s_mesh < rho_0)[0]
+        mask = np.where(s_mesh < rho_0)
         y = solution(s_mesh)[0]
         y[mask] = 0
         return y
@@ -353,9 +328,13 @@ class SchroedingerEquation:
 
         """
         if self.solver_method == "Runge-Kutta":
-            return self.phi_RK(alpha, s_mesh, l, rho_0 = rho_0, phi_threshold=phi_threshold, **kwargs)
+            return self.phi_RK(
+                alpha, s_mesh, l, rho_0=rho_0, phi_threshold=phi_threshold, **kwargs
+            )
         elif self.solver_method == "Numerov":
-            return self.phi_numerov(alpha, s_mesh, l, rho_0=rho_0, phi_threshold=phi_threshold, **kwargs)
+            return self.phi_numerov(
+                alpha, s_mesh, l, rho_0=rho_0, phi_threshold=phi_threshold, **kwargs
+            )
 
     def delta(
         self,
@@ -382,9 +361,25 @@ class SchroedingerEquation:
         """
 
         if self.solver_method == "Runge-Kutta":
-            return self.delta_RK(alpha, s_endpts, l, s_0, **kwargs)
+            rl = self.RK_rmatrix(alpha, s_endpts, l, s_0, **kwargs)
         elif self.solver_method == "Numerov":
-            return self.delta_numerov(alpha, s_endpts, l, s_0, N=N, phi_threshold=phi_threshold)
+            rl = self.numerov_rmatrix(
+                alpha, s_endpts, l, s_0, phi_threshold=phi_threshold
+            )
+
+        return (
+            np.log(
+                (
+                    H_minus(s_0, l, self.interaction.eta(alpha))
+                    - s_0 * rl * H_minus_prime(s_0, l, self.interaction.eta(alpha))
+                )
+                / (
+                    H_plus(s_0, l, self.interaction.eta(alpha))
+                    - s_0 * rl * H_plus_prime(s_0, l, self.interaction.eta(alpha))
+                )
+            )
+            / 2j
+        )
 
 
 def Gamow_factor(l, eta):

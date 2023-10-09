@@ -112,6 +112,7 @@ def CAT_trainer_EIM(
 
 class CATPerformance:
     def __init__(
+        self,
         benchmark_runner: Callable[[np.array], np.array],
         benchmark_inputs: list,
         benchmark_ground_truth: np.array,
@@ -122,7 +123,6 @@ class CATPerformance:
         to each of benchmark_data, returning performance metrics for each case
 
         Parameters:
-            label
             benchmark_runner : runs the benchmark, taking in a set of inputs in the form of an numpy
                 array, and returning a set of outputs in another numpy array
             benchmark_inputs : list of inputs to benchmark runner, each formatted as an np.array
@@ -136,6 +136,15 @@ class CATPerformance:
             benchmark_runner compared to benchmark_ground_truth, as well as the elapsed computational
             time for each run of benchmark_runner
 
+        Attributes:
+            output_shape (tuple): shape of numpy array associated with output of benchmark_runner
+            num_inputs (int): number of inputs passed to benchmark_runner
+            runner_residuals (np.array): difference between benchmark_runner output and
+                benchmark_ground_truth in each input, for each element of output
+            rel_err (np.array) : same as runner_residuals but relative to benchmark_ground_truth
+            times (np.array) : elapsed computational time for call to benchmark_runner for each
+                of benchmark_runner
+            median_rel_err : median of rel_err across output space
         """
 
         self.output_shape = benchmark_ground_truth[0].shape

@@ -153,7 +153,7 @@ class CATPerformance:
         self.runner_residuals = np.zeros(all_output_shape)
         self.rel_err = np.zeros(all_output_shape)
         self.times = np.zeros(self.num_inputs)
-        for i in range(num_inputs):
+        for i in range(self.num_inputs):
             st = perf_counter()
             predicted = benchmark_runner(benchmark_inputs[i])
             et = perf_counter()

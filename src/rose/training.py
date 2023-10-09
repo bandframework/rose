@@ -1,7 +1,11 @@
 r"""
 Some helpful utilities for training an emulator
 """
+from dataclasses import dataclass
+from collections.abc import Callable
+
 import numpy as np
+from time import perf_counter
 from scipy.stats import qmc
 
 from .basis import Basis
@@ -39,7 +43,7 @@ def sample_params_LHC(
 def CAT_trainer_EIM(
     sae_config: tuple,
     base_interaction: InteractionEIMSpace,
-    bases : list  = None,
+    bases: list = None,
     theta_train: np.array = None,
     **SAE_kwargs,
 ):
@@ -94,7 +98,7 @@ def CAT_trainer_EIM(
                     )
                 )
             new_bases.append(basis_list)
-        emulator = ScatteringAmplitudeEmulator(interaction, new_bases,  **SAE_kwargs)
+        emulator = ScatteringAmplitudeEmulator(interaction, new_bases, **SAE_kwargs)
     else:
         emulator = ScatteringAmplitudeEmulator.from_train(
             interaction,
@@ -104,3 +108,136 @@ def CAT_trainer_EIM(
         )
 
     return interactions, emulator
+
+
+class CATPerformance:
+    def __init__(
+        benchmark_runner: Callable[[np.array], np.array],
+        benchmark_inputs: list,
+        benchmark_ground_truth: np.array,
+        label: str = None,
+    ):
+        r"""
+        Run benchmark_runner for each of benchmark_inputs, and compare the output
+        to each of benchmark_data, returning performance metrics for each case
+
+        Parameters:
+            label
+            benchmark_runner : runs the benchmark, taking in a set of inputs in the form of an numpy
+                array, and returning a set of outputs in another numpy array
+            benchmark_inputs : list of inputs to benchmark runner, each formatted as an np.array
+            benchmark_ground_truth : list corresponding to each input in benchmark runner, where each
+                element is an np.array of same shape as output of benchmark_runner, encapsulating
+                the 'exact', or expected, output for a given input
+            label : name or identifier for this particular benchmark_runner
+
+        Returns:
+            CATPerformance object encapsulating the mean squared error of each output of
+            benchmark_runner compared to benchmark_ground_truth, as well as the elapsed computational
+            time for each run of benchmark_runner
+
+        """
+
+        self.output_shape = benchmark_ground_truth[0].shape
+        self.num_inputs = len(benchmark_inputs)
+        all_output_shape = (self.num_inputs,) + self.output_shape
+        self.runner_residuals = np.zeros(all_output_shape)
+        self.rel_err = np.zeros(all_output_shape)
+        self.times = np.zeros(self.num_inputs)
+        for i in range(num_inputs):
+            st = perf_counter()
+            predicted = benchmark_runner(benchmark_inputs[i])
+            et = perf_counter()
+            self.runner_residuals[i, ...] = benchmark_ground_truth[i] - predicted
+            self.rel_err[i, ...] = (
+                np.fabs(self.runner_residuals[i, ...]) / benchmark_ground_truth[i]
+            )
+            self.times[i] = et - st
+
+        self.median_rel_err = np.median(self.rel_err, axis=0)
+
+
+def CAT_plot(data_sets: list):
+    def make_plot(
+        data_set: CATPerformance, color, runner_label_title="[$n_\phi$, $n_U$]"
+    ):
+        custom_lines = [
+            Line2D(
+                [],
+                [],
+                color="w",
+                marker="X",
+                linestyle="None",
+                markersize=20,
+                label=runner_label_title,
+            ),
+            Line2D(
+                [],
+                [],
+                color=color,
+                marker="o",
+                linestyle="None",
+                markersize=20,
+                label=data_set.label,
+            ),
+        ]
+
+        level_sns = 0.001
+
+        x = data_set.times
+        y = data_set.rel_err * 100
+
+        sns.kdeplot(
+            x=x,
+            y=y,
+            levels=[level_sns, 1],
+            color=colors[i],
+            log_scale=[True, True],
+            fill=True,
+            alpha=0.6,
+        )
+
+        sns.kdeplot(
+            x=x,
+            y=y,
+            levels=[level_sns],
+            color=color,
+            log_scale=[True, True],
+            linewidths=3,
+            linestyles="dashed",
+        )
+        ax.scatter(x, y, s=5, color=color)
+        ax.legend(handles=custom_lines, frameon=True, edgecolor="black")
+
+    colors = [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+    ]
+
+    if isinstance(data_sets[0], list):
+        for i, data_set in enumerate(data_sets):
+            make_plot(data_set, colors[i])
+    else:
+        make_plot(data_sets)
+
+    fig, ax = plt.subplots(figsize=(15, 7), dpi=400)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+
+    ax.set_xlabel("time per sample (s)")
+    ax.set_ylabel("median relative error [%]")
+
+    plt.rc("xtick")
+    plt.rc("ytick")
+
+    plt.tight_layout()
+
+    return fig, ax

@@ -28,7 +28,6 @@ class Basis:
         rho_mesh: np.array,
         n_basis: int,
         l: int,
-        solver_method="Runge-Kutta",
     ):
         r"""Builds a reduced basis.
 
@@ -47,7 +46,7 @@ class Basis:
             l (int): orbital angular momentum
 
         """
-        self.solver_method = solver_method
+        self.solver_method = solver.solver_method
         self.solver = solver
         self.theta_train = np.copy(theta_train)
         self.rho_mesh = np.copy(rho_mesh)

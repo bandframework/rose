@@ -173,7 +173,7 @@ class SchroedingerEquation:
         # determine initial conditions
         rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l)
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
-        s_mesh = np.linspace(rho_0, s_endpts[-1], Numerov_grid_size)
+        s_mesh = np.linspace(rho_0, s_endpts[-1], self.numerov_grid_size)
 
         def g(s):
             return -self.radial_se_deriv2(s, l, alpha, S_C)

@@ -182,7 +182,6 @@ class SchroedingerEquation:
 
         y = numerov_kernel(s_mesh, initial_conditions, g)
         u = interp1d(s_mesh[-10:], y[-10:], bounds_error=False)
-        s_0 = s_mesh[-1]
         dx = 1.0e-5
         rl = 1 / s_0 * (u(s_0 - dx) / derivative(u, s_0 - dx, 1.0e-6))
         return rl

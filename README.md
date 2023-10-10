@@ -16,3 +16,7 @@ The primary class is `ReducedBasisEmulator`. To create an instance, minimally, a
 
 For a full set of examples walking through emulation and calibration, check the [tutorials](docs/tutorials/) directory.
 
+You can also check out the [documentation page](https://reduced-order-scattering-emulator.readthedocs.io/en/latest/)
+
+You could even check the other [BAND softwares](https://bandframework.github.io/software/) and start combining them to write all your Bayesian papers!
+

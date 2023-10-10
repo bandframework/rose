@@ -165,7 +165,9 @@ class CATPerformance:
             )
             self.times[i] = et - st
 
-        self.median_rel_err = np.median(self.rel_err, axis=0)
+        # take median along all axes but 0
+        axes = [i + 1 for i in range(len(self.output_shape))]
+        self.median_rel_err = np.median(self.rel_err, axis=axes)
 
 
 def CAT_plot(data_sets: list, labels=None):
@@ -184,10 +186,7 @@ def CAT_plot(data_sets: list, labels=None):
 
     custom_lines = []
 
-    def make_plot(
-        data_set: CATPerformance, color, runner_label_title=None
-
-    ):
+    def make_plot(data_set: CATPerformance, color, runner_label_title=None):
         custom_lines.append(
             Line2D(
                 [],
@@ -213,7 +212,7 @@ def CAT_plot(data_sets: list, labels=None):
         level_sns = 0.001
 
         x = data_set.times
-        y = data_set.rel_err * 100
+        y = data_set.median_rel_err * 100
 
         sns.kdeplot(
             x=x,
@@ -242,7 +241,9 @@ def CAT_plot(data_sets: list, labels=None):
             for j, data_set in enumerate(sub_list):
                 make_plot(data_set, colors[j])
             label = labels[i] if labels is not None else None
-            ax.legend(handles=custom_lines, frameon=True, edgecolor="black", title=label)
+            ax.legend(
+                handles=custom_lines, frameon=True, edgecolor="black", title=label
+            )
     else:
         for i, data_set in enumerate(data_sets):
             make_plot(data_set, colors[i])

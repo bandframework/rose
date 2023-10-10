@@ -7,6 +7,7 @@ from collections.abc import Callable
 import numpy as np
 from time import perf_counter
 from scipy.stats import qmc
+from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 import seaborn as sns
 
@@ -149,6 +150,7 @@ class CATPerformance:
             median_rel_err : median of rel_err across output space
         """
 
+        self.label = label
         self.output_shape = benchmark_ground_truth[0].shape
         self.num_inputs = len(benchmark_inputs)
         all_output_shape = (self.num_inputs,) + self.output_shape
@@ -171,7 +173,12 @@ class CATPerformance:
 
 
 def CAT_plot(data_sets: list, labels=None):
-    colors = [
+    fig, ax = plt.subplots(figsize=(9, 6), dpi=400)
+
+    #plt.rc("xtick")
+    #plt.rc("ytick")
+
+    colors = iter([
         "#1f77b4",
         "#ff7f0e",
         "#2ca02c",
@@ -182,21 +189,22 @@ def CAT_plot(data_sets: list, labels=None):
         "#7f7f7f",
         "#bcbd22",
         "#17becf",
-    ]
+    ])
 
     custom_lines = []
 
-    def make_plot(data_set: CATPerformance, color, runner_label_title=None):
-        custom_lines.append(
-            Line2D(
-                [],
-                [],
-                color="w",
-                marker="X",
-                linestyle="None",
-                markersize=20,
-            )
-        )
+    xlims = [np.inf,-np.inf]
+    ylims = [np.inf,-np.inf]
+
+    def reset_lims(x,y):
+        xlims[0] = min(np.min(x), xlims[0])
+        xlims[1] = max(np.max(x), xlims[1])
+        ylims[0] = min(np.min(y), ylims[0])
+        ylims[1] = max(np.max(y), ylims[1])
+
+
+    def make_plot(data_set: CATPerformance, color):
+
         custom_lines.append(
             Line2D(
                 [],
@@ -204,8 +212,8 @@ def CAT_plot(data_sets: list, labels=None):
                 color=color,
                 marker="o",
                 linestyle="None",
-                markersize=20,
-                label=runner_label_title,
+                markersize=10,
+                label=data_set.label,
             )
         )
 
@@ -214,11 +222,13 @@ def CAT_plot(data_sets: list, labels=None):
         x = data_set.times
         y = data_set.median_rel_err * 100
 
+        reset_lims(x,y)
+
         sns.kdeplot(
             x=x,
             y=y,
             levels=[level_sns, 1],
-            color=colors[i],
+            color=color,
             log_scale=[True, True],
             fill=True,
             alpha=0.6,
@@ -239,27 +249,30 @@ def CAT_plot(data_sets: list, labels=None):
         for i, sub_list in enumerate(data_sets):
             custom_lines = []
             for j, data_set in enumerate(sub_list):
-                make_plot(data_set, colors[j])
+                make_plot(data_set, next(colors))
             label = labels[i] if labels is not None else None
-            ax.legend(
+            l = plt.legend(
                 handles=custom_lines, frameon=True, edgecolor="black", title=label
             )
+            ax.add_artist(l)
     else:
         for i, data_set in enumerate(data_sets):
-            make_plot(data_set, colors[i])
+            make_plot(data_set, next(colors))
 
         ax.legend(handles=custom_lines, frameon=True, edgecolor="black")
 
-    fig, ax = plt.subplots(figsize=(15, 7), dpi=400)
+
+    xlims[0] *= 0.75
+    ylims[0] *= 0.75
+    xlims[1] *= 1.25
+    ylims[1] *= 1.25
+    ax.set_xlim(xlims)
+    ax.set_ylim(ylims)
     ax.set_xscale("log")
     ax.set_yscale("log")
 
     ax.set_xlabel("time per sample (s)")
     ax.set_ylabel("median relative error [%]")
-
-    plt.rc("xtick")
-    plt.rc("ytick")
-
     plt.tight_layout()
 
     return fig, ax

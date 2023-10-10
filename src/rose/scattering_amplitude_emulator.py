@@ -147,7 +147,7 @@ class ScatteringAmplitudeEmulator:
             basis_list = []
             for interaction in interaction_list:
                 solver = SchroedingerEquation(interaction, **solver_kwargs)
-                basis = Basis(solver, None, np.array([0, 20]), None, interaction.ell)
+                basis = Basis(solver, None, np.array([0, s_0 + 1.0]), None, interaction.ell)
                 basis_list.append(basis)
             bases.append(basis_list)
 

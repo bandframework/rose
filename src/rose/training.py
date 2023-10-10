@@ -7,6 +7,8 @@ from collections.abc import Callable
 import numpy as np
 from time import perf_counter
 from scipy.stats import qmc
+from matplotlib.lines import Line2D
+import seaborn as sns
 
 from .basis import Basis
 from .interaction_eim import InteractionEIM, InteractionEIMSpace
@@ -166,11 +168,27 @@ class CATPerformance:
         self.median_rel_err = np.median(self.rel_err, axis=0)
 
 
-def CAT_plot(data_sets: list):
+def CAT_plot(data_sets: list, labels=None):
+    colors = [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+    ]
+
+    custom_lines = []
+
     def make_plot(
-        data_set: CATPerformance, color, runner_label_title="[$n_\phi$, $n_U$]"
+        data_set: CATPerformance, color, runner_label_title=None
+
     ):
-        custom_lines = [
+        custom_lines.append(
             Line2D(
                 [],
                 [],
@@ -178,8 +196,9 @@ def CAT_plot(data_sets: list):
                 marker="X",
                 linestyle="None",
                 markersize=20,
-                label=runner_label_title,
-            ),
+            )
+        )
+        custom_lines.append(
             Line2D(
                 [],
                 [],
@@ -187,9 +206,9 @@ def CAT_plot(data_sets: list):
                 marker="o",
                 linestyle="None",
                 markersize=20,
-                label=data_set.label,
-            ),
-        ]
+                label=runner_label_title,
+            )
+        )
 
         level_sns = 0.001
 
@@ -216,26 +235,19 @@ def CAT_plot(data_sets: list):
             linestyles="dashed",
         )
         ax.scatter(x, y, s=5, color=color)
-        ax.legend(handles=custom_lines, frameon=True, edgecolor="black")
-
-    colors = [
-        "#1f77b4",
-        "#ff7f0e",
-        "#2ca02c",
-        "#d62728",
-        "#9467bd",
-        "#8c564b",
-        "#e377c2",
-        "#7f7f7f",
-        "#bcbd22",
-        "#17becf",
-    ]
 
     if isinstance(data_sets[0], list):
+        for i, sub_list in enumerate(data_sets):
+            custom_lines = []
+            for j, data_set in enumerate(sub_list):
+                make_plot(data_set, colors[j])
+            label = labels[i] if labels is not None else None
+            ax.legend(handles=custom_lines, frameon=True, edgecolor="black", title=label)
+    else:
         for i, data_set in enumerate(data_sets):
             make_plot(data_set, colors[i])
-    else:
-        make_plot(data_sets)
+
+        ax.legend(handles=custom_lines, frameon=True, edgecolor="black")
 
     fig, ax = plt.subplots(figsize=(15, 7), dpi=400)
     ax.set_xscale("log")

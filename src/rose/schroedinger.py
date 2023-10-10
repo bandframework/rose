@@ -8,6 +8,8 @@ documentation](basis.md).
 """
 import numpy as np
 from scipy.integrate import solve_ivp
+from scipy.interpolate import interp1d
+from scipy.misc import derivative
 
 from .interaction import Interaction
 from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
@@ -181,6 +183,7 @@ class SchroedingerEquation:
         y = numerov_kernel(s_mesh, initial_conditions, g)
         u = interp1d(s_mesh[-10:], y[-10:], bounds_error=False)
         s_0 = s_mesh[-1]
+        dx = 1.0e-5
         rl = 1 / s_0 * (u(s_0 - dx) / derivative(u, s_0 - dx, 1.0e-6))
         return rl
 

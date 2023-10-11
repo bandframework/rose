@@ -543,24 +543,31 @@ class ScatteringAmplitudeEmulator:
             return dsdo
 
     def S_matrix_elements(self, deltas: list):
+        r""" Returns:
+                Sl_plus (ndarray) : l-s aligned S-matrix elements for partial waves up to where
+                    S_l_plus.real - 1 < Sl_cutoff
+                Sl_minus (ndarray) : same as S_l_plus, but l-s anti-aligned
+
+            Parameters:
+                deltas (list) : list of phase shifts for each partial wave. Each element,
+                    for l > 0, should have two phase shifts; spin aligned and anti-aligned
+        """
         deltas_plus = np.array([d[0] for d in deltas])
         deltas_minus = np.array([d[1] for d in deltas[1:]])
 
-        S_l_plus = np.exp(2j * deltas_plus)[:, np.newaxis]
+        S_l_plus = np.exp(2j * deltas_plus)
         if self.rbes[0][0].interaction.include_spin_orbit:
             # If there is spin-orbit, the l=0 term for B has to be zero.
-            S_l_minus = np.hstack((S_l_plus[0], np.exp(2j * deltas_minus)))[
-                :, np.newaxis
-            ]
+            S_l_minus = np.hstack((S_l_plus[0], np.exp(2j * deltas_minus)))
         else:
             # This ensures that A reduces to the non-spin-orbit formula, and B = 0.
             S_l_minus = S_l_plus.copy()
 
-        lmp = np.argwhere( np.fabs(S_l_plus.real - 1) < Sl_cutoff)
-        lmm = np.argwhere( np.fabs(S_l_minus.real - 1) < Sl_cutoff)
-        lm = max(lmp, lmm)
+        lmp = np.nonzero( np.fabs(S_l_plus.real - 1) < self.Sl_cutoff)
+        lmm = np.nonzero( np.fabs(S_l_minus.real - 1) < self.Sl_cutoff)
+        lm = max(lmp[0][0], lmm[0][0])
 
-        return S_l_plus[:lm], S_l_minus[:lm]
+        return S_l_plus[:lm][:,np.newaxis], S_l_minus[:lm][:,np.newaxis]
 
     def total_cross_section(self, deltas: np.array):
         r"""Gives the "total" (angle-integrated) cross section in mb. If the interaction

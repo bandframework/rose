@@ -159,7 +159,7 @@ def mass(A, Z, Eb):
 
 
 def numerov_kernel(
-    x_grid : np.array ,
+    x_grid: np.array,
     initial_conditions: tuple,
     g: Callable[[np.double], np.double],
 ):

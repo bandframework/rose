@@ -9,6 +9,7 @@ from time import perf_counter
 from scipy.stats import qmc
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.ticker import MaxNLocator
 import seaborn as sns
 
 from .basis import Basis
@@ -172,13 +173,8 @@ class CATPerformance:
         self.median_rel_err = np.median(self.rel_err, axis=axes)
 
 
-def CAT_plot(data_sets: list, labels=None):
-    fig, ax = plt.subplots(figsize=(9, 6), dpi=400)
-
-    #plt.rc("xtick")
-    #plt.rc("ytick")
-
-    colors = iter([
+colors = iter(
+    [
         "#1f77b4",
         "#ff7f0e",
         "#2ca02c",
@@ -189,22 +185,28 @@ def CAT_plot(data_sets: list, labels=None):
         "#7f7f7f",
         "#bcbd22",
         "#17becf",
-    ])
+    ]
+)
+
+
+def CAT_plot(data_sets: list, labels=None):
+    fig, ax = plt.subplots(figsize=(9, 6), dpi=400)
+
+    # plt.rc("xtick")
+    # plt.rc("ytick")
 
     custom_lines = []
 
-    xlims = [np.inf,-np.inf]
-    ylims = [np.inf,-np.inf]
+    xlims = [np.inf, -np.inf]
+    ylims = [np.inf, -np.inf]
 
-    def reset_lims(x,y):
+    def reset_lims(x, y):
         xlims[0] = min(np.min(x), xlims[0])
         xlims[1] = max(np.max(x), xlims[1])
         ylims[0] = min(np.min(y), ylims[0])
         ylims[1] = max(np.max(y), ylims[1])
 
-
     def make_plot(data_set: CATPerformance, color):
-
         custom_lines.append(
             Line2D(
                 [],
@@ -222,7 +224,7 @@ def CAT_plot(data_sets: list, labels=None):
         x = data_set.times
         y = data_set.median_rel_err * 100
 
-        reset_lims(x,y)
+        reset_lims(x, y)
 
         sns.kdeplot(
             x=x,
@@ -252,15 +254,20 @@ def CAT_plot(data_sets: list, labels=None):
                 make_plot(data_set, next(colors))
             label = labels[i] if labels is not None else None
             l = plt.legend(
-                handles=custom_lines, frameon=True, edgecolor="black", title=label
+                handles=custom_lines,
+                frameon=True,
+                edgecolor="black",
+                title=label,
+                loc="upper right",
             )
             ax.add_artist(l)
     else:
         for i, data_set in enumerate(data_sets):
             make_plot(data_set, next(colors))
 
-        ax.legend(handles=custom_lines, frameon=True, edgecolor="black")
-
+        ax.legend(
+            handles=custom_lines, frameon=True, edgecolor="black", loc="lower right"
+        )
 
     xlims[0] *= 0.75
     ylims[0] *= 0.75
@@ -276,3 +283,200 @@ def CAT_plot(data_sets: list, labels=None):
     plt.tight_layout()
 
     return fig, ax
+
+
+# fancy plotting stuff from https://stackoverflow.com/a/53586826
+def multiple_formatter(denominator=2, number=np.pi, latex="\pi"):
+    def gcd(a, b):
+        while b:
+            a, b = b, a % b
+        return a
+
+    def _multiple_formatter(x, pos):
+        den = denominator
+        num = int(np.rint(den * x / number))
+        com = gcd(num, den)
+        (num, den) = (int(num / com), int(den / com))
+        if den == 1:
+            if num == 0:
+                return r"$0$"
+            if num == 1:
+                return r"$%s$" % latex
+            elif num == -1:
+                return r"$-%s$" % latex
+            else:
+                return r"$%s%s$" % (num, latex)
+        else:
+            if num == 1:
+                return r"$\frac{%s}{%s}$" % (latex, den)
+            elif num == -1:
+                return r"$\frac{-%s}{%s}$" % (latex, den)
+            else:
+                return r"$\frac{%s%s}{%s}$" % (num, latex, den)
+
+    return _multiple_formatter
+
+
+class Multiple:
+    def __init__(self, denominator=2, number=np.pi, latex="\pi"):
+        self.denominator = denominator
+        self.number = number
+        self.latex = latex
+
+    def locator(self):
+        return plt.MultipleLocator(self.number / self.denominator)
+
+    def formatter(self):
+        return plt.FuncFormatter(
+            multiple_formatter(self.denominator, self.number, self.latex)
+        )
+
+
+def plot_phase_shifts(fig, ax1, ax2, deltas):
+    r"""
+    Plots the spin1/2-spin0 coupled phase shifts, the imaginary parts
+    on ax2 and the real parts on ax1
+
+    """
+    l = np.array(list(range(interactions.l_max + 1)))
+    deltas_plus = np.array([d[0] for d in deltas])
+    deltas_minus = np.array([d[1] for d in deltas[1:]])
+
+    p = ax1.plot(l, deltas_plus.real, marker=".", linestyle="solid", alpha=0.5)[0]
+    ax1.plot(
+        l[1:],
+        deltas_minus.real,
+        marker="x",
+        color=p.get_color(),
+        linestyle="dotted",
+        alpha=0.5,
+    )
+    ax2.plot(
+        l,
+        deltas_plus.imag,
+        marker=".",
+        color=p.get_color(),
+        linestyle="solid",
+        alpha=0.5,
+    )
+    ax2.plot(
+        l[1:],
+        deltas_minus.imag,
+        marker="x",
+        color=p.get_color(),
+        linestyle="dotted",
+        alpha=0.5,
+    )
+
+    ax1.set_ylabel(r"$\mathfrak{Re}\,\delta$ [radians]")
+    ax1.set_xlabel(r"$\ell$")
+    ax1.yaxis.set_major_locator(plt.MultipleLocator(np.pi / 6))
+    ax1.yaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter(denominator=6)))
+    ax1.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax2.set_ylabel(r"$\mathfrak{Im}\,\delta$ [radians]")
+    ax2.set_xlabel(r"$\ell$")
+    ax2.yaxis.set_major_locator(plt.MultipleLocator(np.pi / 6))
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter(denominator=6)))
+    ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+    styles = [
+        Line2D(
+            [0],
+            [0],
+            color="k",
+            linestyle="solid",
+            marker=".",
+            label=r"$\delta_+$",
+        ),
+        Line2D(
+            [0],
+            [0],
+            color="k",
+            linestyle="dotted",
+            marker="x",
+            label=r"$\delta_-$",
+        ),
+    ]
+    return styles, p.get_color()
+
+
+def plot_multiple_phase_shifts(datasets: list, labels: list, fig, ax1, ax2):
+    color_legend = []
+
+    for i, (deltas, label) in enumerate(zip(datasets, labels)):
+        # plot each one with small shift for overlap
+        styles, c = plot_phase_shifts(fig, ax1, ax2, deltas + i * 0.03)
+        color_legend.append(
+            Line2D([0], [0], color=c, linestyle="-", label=label),
+        )
+    leg1 = ax1.legend(handles=color_legend, loc="lower right")
+    ax1.legend(handles=styles, loc="upper right")
+    ax1.add_artist(leg1)
+
+    return fig, ax1, ax2
+
+
+def plot_wavefunctions(s_mesh, wavefunctions, fig, ax1, ax2, linestyle="-"):
+    r"""
+    Plots the spin1/2-spin0 coupled reduced radial wavefunctions, the imaginary parts
+    on ax2 and the real parts on ax1
+    """
+
+    legend_colors = []
+    lwaves = ["s", "p", "d", "f", "g", "h"]
+    lwaves_iter = iter(lwaves)
+    assert len(wavefunctions) <= 6
+
+    for u_list in solutions:
+        lsf = next(lwaves_iter)
+        for i, u in enumerate(u_list):
+            caption = r"$%d_{1/2}$" if i & 2 == 0 else r"$%d_{3/2}$"
+            c = next(color)
+            ax1.plot(s_mesh, u.real, linestyle=linestyle, color=c, alpha=0.5)
+            ax2.plot(s_mesh, u.imag, linestyle=linestyle, color=c, alpha=0.5)
+            legend_colors.append(
+                Line2D([0], [0], color=c, linestyle=linestyle, alpha=0.8, label=caption)
+            )
+
+    fig.legend(
+        handles=legend_colors,
+        ncol=3,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1),
+        bbox_transform=plt.gcf().transFigure,
+    )
+
+    Npi = int(np.max(s_mesh) / np.pi)
+    denom = Npi // 4
+
+    ax1.xaxis.set_major_locator(plt.MultipleLocator(np.pi / denom))
+    ax1.xaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter(denom=denom)))
+    ax2.xaxis.set_major_locator(plt.MultipleLocator(np.pi / denom))
+    ax2.xaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter(denom=denom)))
+
+    ax1.set_xlabel(r"$s = kr$ [dimensionless]")
+    ax1.set_ylabel(r"$\mathfrak{Re} \, u_{lj}(s)$ [a.u.]")
+    ax2.set_xlabel(r"$s = kr$ [dimensionless]")
+    ax2.set_ylabel(r"$\mathfrak{Im} \, u_{lj}(s)$ [a.u.]")
+    plt.tight_layout()
+
+    return fig, ax1, ax2
+
+
+def plot_multiple_wavefunctions(s_mesh, data_sets, labels, fig, ax1, ax2):
+    linestyles = ["solid", "dotted", "dashed", "dotdashed"]
+    assert len(datasets <= 4)
+    style_legend = []
+
+    for i, (data_set, label) in enumerate(zip(datasets, labels)):
+        fig, ax1, ax2 = plot_wavefunctions(
+            s_mesh, data_set, fig, ax1, ax2, linestyle=linestyle[i]
+        )
+        style_legend.append(
+            Line2D([0], [0], color="k", linestyle=linestyles[i], label=label),
+        )
+    leg1 = ax1.legend(handles=color_legend, loc="lower right")
+    ax1.legend(handles=styles, loc="upper right")
+    ax1.add_artist(leg1)
+
+    return fig, ax1, ax2

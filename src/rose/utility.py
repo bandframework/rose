@@ -123,6 +123,7 @@ def get_AME_binding_energy(A, Z):
     return None
 
 
+@njit
 def semiempirical_binding_energy(A, Z):
     r"""Calculates binding in MeV/c^2 given mass number, A, proton number, Z, by semi-empriical mass fomrula"""
     N = A - Z
@@ -152,14 +153,16 @@ def get_binding_energy(A, Z):
     return Eb
 
 
+@njit
 def mass(A, Z, Eb):
     r"""Calculates rest mass in MeV/c^2 given mass number, A, proton number, Z, and binding energy in MeV/c^2"""
     N = A - Z
     return Z * MASS_P + N * MASS_N - Eb
 
-
 def numerov_kernel(
-    x_grid: np.array,
+    x0 : np.double,
+    dx : np.double,
+    N  : np.int,
     initial_conditions: tuple,
     g: Callable[[np.double], np.double],
 ):
@@ -175,27 +178,19 @@ def numerov_kernel(
         initial_conditions : the value of y and y' at the minimum of x_grid
         g : callable for g(x)
     """
-    # initialize domain
-    xmin, xmax = x_grid[0], x_grid[-1]
-    dx = x_grid[1] - x_grid[0]
 
     # convenient factor
     f = dx * dx / 12.0
 
     # intialize domain walker
-    xnm = xmin
-    xn = xmin + dx
-    xnp = xn + dx
-
-    def forward_stepx(xnm, xn, xnp):
-        return xnm + dx, xn + dx, xnp + dx
+    xnm = x0
 
     # intial conditions
     ynm = initial_conditions[0]
     yn = ynm + initial_conditions[1] * dx
 
     # initialize range walker
-    y = np.empty(x_grid.shape, dtype=np.cdouble)
+    y = np.empty(N, dtype=np.cdouble)
     y[0] = ynm
     y[1] = yn
 
@@ -206,13 +201,13 @@ def numerov_kernel(
     for n in range(2, y.shape[0]):
         # determine next y
         gnm = g(xnm)
-        gn = g(xn)
-        gnp = g(xnp)
+        gn = g(xnm+dx)
+        gnp = g(xnm + dx + dx)
         ynp = (2 * yn * (1.0 - 5.0 * f * gn) - ynm * (1.0 + f * gnm)) / (1.0 + f * gnp)
 
         # forward step
-        xnm, xn, xnp = forward_stepx(xnm, xn, xnp)
         ynm, yn = forward_stepy(n, ynm, yn, ynp)
+        xnm += dx
 
     return y
 

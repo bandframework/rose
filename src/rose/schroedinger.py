@@ -145,7 +145,7 @@ class SchroedingerEquation:
         if s_mesh is None:
             calc_mesh = self.s_mesh
         else:
-            calc_mesh = np.linspace(s_mesh[0], s_mesh[-1], self.numerov_grid_size)
+            calc_mesh = np.linspace(s_mesh[0], s_mesh[-1], self.numerov_grid_size, dtype=np.double)
 
         rho_0, initial_conditions = self.initial_conditions(
             alpha, phi_threshold, l, rho_0
@@ -153,7 +153,9 @@ class SchroedingerEquation:
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
         y = numerov_kernel(
-            calc_mesh,
+            calc_mesh[0],
+            calc_mesh[1] - calc_mesh[0],
+            self.numerov_grid_size,
             initial_conditions,
             lambda s: -self.radial_se_deriv2(s, l, alpha, S_C),
         )
@@ -192,7 +194,9 @@ class SchroedingerEquation:
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
         y = numerov_kernel(
-            self.s_mesh,
+            self.s_mesh[0],
+            self.s_mesh[1] - self.s_mesh[0],
+            self.numerov_grid_size,
             initial_conditions,
             lambda s: -self.radial_se_deriv2(s, l, alpha, S_C),
         )

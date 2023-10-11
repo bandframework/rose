@@ -25,7 +25,7 @@ class SchroedingerEquation:
     DEFAULT_R_MIN = 1e-2  # fm
     DEFAULT_R_MAX = 30.0  # fm
     DEFAULT_S_MIN = 1e-2  # fm
-    DEFAULT_S_MAX = 10*np.pi  # fm
+    DEFAULT_S_MAX = 10 * np.pi  # fm
     DEFAULT_R_0 = 20.0  # fm
     DEFAULT_NUM_PTS = 2000
     MAX_STEPS = 20000
@@ -196,7 +196,7 @@ class SchroedingerEquation:
             initial_conditions,
             lambda s: -self.radial_se_deriv2(s, l, alpha, S_C),
         )
-        u = interp1d(s_mesh, y, bounds_error=True)
+        u = interp1d(self.s_mesh, y, bounds_error=True)
         rl = 1 / s_0 * (u(s_0) / derivative(u, s_0, 1.0e-6))
         return rl
 

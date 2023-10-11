@@ -120,7 +120,7 @@ class ScatteringAmplitudeEmulator:
         angles: np.array = DEFAULT_ANGLE_MESH,
         s_0: float = 6 * np.pi,
         verbose: bool = True,
-        l_cutoff_rel: float = 1.0e-6,
+        Sl_cutoff: float = 1.0e-6,
         s_mesh=None,
         **solver_kwargs,
     ):
@@ -135,8 +135,8 @@ class ScatteringAmplitudeEmulator:
                 emulate the cross section.
             s_0 (float): $s$ point where the phase shift is extracted
             verbose (bool): Do you want the class to print out warnings?
-            l_cutoff_rel : relative tolerance for change in scattering amplitudes between
-                partial waves, used to stop calculation ig higher partial waves are negligble
+            Sl_cutoff : absolute tolerance for deviation of real part of S-matrix amplitudes
+                from 1, used as criteria to stop calculation ig higher partial waves are negligble
             s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
             solver_kwargs : passed to SchroedingerEquation
 
@@ -173,7 +173,7 @@ class ScatteringAmplitudeEmulator:
             angles,
             s_0=s_0,
             verbose=verbose,
-            l_cutoff_rel=l_cutoff_rel,
+            Sl_cutoff=Sl_cutoff,
             initialize_emulator=False,
         )
 
@@ -188,7 +188,7 @@ class ScatteringAmplitudeEmulator:
         use_svd: bool = True,
         s_mesh: np.array = DEFAULT_RHO_MESH,
         s_0: float = 6 * np.pi,
-        l_cutoff_rel: float = 1.0e-6,
+        Sl_cutoff: float = 1.0e-6,
         **solver_kwargs,
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
@@ -204,7 +204,7 @@ class ScatteringAmplitudeEmulator:
             use_svd (bool): Use principal components of training wave functions?
             s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
             s_0 (float): $s$ point where the phase shift is extracted
-            l_cutoff_rel : relative tolerance for change in scattering amplitudes between
+            Sl_cutoff : relative tolerance for change in scattering amplitudes between
                 partial waves, used to stop calculation ig higher partial waves are negligble
             solver_kwargs : passed to `SchroedingerEquation`
 
@@ -239,7 +239,7 @@ class ScatteringAmplitudeEmulator:
             l_max,
             angles=angles,
             s_0=s_0,
-            l_cutoff_rel=l_cutoff_rel,
+            Sl_cutoff=Sl_cutoff,
         )
 
     def __init__(
@@ -250,7 +250,7 @@ class ScatteringAmplitudeEmulator:
         angles: np.array = DEFAULT_ANGLE_MESH,
         s_0: float = 6 * np.pi,
         verbose: bool = True,
-        l_cutoff_rel=1.0e-6,
+        Sl_cutoff=1.0e-6,
         initialize_emulator=True,
     ):
         r"""Trains a reduced-basis emulator that computes differential and total cross sections (from emulated phase shifts).
@@ -264,7 +264,7 @@ class ScatteringAmplitudeEmulator:
                 emulate the cross section.
             s_0 (float): $s$ point where the phase shift is extracted
             verbose (bool): Do you want the class to print out warnings?
-            l_cutoff_rel : relative tolerance for change in scattering amplitudes between
+            Sl_cutoff : relative tolerance for change in scattering amplitudes between
                 partial waves, used to stop calculation ig higher partial waves are negligble
             initialize_emulator : build the low-order emulator (True required for emulation)
 
@@ -286,7 +286,7 @@ class ScatteringAmplitudeEmulator:
         if l_max is None:
             l_max = interaction_space.l_max
         self.l_max = l_max
-        self.l_cutoff_rel = l_cutoff_rel
+        self.Sl_cutoff = Sl_cutoff
 
         # construct bases
         bases_types = [isinstance(bases[l], CustomBasis) for l in range(self.l_max + 1)]
@@ -556,7 +556,11 @@ class ScatteringAmplitudeEmulator:
             # This ensures that A reduces to the non-spin-orbit formula, and B = 0.
             S_l_minus = S_l_plus.copy()
 
-        return S_l_plus, S_l_minus
+        lmp = np.argwhere( np.fabs(S_l_plus.real - 1) < Sl_cutoff)
+        lmm = np.argwhere( np.fabs(S_l_minus.real - 1) < Sl_cutoff)
+        lm = max(lmp, lmm)
+
+        return S_l_plus[:lm], S_l_minus[:lm]
 
     def total_cross_section(self, deltas: np.array):
         r"""Gives the "total" (angle-integrated) cross section in mb. If the interaction
@@ -615,11 +619,6 @@ class ScatteringAmplitudeEmulator:
                 cross sections (NucleonNucleusXS) :
         """
         S_l_plus, S_l_minus = self.S_matrix_elements(deltas)
-        Smag = np.real(S_l_plus * S_l_plus.conj() + S_l_minus * S_l_minus.conj())
-        reldiff = np.array(
-            [np.fabs(Smag[l] - Smag[l - 1]) / Smag[l - 1] for l in range(1, self.l_max)]
-        )
-        lmax = np.min((self.l_max, np.argmax(reldiff - self.l_cutoff_rel < 0)))
 
         k = self.rbes[0][0].interaction.momentum(theta)
 

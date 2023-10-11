@@ -204,8 +204,8 @@ class ScatteringAmplitudeEmulator:
             use_svd (bool): Use principal components of training wave functions?
             s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
             s_0 (float): $s$ point where the phase shift is extracted
-            Sl_cutoff : relative tolerance for change in scattering amplitudes between
-                partial waves, used to stop calculation ig higher partial waves are negligble
+            Sl_cutoff : absolute tolerance for deviation of real part of S-matrix amplitudes
+                from 1, used as criteria to stop calculation ig higher partial waves are negligble
             solver_kwargs : passed to `SchroedingerEquation`
 
         Returns:
@@ -264,8 +264,8 @@ class ScatteringAmplitudeEmulator:
                 emulate the cross section.
             s_0 (float): $s$ point where the phase shift is extracted
             verbose (bool): Do you want the class to print out warnings?
-            Sl_cutoff : relative tolerance for change in scattering amplitudes between
-                partial waves, used to stop calculation ig higher partial waves are negligble
+            Sl_cutoff : absolute tolerance for deviation of real part of S-matrix amplitudes
+                from 1, used as criteria to stop calculation ig higher partial waves are negligble
             initialize_emulator : build the low-order emulator (True required for emulation)
 
         Attributes:

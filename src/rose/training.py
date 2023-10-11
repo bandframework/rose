@@ -476,7 +476,9 @@ def plot_wavefunctions(
     )
 
     Npi = int(np.max(s_mesh) / np.pi)
-    denom = Npi // 4
+    denom = 6 // Npi
+    if denom == 0:
+        denom = 1
 
     ax1.xaxis.set_major_locator(plt.MultipleLocator(np.pi / denom))
     ax1.xaxis.set_major_formatter(

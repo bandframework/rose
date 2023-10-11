@@ -121,6 +121,7 @@ class ScatteringAmplitudeEmulator:
         s_0: float = 6 * np.pi,
         verbose: bool = True,
         l_cutoff_rel: float = 1.0e-6,
+        s_mesh=None,
         **solver_kwargs,
     ):
         r"""Sets up a ScatteringAmplitudeEmulator without any emulation capabilities, for use purely
@@ -136,6 +137,7 @@ class ScatteringAmplitudeEmulator:
             verbose (bool): Do you want the class to print out warnings?
             l_cutoff_rel : relative tolerance for change in scattering amplitudes between
                 partial waves, used to stop calculation ig higher partial waves are negligble
+            s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
             solver_kwargs : passed to SchroedingerEquation
 
         Returns:
@@ -147,11 +149,20 @@ class ScatteringAmplitudeEmulator:
             basis_list = []
             for interaction in interaction_list:
                 solver = SchroedingerEquation(
-                    interaction, domain=[1.0e-4, s_0 + 1.0e-1], **solver_kwargs
+                    interaction,
+                    domain=[SchroedingerEquation.DEFAULT_S_MIN, s_0 + 1.0e-1],
+                    **solver_kwargs,
                 )
-                basis = Basis(
-                    solver, None, np.array([0, s_0 + 1.0]), None, interaction.ell
-                )
+                if s_mesh is None:
+                    if hasattr(solver, "s_mesh"):
+                        s_mesh = solver.s_mesh
+                    else:
+                        s_mesh = np.linspace(
+                            SchroedingerEquation.DEFAULT_S_MIN,
+                            s_0 + 1.0e-1,
+                            SchroedingerEquation.DEFAULT_NUM_PTS,
+                        )
+                basis = Basis(solver, None, s_mesh, None, interaction.ell)
                 basis_list.append(basis)
             bases.append(basis_list)
 
@@ -461,12 +472,16 @@ class ScatteringAmplitudeEmulator:
         """
         return [[x.emulate_wave_function(theta) for x in rbe] for rbe in self.rbes]
 
-    def exact_wave_functions(self, theta: np.array, **solver_kwargs):
+    def exact_wave_functions(
+        self, theta: np.array, s_mesh: np.array = None, **solver_kwargs
+    ):
         r"""Gives the wave functions for each partial wave.  Returns a list of
             arrays.  Order is [l=0, l=1, ..., l=l_max-1].
 
         Parameters:
             theta (ndarray): parameter-space vector
+            s_mesh (ndarray): s_mesh on which to evaluate phi, if different from the one used
+                for emulation
             solver_kwargs (ndarray): passed to SchroedingerEquation.phi
 
         Returns:
@@ -474,13 +489,26 @@ class ScatteringAmplitudeEmulator:
 
 
         """
-        return [
-            [
-                x.basis.solver.phi(theta, x.s_mesh, x.interaction.ell, **solver_kwargs)
-                for x in rbe
+        if s_mesh is None:
+            return [
+                [
+                    x.basis.solver.phi(
+                        theta, x.s_mesh, x.interaction.ell, **solver_kwargs
+                    )
+                    for x in rbe
+                ]
+                for rbe in self.rbes
             ]
-            for rbe in self.rbes
-        ]
+        else:
+            return [
+                [
+                    x.basis.solver.phi(
+                        theta, s_mesh, x.interaction.ell, **solver_kwargs
+                    )
+                    for x in rbe
+                ]
+                for rbe in self.rbes
+            ]
 
     def dsdo(self, theta: np.array, deltas: np.array):
         r"""Gives the differential cross section (dsigma/dOmega = dsdo) in mb/Sr.

@@ -400,7 +400,7 @@ def plot_phase_shifts(fig, ax1, ax2, deltas):
     return styles, p.get_color()
 
 
-def plot_multiple_phase_shifts(datasets: list, labels: list, fig, ax1, ax2):
+def compare_phase_shifts(datasets: list, labels: list, fig, ax1, ax2):
     color_legend = []
 
     for i, (deltas, label) in enumerate(zip(datasets, labels)):
@@ -463,12 +463,12 @@ def plot_wavefunctions(s_mesh, wavefunctions, fig, ax1, ax2, linestyle="-"):
     return fig, ax1, ax2
 
 
-def plot_multiple_wavefunctions(s_mesh, data_sets, labels, fig, ax1, ax2):
+def compare_partial_waves(s_mesh, data_sets, labels, fig, ax1, ax2):
     linestyles = ["solid", "dotted", "dashed", "dotdashed"]
     assert len(datasets <= 4)
     style_legend = []
 
-    for i, (data_set, label) in enumerate(zip(datasets, labels)):
+    for i, (data_set, label) in enumerate(zip(data_sets, labels)):
         fig, ax1, ax2 = plot_wavefunctions(
             s_mesh, data_set, fig, ax1, ax2, linestyle=linestyle[i]
         )

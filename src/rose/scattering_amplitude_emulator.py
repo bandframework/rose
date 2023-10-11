@@ -625,10 +625,12 @@ class ScatteringAmplitudeEmulator:
 
         # determine desired angle grid and precompute
         # Legendre functions if necessary
-        if not angles:
+        if angles is None:
             angles = self.angles
             P_l_costheta = self.P_l_costheta
             P_1_l_costheta = self.P_1_l_costheta
+            rutherford = self.rutherford
+            f_c = self.f_c
         else:
             assert np.max(angles) <= np.pi and np.min(angles) >= 0
             P_l_costheta = np.array(
@@ -636,6 +638,15 @@ class ScatteringAmplitudeEmulator:
             )
             P_1_l_costheta = np.array(
                 [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
+            )
+            sin2 = np.sin(angles / 2) ** 2
+            rutherford = (
+                10 * self.eta**2 / (4 * k**2 * sin2**2)
+            )
+            f_c = (
+                -self.eta
+                / (2 * k * sin2)
+                * np.exp(-1j * self.eta * np.log(sin2) + 2j * self.sigma_l[0])
             )
 
         if self.rbes[0][0].interaction.eta(theta) >= 0:
@@ -648,9 +659,9 @@ class ScatteringAmplitudeEmulator:
                     P_l_costheta,
                     P_1_l_costheta,
                     self.l_max,
-                    self.f_c,
+                    f_c,
                     self.sigma_l,
-                    self.rutherford,
+                    rutherford,
                 )
             )
         else:

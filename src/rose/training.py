@@ -173,32 +173,32 @@ class CATPerformance:
         self.median_rel_err = np.median(self.rel_err, axis=axes)
 
 
-colors = iter(
-    [
-        "#1f77b4",
-        "#ff7f0e",
-        "#2ca02c",
-        "#d62728",
-        "#9467bd",
-        "#8c564b",
-        "#e377c2",
-        "#7f7f7f",
-        "#bcbd22",
-        "#17becf",
-    ]
-)
+colors = [
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+    "#9467bd",
+    "#8c564b",
+    "#e377c2",
+    "#7f7f7f",
+    "#bcbd22",
+    "#17becf",
+]
 
 
-def CAT_plot(data_sets: list, labels=None):
+def CAT_plot(data_sets: list, labels=None, border_styles=None):
     fig, ax = plt.subplots(figsize=(9, 6), dpi=400)
 
     # plt.rc("xtick")
     # plt.rc("ytick")
 
     custom_lines = []
+    col = iter(colors)
 
     xlims = [np.inf, -np.inf]
     ylims = [np.inf, -np.inf]
+    legend_locs = iter(["upper right", "lower right", "upper left", "lower left"])
 
     def reset_lims(x, y):
         xlims[0] = min(np.min(x), xlims[0])
@@ -206,14 +206,14 @@ def CAT_plot(data_sets: list, labels=None):
         ylims[0] = min(np.min(y), ylims[0])
         ylims[1] = max(np.max(y), ylims[1])
 
-    def make_plot(data_set: CATPerformance, color):
+    def make_plot(data_set: CATPerformance, color, border_style="dashed"):
         custom_lines.append(
             Line2D(
                 [],
                 [],
                 color=color,
                 marker="o",
-                linestyle="None",
+                linestyle=border_style,
                 markersize=10,
                 label=data_set.label,
             )
@@ -243,7 +243,7 @@ def CAT_plot(data_sets: list, labels=None):
             color=color,
             log_scale=[True, True],
             linewidths=3,
-            linestyles="dashed",
+            linestyles=border_style,
         )
         ax.scatter(x, y, s=5, color=color)
 
@@ -251,28 +251,33 @@ def CAT_plot(data_sets: list, labels=None):
         for i, sub_list in enumerate(data_sets):
             custom_lines = []
             for j, data_set in enumerate(sub_list):
-                make_plot(data_set, next(colors))
+                if border_styles is not None:
+                    border_style = border_styles[i]
+                else:
+                    border_style = "dashed"
+                make_plot(data_set, next(col), border_style=border_style)
             label = labels[i] if labels is not None else None
-            l = plt.legend(
+            loc = next(legend_locs, "best")
+            l = ax.legend(
                 handles=custom_lines,
                 frameon=True,
                 edgecolor="black",
                 title=label,
-                loc="upper right",
+                loc=loc,
             )
             ax.add_artist(l)
     else:
         for i, data_set in enumerate(data_sets):
-            make_plot(data_set, next(colors))
+            make_plot(data_set, next(col))
 
         ax.legend(
             handles=custom_lines, frameon=True, edgecolor="black", loc="lower right"
         )
 
-    xlims[0] *= 0.75
-    ylims[0] *= 0.75
-    xlims[1] *= 1.25
-    ylims[1] *= 1.25
+    xlims[0] *= 0.8
+    ylims[0] *= 0.5
+    xlims[1] *= 1.2
+    ylims[1] *= 1.5
     ax.set_xlim(xlims)
     ax.set_ylim(ylims)
     ax.set_xscale("log")
@@ -332,19 +337,35 @@ class Multiple:
         )
 
 
-def plot_phase_shifts(fig, ax1, ax2, deltas):
+def plot_phase_shifts(fig, ax1, ax2, deltas, shift=0, color=None):
     r"""
     Plots the spin1/2-spin0 coupled phase shifts, the imaginary parts
     on ax2 and the real parts on ax1
 
     """
-    l = np.array(list(range(interactions.l_max + 1)))
+    l = np.array(list(range(len(deltas))))
     deltas_plus = np.array([d[0] for d in deltas])
     deltas_minus = np.array([d[1] for d in deltas[1:]])
-
-    p = ax1.plot(l, deltas_plus.real, marker=".", linestyle="solid", alpha=0.5)[0]
+    if color is not None:
+        p = ax1.plot(
+            l + shift,
+            deltas_plus.real,
+            color=color,
+            marker=".",
+            linestyle="solid",
+            alpha=0.5,
+        )[0]
+    else:
+        p = ax1.plot(
+            l + shift,
+            deltas_plus.real,
+            color=color,
+            marker=".",
+            linestyle="solid",
+            alpha=0.5,
+        )[0]
     ax1.plot(
-        l[1:],
+        l[1:] + shift,
         deltas_minus.real,
         marker="x",
         color=p.get_color(),
@@ -352,7 +373,7 @@ def plot_phase_shifts(fig, ax1, ax2, deltas):
         alpha=0.5,
     )
     ax2.plot(
-        l,
+        l + shift,
         deltas_plus.imag,
         marker=".",
         color=p.get_color(),
@@ -360,7 +381,7 @@ def plot_phase_shifts(fig, ax1, ax2, deltas):
         alpha=0.5,
     )
     ax2.plot(
-        l[1:],
+        l[1:] + shift,
         deltas_minus.imag,
         marker="x",
         color=p.get_color(),
@@ -369,12 +390,14 @@ def plot_phase_shifts(fig, ax1, ax2, deltas):
     )
 
     ax1.set_ylabel(r"$\mathfrak{Re}\,\delta$ [radians]")
-    ax1.set_xlabel(r"$\ell$")
+    ax1.set_xlabel(r"$\ell$ [$\hbar$]")
     ax1.yaxis.set_major_locator(plt.MultipleLocator(np.pi / 6))
     ax1.yaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter(denominator=6)))
     ax1.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax2.set_xlim(ax1.get_xlim())
+    ax2.set_ylim(ax1.get_ylim())
     ax2.set_ylabel(r"$\mathfrak{Im}\,\delta$ [radians]")
-    ax2.set_xlabel(r"$\ell$")
+    ax2.set_xlabel(r"$\ell$ [$\hbar$]")
     ax2.yaxis.set_major_locator(plt.MultipleLocator(np.pi / 6))
     ax2.yaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter(denominator=6)))
     ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -400,12 +423,12 @@ def plot_phase_shifts(fig, ax1, ax2, deltas):
     return styles, p.get_color()
 
 
-def compare_phase_shifts(datasets: list, labels: list, fig, ax1, ax2):
+def compare_phase_shifts(data_sets: list, labels: list, fig, ax1, ax2):
     color_legend = []
 
-    for i, (deltas, label) in enumerate(zip(datasets, labels)):
+    for i, (deltas, label) in enumerate(zip(data_sets, labels)):
         # plot each one with small shift for overlap
-        styles, c = plot_phase_shifts(fig, ax1, ax2, deltas + i * 0.03)
+        styles, c = plot_phase_shifts(fig, ax1, ax2, deltas, shift=i * 0.03)
         color_legend.append(
             Line2D([0], [0], color=c, linestyle="-", label=label),
         )
@@ -416,7 +439,9 @@ def compare_phase_shifts(datasets: list, labels: list, fig, ax1, ax2):
     return fig, ax1, ax2
 
 
-def plot_wavefunctions(s_mesh, wavefunctions, fig, ax1, ax2, linestyle="-"):
+def plot_wavefunctions(
+    s_mesh, wavefunctions, fig, ax1, ax2, linestyle="-", col_iter=iter(colors)
+):
     r"""
     Plots the spin1/2-spin0 coupled reduced radial wavefunctions, the imaginary parts
     on ax2 and the real parts on ax1
@@ -427,22 +452,26 @@ def plot_wavefunctions(s_mesh, wavefunctions, fig, ax1, ax2, linestyle="-"):
     lwaves_iter = iter(lwaves)
     assert len(wavefunctions) <= 6
 
-    for u_list in solutions:
+    for l, u_list in enumerate(wavefunctions):
         lsf = next(lwaves_iter)
         for i, u in enumerate(u_list):
-            caption = r"$%d_{1/2}$" if i & 2 == 0 else r"$%d_{3/2}$"
-            c = next(color)
+            caption = r"$%s_{1/2}$" % lsf if i % 2 == 0 else r"$%s_{3/2}$" % lsf
+            c = next(col_iter)
             ax1.plot(s_mesh, u.real, linestyle=linestyle, color=c, alpha=0.5)
             ax2.plot(s_mesh, u.imag, linestyle=linestyle, color=c, alpha=0.5)
             legend_colors.append(
                 Line2D([0], [0], color=c, linestyle=linestyle, alpha=0.8, label=caption)
             )
+            if l == 0:
+                legend_colors.append(
+                    Line2D([0], [0], color="w", linestyle=None, label=None)
+                )
 
     fig.legend(
         handles=legend_colors,
-        ncol=3,
+        ncol=len(wavefunctions),
         loc="upper center",
-        bbox_to_anchor=(0.5, 1),
+        bbox_to_anchor=(0.5, 1.05),
         bbox_transform=plt.gcf().transFigure,
     )
 
@@ -450,9 +479,13 @@ def plot_wavefunctions(s_mesh, wavefunctions, fig, ax1, ax2, linestyle="-"):
     denom = Npi // 4
 
     ax1.xaxis.set_major_locator(plt.MultipleLocator(np.pi / denom))
-    ax1.xaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter(denom=denom)))
+    ax1.xaxis.set_major_formatter(
+        plt.FuncFormatter(multiple_formatter(denominator=denom))
+    )
     ax2.xaxis.set_major_locator(plt.MultipleLocator(np.pi / denom))
-    ax2.xaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter(denom=denom)))
+    ax2.xaxis.set_major_formatter(
+        plt.FuncFormatter(multiple_formatter(denominator=denom))
+    )
 
     ax1.set_xlabel(r"$s = kr$ [dimensionless]")
     ax1.set_ylabel(r"$\mathfrak{Re} \, u_{lj}(s)$ [a.u.]")
@@ -465,18 +498,18 @@ def plot_wavefunctions(s_mesh, wavefunctions, fig, ax1, ax2, linestyle="-"):
 
 def compare_partial_waves(s_mesh, data_sets, labels, fig, ax1, ax2):
     linestyles = ["solid", "dotted", "dashed", "dotdashed"]
-    assert len(datasets <= 4)
+    assert len(data_sets) <= 4
     style_legend = []
 
     for i, (data_set, label) in enumerate(zip(data_sets, labels)):
+        col_iter = iter(colors)
         fig, ax1, ax2 = plot_wavefunctions(
-            s_mesh, data_set, fig, ax1, ax2, linestyle=linestyle[i]
+            s_mesh, data_set, fig, ax1, ax2, linestyle=linestyles[i], col_iter=col_iter
         )
         style_legend.append(
             Line2D([0], [0], color="k", linestyle=linestyles[i], label=label),
         )
-    leg1 = ax1.legend(handles=color_legend, loc="lower right")
-    ax1.legend(handles=styles, loc="upper right")
+    leg1 = ax1.legend(handles=style_legend, loc="lower right")
     ax1.add_artist(leg1)
 
     return fig, ax1, ax2

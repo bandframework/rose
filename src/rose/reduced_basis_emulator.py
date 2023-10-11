@@ -57,7 +57,7 @@ class ReducedBasisEmulator:
         use_svd: bool = True,  # Use principal components as basis vectors?
         s_mesh: np.array = DEFAULT_RHO_MESH,  # s = rho = kr; solutions are phi(s)
         s_0: float = 6 * np.pi,  # phase shift is "extracted" at s_0
-        hf_tols: list = None,  # 2 numbers: high-fidelity solver tolerances, relative and absolute
+        **solver_kwargs,
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
 
@@ -68,15 +68,17 @@ class ReducedBasisEmulator:
             use_svd (bool): Use principal components of training wave functions?
             s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
             s_0 (float): $s$ point where the phase shift is extracted
-            hf_tols (list): 2-element list passed to `SchroedingerEquation`;
-                [relative tolerance, absolute tolerance]
+            solver_kwargs : passed to `SchroedingerEquation`
 
         Returns:
             rbe (ReducedBasisEmulator): $\ell$-specific, reduced basis emulator
 
         """
+
         basis = RelativeBasis(
-            SchroedingerEquation(interaction, hifi_tolerances=hf_tols),
+            SchroedingerEquation(
+                interaction, domain=[s_mesh[0], s_mesh[-1]], **solver_kwargs
+            ),
             theta_train,
             s_mesh,
             n_basis,
@@ -264,7 +266,7 @@ class ReducedBasisEmulator:
             delta (float | complex): high-fidelity phase shift (extracted at $s_0$)
 
         """
-        return self.basis.solver.delta(theta, self.s_mesh[[0, -1]], self.l, self.s_0)
+        return self.basis.solver.delta(theta, self.l, self.s_0)
 
     def save(self, filename):
         r"""Write the current emulator to file.

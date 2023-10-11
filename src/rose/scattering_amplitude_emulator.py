@@ -120,7 +120,7 @@ class ScatteringAmplitudeEmulator:
         angles: np.array = DEFAULT_ANGLE_MESH,
         s_0: float = 6 * np.pi,
         verbose: bool = True,
-        l_cutoff_rel: float = 1.0e-3,
+        l_cutoff_rel: float = 1.0e-6,
         **solver_kwargs,
     ):
         r"""Sets up a ScatteringAmplitudeEmulator without any emulation capabilities, for use purely
@@ -146,8 +146,12 @@ class ScatteringAmplitudeEmulator:
         for interaction_list in interaction_space.interactions:
             basis_list = []
             for interaction in interaction_list:
-                solver = SchroedingerEquation(interaction, **solver_kwargs)
-                basis = Basis(solver, None, np.array([0, s_0 + 1.0]), None, interaction.ell)
+                solver = SchroedingerEquation(
+                    interaction, domain=[1.0e-4, s_0 + 1.0e-1], **solver_kwargs
+                )
+                basis = Basis(
+                    solver, None, np.array([0, s_0 + 1.0]), None, interaction.ell
+                )
                 basis_list.append(basis)
             bases.append(basis_list)
 
@@ -173,10 +177,8 @@ class ScatteringAmplitudeEmulator:
         use_svd: bool = True,
         s_mesh: np.array = DEFAULT_RHO_MESH,
         s_0: float = 6 * np.pi,
-        rk_tols: list = [10e-9, 10e-9],
-        numerov_grid_size: int = 1e4,
-        solver_method: str = "Runge-Kutta",
-        l_cutoff_rel: float = 1.0e-3,
+        l_cutoff_rel: float = 1.0e-6,
+        **solver_kwargs,
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
 
@@ -191,13 +193,9 @@ class ScatteringAmplitudeEmulator:
             use_svd (bool): Use principal components of training wave functions?
             s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
             s_0 (float): $s$ point where the phase shift is extracted
-            rk_tols (list): 2-element list passed to `SchroedingerEquation`; used for training
-                [relative tolerance, absolute tolerance]
-            numerov_grid_size (int) : grid size passed to `SchroedingerEquation`; used for training
-            solver_method (str) : high-fidelity solver method passed to `SchroedingerEquation`;
-                used for training
             l_cutoff_rel : relative tolerance for change in scattering amplitudes between
                 partial waves, used to stop calculation ig higher partial waves are negligble
+            solver_kwargs : passed to `SchroedingerEquation`
 
         Returns:
             sae (ScatteringAmplitudeEmulator): scattering amplitude emulator
@@ -211,9 +209,8 @@ class ScatteringAmplitudeEmulator:
                 RelativeBasis(
                     SchroedingerEquation(
                         interaction,
-                        solver_method=solver_method,
-                        RK_tolerances=rk_tols,
-                        numerov_grid_size=numerov_grid_size,
+                        domain=[s_mesh[0], s_mesh[-1]],
+                        **solver_kwargs,
                     ),
                     theta_train,
                     s_mesh,
@@ -242,7 +239,7 @@ class ScatteringAmplitudeEmulator:
         angles: np.array = DEFAULT_ANGLE_MESH,
         s_0: float = 6 * np.pi,
         verbose: bool = True,
-        l_cutoff_rel=1.0e-3,
+        l_cutoff_rel=1.0e-6,
         initialize_emulator=True,
     ):
         r"""Trains a reduced-basis emulator that computes differential and total cross sections (from emulated phase shifts).

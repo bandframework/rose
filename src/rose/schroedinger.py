@@ -379,7 +379,7 @@ class SchroedingerEquation:
         if self.solver_method == "Runge-Kutta":
             rl = self.RK_rmatrix(alpha, self.domain, l, s_0, **kwargs)
         elif self.solver_method == "Numerov":
-            rl = self.numerov_rmatrix(alpha, self.s_mesh, l, s_0, **kwargs)
+            rl = self.numerov_rmatrix(alpha, l, s_0, **kwargs)
 
         return (
             np.log(

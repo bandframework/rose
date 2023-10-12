@@ -120,7 +120,7 @@ class ScatteringAmplitudeEmulator:
         angles: np.array = DEFAULT_ANGLE_MESH,
         s_0: float = 6 * np.pi,
         verbose: bool = True,
-        Sl_cutoff: float = 1.0e-6,
+        Sl_cutoff: float = 1.0e-4,
         s_mesh=None,
         **solver_kwargs,
     ):
@@ -188,7 +188,7 @@ class ScatteringAmplitudeEmulator:
         use_svd: bool = True,
         s_mesh: np.array = DEFAULT_RHO_MESH,
         s_0: float = 6 * np.pi,
-        Sl_cutoff: float = 1.0e-6,
+        Sl_cutoff: float = 1.0e-4,
         **solver_kwargs,
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
@@ -250,7 +250,7 @@ class ScatteringAmplitudeEmulator:
         angles: np.array = DEFAULT_ANGLE_MESH,
         s_0: float = 6 * np.pi,
         verbose: bool = True,
-        Sl_cutoff=1.0e-6,
+        Sl_cutoff=1.0e-4,
         initialize_emulator=True,
     ):
         r"""Trains a reduced-basis emulator that computes differential and total cross sections
@@ -526,16 +526,19 @@ class ScatteringAmplitudeEmulator:
         k = self.rbes[0][0].interaction.momentum(theta)
 
         S_l_plus, S_l_minus = self.S_matrix_elements(deltas)
-        l = self.ls[: S_l_plus.shape[0]]
+        lmax = S_l_plus.shape[0]
+        l = self.ls[:lmax]
 
         A = self.f_c + (1 / (2j * k)) * np.sum(
-            np.exp(2j * self.sigma_l)
+            np.exp(2j * self.sigma_l[:lmax])
             * ((l + 1) * (S_l_plus - 1) + l * (S_l_minus - 1))
-            * self.P_l_costheta,
+            * self.P_l_costheta[:lmax, ...],
             axis=0,
         )
         B = (1 / (2j * k)) * np.sum(
-            np.exp(2j * self.sigma_l) * (S_l_plus - S_l_minus) * self.P_1_l_costheta,
+            np.exp(2j * self.sigma_l[:lmax])
+            * (S_l_plus - S_l_minus)
+            * self.P_1_l_costheta[:lmax, ...],
             axis=0,
         )
 

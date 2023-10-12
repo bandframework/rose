@@ -482,6 +482,12 @@ def compare_phase_shifts_err(delta1, delta2, label1, label2, fig, ax1, ax2, ax3,
     ax4.relim()
     ax4.autoscale()
 
+    ylim3 = ax3.get_ylim()
+    ylim4 = ax4.get_ylim()
+    ylim = [min(ylim3[0], ylim4[0]), max(ylim3[1], ylim4[1])]
+    ax3.set_ylim(ylim)
+    ax4.set_ylim(ylim)
+
     plt.tight_layout()
 
 

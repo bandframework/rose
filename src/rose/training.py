@@ -452,7 +452,7 @@ def compare_phase_shifts_err(delta1, delta2, label1, label2, fig, ax1, ax2, ax3,
     for l in range(len(delta1)):
         diff = []
         for j in range(len(delta1[l])):
-            diff.append((delta1[l][j] - delta2[l][j]) ** 2)
+            diff.append( np.fabs(delta1[l][j] - delta2[l][j]) )
         diffs.append(diff)
 
     plot_phase_shifts(fig, ax3, ax4, diffs, color="k")
@@ -461,11 +461,11 @@ def compare_phase_shifts_err(delta1, delta2, label1, label2, fig, ax1, ax2, ax3,
     if small_label2 is not None:
         small_label2 = label2
     ax3.set_ylabel(
-        r"$\mathfrak{Re}\,\left( \delta_{%s} - \delta_{%s} \right)^2$ [radians]"
+        r"$\mathfrak{Re}\,\left| \delta_{%s} - \delta_{%s} \right|$ [radians]"
         % (small_label1, small_label2)
     )
     ax4.set_ylabel(
-        r"$\mathfrak{Im|}\,\left( \delta_{%s} - \delta_{%s} \right)^2$ [radians]"
+        r"$\mathfrak{Im|}\,\left| \delta_{%s} - \delta_{%s} \right|$ [radians]"
         % (small_label1, small_label2)
     )
 

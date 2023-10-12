@@ -633,6 +633,8 @@ class ScatteringAmplitudeEmulator:
                 cross sections (NucleonNucleusXS) :
         """
         S_l_plus, S_l_minus = self.S_matrix_elements(deltas)
+        S_l_plus = S_l_plus.T[0]
+        S_l_minus = S_l_minus.T[0]
 
         k = self.rbes[0][0].interaction.momentum(theta)
 

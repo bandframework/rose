@@ -33,12 +33,12 @@ def xs_calc_neutral(
     S_l_minus: np.array,
     P_l_theta: np.array,
     P_1_l_theta: np.array,
-    lmax,
 ):
     xst = 0.0
     xsrxn = 0.0
     a = np.zeros_like(angles, dtype=np.cdouble)
     b = np.zeros_like(angles, dtype=np.cdouble)
+    lmax = S_l_plus.shape[0]
 
     for l in range(lmax):
         # scattering amplitudes
@@ -69,13 +69,13 @@ def xs_calc_coulomb(
     S_l_minus: np.array,
     P_l_theta: np.array,
     P_1_l_theta: np.array,
-    lmax,
     f_c: np.array,
     sigma_l: np.array,
     rutherford: np.array,
 ):
     a = np.zeros_like(angles, dtype=np.cdouble) + f_c
     b = np.zeros_like(angles, dtype=np.cdouble)
+    lmax = S_l_plus.shape[0]
 
     for l in range(lmax):
         # scattering amplitudes
@@ -253,7 +253,8 @@ class ScatteringAmplitudeEmulator:
         Sl_cutoff=1.0e-6,
         initialize_emulator=True,
     ):
-        r"""Trains a reduced-basis emulator that computes differential and total cross sections (from emulated phase shifts).
+        r"""Trains a reduced-basis emulator that computes differential and total cross sections
+            (from emulated phase shifts).
 
         Parameters:
             interaction_space (InteractionSpace): local interaction up to (and including $\ell_\max$)
@@ -271,7 +272,8 @@ class ScatteringAmplitudeEmulator:
         Attributes:
             l_max (int): maximum angular momentum
             angles (ndarray): angle values at which the differential cross section is desired
-            rbes (list): list of `ReducedBasisEmulators`; one for each partial wave (and total $j$ with spin-orbit)
+            rbes (list): list of `ReducedBasisEmulators`; one for each partial wave
+                (and total $j$ with spin-orbit)
             ls (ndarray): angular momenta; shape = (`l_max`+1, 1)
             P_l_costheta (ndarray): Legendre polynomials evaluated at `angles`
             P_1_l_costheta (ndarray): **associated** Legendre polynomials evalated at `angles`
@@ -524,10 +526,11 @@ class ScatteringAmplitudeEmulator:
         k = self.rbes[0][0].interaction.momentum(theta)
 
         S_l_plus, S_l_minus = self.S_matrix_elements(deltas)
+        l = self.ls[: S_l_plus.shape[0]]
 
         A = self.f_c + (1 / (2j * k)) * np.sum(
             np.exp(2j * self.sigma_l)
-            * ((self.ls + 1) * (S_l_plus - 1) + self.ls * (S_l_minus - 1))
+            * ((l + 1) * (S_l_plus - 1) + l * (S_l_minus - 1))
             * self.P_l_costheta,
             axis=0,
         )
@@ -543,14 +546,14 @@ class ScatteringAmplitudeEmulator:
             return dsdo
 
     def S_matrix_elements(self, deltas: list):
-        r""" Returns:
-                Sl_plus (ndarray) : l-s aligned S-matrix elements for partial waves up to where
-                    S_l_plus.real - 1 < Sl_cutoff
-                Sl_minus (ndarray) : same as S_l_plus, but l-s anti-aligned
+        r"""Returns:
+            Sl_plus (ndarray) : l-s aligned S-matrix elements for partial waves up to where
+                S_l_plus.real - 1 < Sl_cutoff
+            Sl_minus (ndarray) : same as S_l_plus, but l-s anti-aligned
 
-            Parameters:
-                deltas (list) : list of phase shifts for each partial wave. Each element,
-                    for l > 0, should have two phase shifts; spin aligned and anti-aligned
+        Parameters:
+            deltas (list) : list of phase shifts for each partial wave. Each element,
+                for l > 0, should have two phase shifts; spin aligned and anti-aligned
         """
         deltas_plus = np.array([d[0] for d in deltas])
         deltas_minus = np.array([d[1] for d in deltas[1:]])
@@ -563,11 +566,14 @@ class ScatteringAmplitudeEmulator:
             # This ensures that A reduces to the non-spin-orbit formula, and B = 0.
             S_l_minus = S_l_plus.copy()
 
-        lmp = np.nonzero( np.fabs(S_l_plus.real - 1) < self.Sl_cutoff)
-        lmm = np.nonzero( np.fabs(S_l_minus.real - 1) < self.Sl_cutoff)
-        lm = max(lmp[0][0], lmm[0][0])
+        # cutoff
+        lmp = np.argmax(np.fabs(S_l_plus.real - 1) < self.Sl_cutoff)
+        lmm = np.argmax(np.fabs(S_l_minus.real - 1) < self.Sl_cutoff)
+        lm = max(lmp, lmm)
+        if lm == 0:
+            lm = S_l_plus.shape[0]
 
-        return S_l_plus[:lm][:,np.newaxis], S_l_minus[:lm][:,np.newaxis]
+        return S_l_plus[:lm][:, np.newaxis], S_l_minus[:lm][:, np.newaxis]
 
     def total_cross_section(self, deltas: np.array):
         r"""Gives the "total" (angle-integrated) cross section in mb. If the interaction
@@ -589,21 +595,19 @@ class ScatteringAmplitudeEmulator:
 
         k = self.rbes[0][0].interaction.momentum(theta)
         S_l_plus, S_l_minus = self.S_matrix_elements(deltas)
+        l = self.ls[: S_l_plus.shape[0]]
 
-        xst = np.sum(np.pi / k**2 * (2 * self.ls + 2) * (1 - S_l_plus.real))
-        xst += np.sum(np.pi / k**2 * (2 * self.ls - 2) * (1 - S_l_minus.real))
+        xst = np.sum(np.pi / k**2 * (2 * l + 2) * (1 - S_l_plus.real))
+        xst += np.sum(np.pi / k**2 * (2 * l - 2) * (1 - S_l_minus.real))
 
         if self.rbes[0][0].interaction.is_complex:
             xsrxn = np.sum(
-                np.pi
-                / k**2
-                * (2 * self.ls + 2)
-                * (1 - np.real(S_l_plus * S_l_plus.conj()))
+                np.pi / k**2 * (2 * l + 2) * (1 - np.real(S_l_plus * S_l_plus.conj()))
             )
             xsrxn += np.sum(
                 np.pi
                 / k**2
-                * (2 * self.ls - 2)
+                * (2 * l - 2)
                 * (1 - np.real(S_l_minus * S_l_minus.conj()))
             )
             return 10 * xst, 10 * xsrxn
@@ -646,9 +650,7 @@ class ScatteringAmplitudeEmulator:
                 [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
             )
             sin2 = np.sin(angles / 2) ** 2
-            rutherford = (
-                10 * self.eta**2 / (4 * k**2 * sin2**2)
-            )
+            rutherford = 10 * self.eta**2 / (4 * k**2 * sin2**2)
             f_c = (
                 -self.eta
                 / (2 * k * sin2)
@@ -664,7 +666,6 @@ class ScatteringAmplitudeEmulator:
                     S_l_minus,
                     P_l_costheta,
                     P_1_l_costheta,
-                    self.l_max,
                     f_c,
                     self.sigma_l,
                     rutherford,
@@ -679,7 +680,6 @@ class ScatteringAmplitudeEmulator:
                     S_l_minus,
                     P_l_costheta,
                     P_1_l_costheta,
-                    self.l_max,
                 )
             )
 
@@ -691,4 +691,4 @@ class ScatteringAmplitudeEmulator:
 
         """
         with open(filename, "wb") as f:
-            pickle.dump(self, f)
+            pickle.dump(self, filename)

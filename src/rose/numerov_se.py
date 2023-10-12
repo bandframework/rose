@@ -26,53 +26,46 @@ class NumerovSolver(SchroedingerEquation):
     def __init__(
         self,
         interaction: Interaction,
-        numerov_grid_size=DEFAULT_NUM_PTS,
-        domain=[DEFAULT_S_MIN, DEFAULT_R_MAX],
-        s_mesh=None,
+        mesh_size: int,
+        domain: tuple,
     ):
         r"""Solves the Shrödinger equation for local, complex potentials.
 
         Parameters:
             interaction (Interaction): See [Interaction documentation](interaction.md).
-            numerov_grid_size (int) : the number of grid points in the radial mesh to use
-                for the Numerov solver
-            domain (list) : the domain over which to integrate. The channel radius `s_0` must be
-                on this domain for all calls to `delta` or `rmatrix`
+            mesh_size (int) : the number of grid points in the radial mesh to use
+                for the Numerov solve
+            domain (tuple) : the upper and lower bounds of the problem domain $s$
 
         Returns:
             solver (NumerovSolver): instance of `NumerovSolver`
 
         """
         self.domain = domain
-        self.numerov_grid_size = int(numerov_grid_size)
-        if s_mesh is None:
-            self.s_mesh = np.linspace(domain[0], domain[1], self.numerov_grid_size)
-        else:
-            assert np.is_close(s_mesh[0], domain[0]) and np.is_close(
-                s_mesh[-1], domain[1]
-            )
+        self.mesh_size = int(mesh_size)
+        self.s_mesh = np.linspace(self.domain[0], self.domain[1], self.mesh_size)
+
         super().__init__(interaction, None)
 
     def clone_for_new_interaction(self, interaction: Interaction):
-        return NumerovSolver(
-            interaction, self.numerov_grid_size, self.domain, self.s_mesh
-        )
+        return NumerovSolver(interaction, self.mesh_size, self.domain)
 
     def phi(
         self,
-        alpha: np.array,  # interaction parameters
-        s_mesh: np.array = None,  # mesh on which to calculate phi
-        l: int = 0,  # angular momentum
-        rho_0=None,  # initial rho value ("effective zero")
-        phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
+        alpha: np.array,
+        s_mesh: np.array = None,
+        l: int = 0,
+        rho_0=None,
+        phi_threshold=SchroedingerEquation.PHI_THRESHOLD,
     ):
         r"""Computes the reduced, radial wave function $\phi$ (or $u$) on `s_mesh` using the
         Numerov method.
 
         Parameters:
             alpha (ndarray): parameter vector
-            s_mesh (ndarray): values of $s$ at which $\phi$ is evaluated; uses self.mesh if None
-                (which is much faster).
+            s_mesh (ndarray): values of $s$ at which $\phi$ is evaluated; uses self.mesh if None.
+                If s_mesh is supplied, simply calculates on self.s_mesh and interpolates solution
+                onto s_mesh. Must be contained in the domain.
             l (int): angular momentum
             rho_0 (float): starting point for the solver
             phi_threshold (float): minimum $\phi$ value; The wave function is
@@ -82,40 +75,36 @@ class NumerovSolver(SchroedingerEquation):
             phi (ndarray): reduced, radial wave function
 
         """
-        # determine initial conditions
-        if s_mesh is None:
-            calc_mesh = self.s_mesh
-        else:
-            calc_mesh = np.linspace(
-                s_mesh[0], s_mesh[-1], self.numerov_grid_size, dtype=np.double
-            )
+        assert s_mesh[0] >= self.domain[0]
+        assert s_mesh[1] <= self.domain[1]
 
+        # determine initial conditions
         rho_0, initial_conditions = self.initial_conditions(
             alpha, phi_threshold, l, rho_0
         )
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
         y = numerov_kernel(
-            calc_mesh[0],
-            calc_mesh[1] - calc_mesh[0],
-            self.numerov_grid_size,
+            self.s_mesh[0],
+            self.s_mesh[1] - self.s_mesh[0],
+            self.mesh_size,
             initial_conditions,
             lambda s: -self.radial_se_deriv2(s, l, alpha, S_C),
         )
-        mask = np.where(calc_mesh < rho_0)[0]
+        mask = np.where(self.s_mesh < rho_0)[0]
         y[mask] = 0
 
         if s_mesh is None:
             return y
         else:
-            return np.interp(s_mesh, calc_mesh, y)
+            return np.interp(s_mesh, self.s_mesh, y)
 
     def rmatrix(
         self,
-        alpha: np.array,  # interaction parameters
-        l: int,  # angular momentum
-        s_0: float,  # phaseshift is extracted at phi(s_0)
-        phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
+        alpha: np.array,
+        l: int,
+        s_0: float,
+        phi_threshold=SchroedingerEquation.PHI_THRESHOLD,
     ):
         r"""Calculates the $\ell$-th partial wave R-matrix element at the specified energy,
             using the Numerov method for integrating the Radial SE
@@ -141,7 +130,7 @@ class NumerovSolver(SchroedingerEquation):
         y = numerov_kernel(
             self.s_mesh[0],
             self.s_mesh[1] - self.s_mesh[0],
-            self.numerov_grid_size,
+            self.mesh_size,
             initial_conditions,
             lambda s: -self.radial_se_deriv2(s, l, alpha, S_C),
         )

@@ -660,7 +660,7 @@ class ScatteringAmplitudeEmulator:
                 * np.exp(-1j * self.eta * np.log(sin2) + 2j * self.sigma_l[0])
             )
 
-        if self.rbes[0][0].interaction.eta(theta) >= 0:
+        if self.rbes[0][0].interaction.eta(theta) > 0:
             return NucleonNucleusXS(
                 *xs_calc_coulomb(
                     k,

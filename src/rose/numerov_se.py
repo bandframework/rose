@@ -150,11 +150,11 @@ class NumerovSolver(SchroedingerEquation):
         return rl
 
 
-#@njit
+# @njit
 def numerov_kernel(
-    x0 : np.double,
-    dx : np.double,
-    N  : np.int,
+    x0: np.double,
+    dx: np.double,
+    N: np.int,
     initial_conditions: tuple,
     g: Callable[[np.double], np.double],
 ):
@@ -193,7 +193,7 @@ def numerov_kernel(
     for n in range(2, y.shape[0]):
         # determine next y
         gnm = g(xnm)
-        gn = g(xnm+dx)
+        gn = g(xnm + dx)
         gnp = g(xnm + dx + dx)
         ynp = (2 * yn * (1.0 - 5.0 * f * gn) - ynm * (1.0 + f * gnm)) / (1.0 + f * gnp)
 

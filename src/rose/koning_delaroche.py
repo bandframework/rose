@@ -20,6 +20,7 @@ from .utility import kinematics, Projectile
 MAX_ARG = np.log(1 / 1e-16)
 NUM_PARAMS = 15
 
+
 @njit
 def Vv(E, v1, v2, v3, v4, Ef):
     r"""energy-dependent, volume-central strength - real term, Eq. (7)"""
@@ -71,7 +72,7 @@ def woods_saxon_safe(r, R, a):
     else:
         ii = np.where(x <= MAX_ARG)[0]
         jj = np.where(x > MAX_ARG)[0]
-        return np.hstack( (1 / (1 + np.exp(x[ii])), np.zeros(jj.size)) )
+        return np.hstack((1 / (1 + np.exp(x[ii])), np.zeros(jj.size)))
 
 
 @njit
@@ -97,6 +98,7 @@ def woods_saxon_prime_safe(r, R, a):
             (-1 / a * np.exp(x[ii]) / (1 + np.exp(x[ii])) ** 2, np.zeros(jj.size))
         )
 
+
 @njit
 def KD(r, E, v1, v2, v3, v4, w1, w2, d1, d2, d3, Ef, Rv, av, Rd, ad):
     """Koning-Delaroche without the spin-orbit terms - Eq. (1)"""
@@ -105,6 +107,7 @@ def KD(r, E, v1, v2, v3, v4, w1, w2, d1, d2, d3, Ef, Rv, av, Rd, ad):
         - 1j * Wv(E, w1, w2, Ef) * woods_saxon(r, Rv, av)
         - 1j * (-4 * ad) * Wd(E, d1, d2, d3, Ef) * woods_saxon_prime(r, Rd, ad)
     )
+
 
 @njit
 def decompose_alpha(alpha):
@@ -135,6 +138,7 @@ def KD_simple(r, alpha):
         - 1j * wv * woods_saxon_safe(r, rwv, awv)
         - 1j * (-4 * ad) * wd * woods_saxon_prime_safe(r, rd, ad)
     )
+
 
 @njit
 def KD_simple_so(r, alpha, lds):

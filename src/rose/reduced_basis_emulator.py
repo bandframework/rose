@@ -55,7 +55,7 @@ class ReducedBasisEmulator:
         use_svd: bool = True,  # Use principal components as basis vectors?
         s_mesh: np.array = DEFAULT_RHO_MESH,  # s = rho = kr; solutions are phi(s)
         s_0: float = 6 * np.pi,  # phase shift is "extracted" at s_0
-        base_solver : SchroedingerEquation = SchroedingerEquation(None),
+        base_solver: SchroedingerEquation = SchroedingerEquation(None),
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
 
@@ -74,7 +74,7 @@ class ReducedBasisEmulator:
         """
 
         basis = RelativeBasis(
-            base_solver.clone_for_new_interaction(interaction)
+            base_solver.clone_for_new_interaction(interaction),
             theta_train,
             s_mesh,
             n_basis,

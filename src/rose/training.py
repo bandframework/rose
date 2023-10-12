@@ -103,10 +103,10 @@ def CAT_trainer_EIM(
         for interaction_list, basis_list in zip(interactions.interactions, bases):
             basis_list = []
             for interaction, basis in zip(interaction_list, basis_list):
-                solutions  = basis.solutions[:, :nbasis]
+                solutions = basis.solutions[:, :nbasis]
                 basis_list.append(
                     CustomBasis(
-                        solutions
+                        solutions,
                         basis.phi_0,
                         basis.rho_mesh,
                         n_basis,
@@ -184,7 +184,6 @@ class CATPerformance:
         # take median along all axes but 0
         axes = [i + 1 for i in range(len(self.output_shape))]
         self.median_rel_err = np.median(self.rel_err, axis=axes)
-
 
 
 def CAT_plot(data_sets: list, labels=None, border_styles=None):
@@ -439,7 +438,19 @@ def compare_phase_shifts(data_sets: list, labels: list, fig, ax1, ax2):
     return fig, ax1, ax2
 
 
-def compare_phase_shifts_err(delta1, delta2, label1, label2, fig, ax1, ax2, ax3, ax4, small_label1=None, small_label2=None):
+def compare_phase_shifts_err(
+    delta1,
+    delta2,
+    label1,
+    label2,
+    fig,
+    ax1,
+    ax2,
+    ax3,
+    ax4,
+    small_label1=None,
+    small_label2=None,
+):
     fig, ax1, ax2 = compare_phase_shifts(
         [delta1, delta2],
         [label1, label2],
@@ -453,7 +464,7 @@ def compare_phase_shifts_err(delta1, delta2, label1, label2, fig, ax1, ax2, ax3,
         diff = []
         for j in range(len(delta1[l])):
             residual = delta1[l][j] - delta2[l][j]
-            diff.append( np.fabs(residual.real) + 1j * np.fabs(residual.imag) )
+            diff.append(np.fabs(residual.real) + 1j * np.fabs(residual.imag))
         diffs.append(diff)
 
     plot_phase_shifts(fig, ax3, ax4, diffs, color="k")

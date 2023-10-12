@@ -116,7 +116,7 @@ class ScatteringAmplitudeEmulator:
     def HIFI_solver(
         cls,
         interaction_space: InteractionSpace,
-        base_solver : SchroedingerEquation = SchroedingerEquation(None),
+        base_solver: SchroedingerEquation = SchroedingerEquation(None),
         l_max: int = None,
         angles: np.array = DEFAULT_ANGLE_MESH,
         s_0: float = 6 * np.pi,
@@ -181,7 +181,7 @@ class ScatteringAmplitudeEmulator:
         cls,
         interaction_space: InteractionSpace,
         theta_train: np.array,
-        base_solver : SchroedingerEquation = SchroedingerEquation(None),
+        base_solver: SchroedingerEquation = SchroedingerEquation(None),
         l_max: int = None,
         angles: np.array = DEFAULT_ANGLE_MESH,
         n_basis: int = 4,

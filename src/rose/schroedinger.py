@@ -148,7 +148,7 @@ class SchroedingerEquation:
             ),
             [rho_0, domain[1]],
             initial_conditions,
-            rtol=self.rk_tols[0],,,
+            rtol=self.rk_tols[0],
             atol=self.rk_tols[1],
             dense_output=True,
             **kwargs,

@@ -16,6 +16,20 @@ from .basis import Basis
 from .interaction_eim import InteractionEIM, InteractionEIMSpace
 from .scattering_amplitude_emulator import ScatteringAmplitudeEmulator
 
+# some colors Pablo likes for plotting
+colors = [
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+    "#9467bd",
+    "#8c564b",
+    "#e377c2",
+    "#7f7f7f",
+    "#bcbd22",
+    "#17becf",
+]
+
 
 def sample_params_LHC(
     N: int, central_vals: np.array, scale: float = 0.5, seed: int = None
@@ -58,7 +72,7 @@ def CAT_trainer_EIM(
         base_interaction :  interaction on which to train
         bases (optional) : if a full set of bases for each interaction has been solved
             for already, re-use basis.vectors rather than re-calculating them
-        theta_train (optional) : is bases is not provided, simply pass in the
+        theta_train (optional) : if bases is not provided, simply pass in the
             training samples and re-train the emulator
         SAE_kwargs : passed to ScatteringAmplitudeEmulator
     """
@@ -89,11 +103,10 @@ def CAT_trainer_EIM(
         for interaction_list, basis_list in zip(interactions.interactions, bases):
             basis_list = []
             for interaction, basis in zip(interaction_list, basis_list):
-                # add back free solution to get HF solutions
-                solutions = (basis.pillars.T + basis.phi_0).T
+                solutions  = basis.solutions[:, :nbasis]
                 basis_list.append(
                     CustomBasis(
-                        solutions[:, :n_basis],
+                        solutions
                         basis.phi_0,
                         basis.rho_mesh,
                         n_basis,
@@ -172,19 +185,6 @@ class CATPerformance:
         axes = [i + 1 for i in range(len(self.output_shape))]
         self.median_rel_err = np.median(self.rel_err, axis=axes)
 
-
-colors = [
-    "#1f77b4",
-    "#ff7f0e",
-    "#2ca02c",
-    "#d62728",
-    "#9467bd",
-    "#8c564b",
-    "#e377c2",
-    "#7f7f7f",
-    "#bcbd22",
-    "#17becf",
-]
 
 
 def CAT_plot(data_sets: list, labels=None, border_styles=None):

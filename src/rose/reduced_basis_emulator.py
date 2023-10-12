@@ -55,7 +55,7 @@ class ReducedBasisEmulator:
         use_svd: bool = True,  # Use principal components as basis vectors?
         s_mesh: np.array = DEFAULT_RHO_MESH,  # s = rho = kr; solutions are phi(s)
         s_0: float = 6 * np.pi,  # phase shift is "extracted" at s_0
-        **solver_kwargs,
+        base_solver : SchroedingerEquation = SchroedingerEquation(None),
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
 
@@ -66,7 +66,7 @@ class ReducedBasisEmulator:
             use_svd (bool): Use principal components of training wave functions?
             s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
             s_0 (float): $s$ point where the phase shift is extracted
-            solver_kwargs : passed to `SchroedingerEquation`
+            base_solver : the solver used in the basis.
 
         Returns:
             rbe (ReducedBasisEmulator): $\ell$-specific, reduced basis emulator
@@ -74,9 +74,7 @@ class ReducedBasisEmulator:
         """
 
         basis = RelativeBasis(
-            SchroedingerEquation(
-                interaction, domain=[s_mesh[0], s_mesh[-1]], **solver_kwargs
-            ),
+            base_solver.clone_for_new_interaction(interaction)
             theta_train,
             s_mesh,
             n_basis,
@@ -116,13 +114,12 @@ class ReducedBasisEmulator:
             self.basis.solver = basis.solver
 
         self.s_mesh = np.copy(basis.rho_mesh)
+        self.s_0 = s_0
 
         if initialize_emulator:
-            self.initialize_emulator(s_0)
-        else:
-            self.s_0 = s_0
+            self.initialize_emulator()
 
-    def initialize_emulator(self, s_0):
+    def initialize_emulator(self):
         if self.interaction.k_c == 0:
             # No Coulomb, so we can precompute with eta = 0.
             self.Hm = H_minus(self.s_0, self.l, 0)

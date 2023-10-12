@@ -69,6 +69,19 @@ class Basis:
         """
         raise NotImplementedError
 
+    def phi_exact(self, theta: np.array):
+        r"""Exact wave function.
+
+        Parameters:
+            theta (ndarray): parameters
+            l (int) : partial wave
+
+        Returns:
+            phi (ndarray): wave function
+
+        """
+        return self.solver.phi(theta, self.rho_mesh, self.l)
+
     def save(self, filename):
         """Saves a basis to file.
 
@@ -90,7 +103,6 @@ class RelativeBasis(Basis):
         l: int,
         use_svd: bool,
         phi_0_energy: float = None,
-        solver_method="Runge-Kutta",
     ):
         r"""Builds a "relative" reduced basis. This is the default choice.
 
@@ -127,13 +139,6 @@ class RelativeBasis(Basis):
             solver, theta_train, rho_mesh, n_basis, l, solver_method=solver_method
         )
 
-        if solver_method == "Runge-Kutta":
-            self.phi_exact = lambda theta, l: self.solver.phi(theta, self.rho_mesh, l)
-        elif solver_method == "Numerov":
-            self.phi_exact = lambda theta, l: self.solver.phi_numerov(
-                theta, self.rho_mesh, l
-            )
-
         if phi_0_energy:
             k = np.sqrt(2 * self.solver.interaction.mu * phi_0_energy / HBARC)
             eta = self.solver.interaction.k_c / k
@@ -152,10 +157,9 @@ class RelativeBasis(Basis):
         self.phi_0 = np.array(
             [coulombf(self.l, eta, rho) for rho in self.rho_mesh], dtype=np.float64
         )
+        self.solutions = np.array([self.phi_exact(theta) for theta in theta_train]).T
 
-        self.all_vectors = np.array(
-            [self.get_phi(theta, l) - self.phi_0 for theta in theta_train]
-        ).T
+        self.all_vectors = self.solutions - self.phi_0[:, np.newaxis]
         self.pillars = self.all_vectors.copy()
 
         if use_svd:
@@ -220,6 +224,7 @@ class CustomBasis(Basis):
 
         super().__init__(None, None, rho_mesh, n_basis, ell)
 
+        # TODO why are we copying here?
         self.solutions = solutions.copy()
         self.pillars = solutions.copy()
         self.rho_mesh = rho_mesh.copy()

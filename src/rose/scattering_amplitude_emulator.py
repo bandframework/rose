@@ -116,19 +116,23 @@ class ScatteringAmplitudeEmulator:
     def HIFI_solver(
         cls,
         interaction_space: InteractionSpace,
+        base_solver : SchroedingerEquation = SchroedingerEquation(None),
         l_max: int = None,
         angles: np.array = DEFAULT_ANGLE_MESH,
         s_0: float = 6 * np.pi,
         verbose: bool = True,
         Sl_cutoff: float = 1.0e-4,
         s_mesh=None,
-        **solver_kwargs,
     ):
         r"""Sets up a ScatteringAmplitudeEmulator without any emulation capabilities, for use purely
             as a high-fidelity solver, for which the exact_* functions will be used.
 
         Parameters:
             interaction_space (InteractionSpace): local interaction up to (and including $\ell_\max$)
+            base_solver : the solver used. Must be an instance of SchroedingerEquation or a derived
+                class of it. The solvers for each `interaction` in `interaction_space` will be
+                constructed using `base_solver.clone_for_new_interaction`. Defaults to the base class
+                using Runge-Kutta; `SchroedingerEquation`
             l_max (int): maximum angular momentum to include in the sum approximating the cross section
             angles (ndarray): Differential cross sections are functions of the
                 angles. These are the specific values at which the user wants to
@@ -138,7 +142,6 @@ class ScatteringAmplitudeEmulator:
             Sl_cutoff : absolute tolerance for deviation of real part of S-matrix amplitudes
                 from 1, used as criteria to stop calculation ig higher partial waves are negligble
             s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
-            solver_kwargs : passed to SchroedingerEquation
 
         Returns:
             sae (ScatteringAmplitudeEmulator): scattering amplitude emulator
@@ -148,11 +151,7 @@ class ScatteringAmplitudeEmulator:
         for interaction_list in interaction_space.interactions:
             basis_list = []
             for interaction in interaction_list:
-                solver = SchroedingerEquation(
-                    interaction,
-                    domain=[SchroedingerEquation.DEFAULT_S_MIN, s_0 + 1.0e-1],
-                    **solver_kwargs,
-                )
+                solver = base_solver.clone_for_new_interaction(interaction)
                 if s_mesh is None:
                     if hasattr(solver, "s_mesh"):
                         s_mesh = solver.s_mesh
@@ -182,6 +181,7 @@ class ScatteringAmplitudeEmulator:
         cls,
         interaction_space: InteractionSpace,
         theta_train: np.array,
+        base_solver : SchroedingerEquation = SchroedingerEquation(None),
         l_max: int = None,
         angles: np.array = DEFAULT_ANGLE_MESH,
         n_basis: int = 4,
@@ -189,13 +189,17 @@ class ScatteringAmplitudeEmulator:
         s_mesh: np.array = DEFAULT_RHO_MESH,
         s_0: float = 6 * np.pi,
         Sl_cutoff: float = 1.0e-4,
-        **solver_kwargs,
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
 
         Parameters:
             interaction_space (InteractionSpace): local interaction up to (and including $\ell_\max$)
             theta_train (ndarray): training points in parameter space; shape = (n_points, n_parameters)
+            base_solver : the solver used for training the emulator, and for calculations of exact
+                observables. Must be an instance of SchroedingerEquation or a derived class of it.
+                The solvers for each `interaction` in `interaction_space` will be constructed using
+                `base_solver.clone_for_new_interaction`. Defaults to the base class using Runge-Kutta;
+                `SchroedingerEquation`
             l_max (int): maximum angular momentum to include in the sum approximating the cross section
             angles (ndarray): Differential cross sections are functions of the
                 angles. These are the specific values at which the user wants to
@@ -206,7 +210,6 @@ class ScatteringAmplitudeEmulator:
             s_0 (float): $s$ point where the phase shift is extracted
             Sl_cutoff : absolute tolerance for deviation of real part of S-matrix amplitudes
                 from 1, used as criteria to stop calculation ig higher partial waves are negligble
-            solver_kwargs : passed to `SchroedingerEquation`
 
         Returns:
             sae (ScatteringAmplitudeEmulator): scattering amplitude emulator

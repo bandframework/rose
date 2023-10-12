@@ -159,58 +159,6 @@ def mass(A, Z, Eb):
     N = A - Z
     return Z * MASS_P + N * MASS_N - Eb
 
-def numerov_kernel(
-    x0 : np.double,
-    dx : np.double,
-    N  : np.int,
-    initial_conditions: tuple,
-    g: Callable[[np.double], np.double],
-):
-    r"""Solves the the equation y'' + g(x)  y = 0 via the Numerov method,
-    for complex functions over real domain
-
-    Returns:
-    value of y evaluated at the points x_grid
-
-    Parameters:
-        x_grid : the grid of points on which to run the solver and evaluate the solution.
-                 Must be evenly spaced and monotonically increasing.
-        initial_conditions : the value of y and y' at the minimum of x_grid
-        g : callable for g(x)
-    """
-
-    # convenient factor
-    f = dx * dx / 12.0
-
-    # intialize domain walker
-    xnm = x0
-
-    # intial conditions
-    ynm = initial_conditions[0]
-    yn = ynm + initial_conditions[1] * dx
-
-    # initialize range walker
-    y = np.empty(N, dtype=np.cdouble)
-    y[0] = ynm
-    y[1] = yn
-
-    def forward_stepy(n, ynm, yn, ynp):
-        y[n] = ynp
-        return yn, ynp
-
-    for n in range(2, y.shape[0]):
-        # determine next y
-        gnm = g(xnm)
-        gn = g(xnm+dx)
-        gnp = g(xnm + dx + dx)
-        ynp = (2 * yn * (1.0 - 5.0 * f * gn) - ynm * (1.0 + f * gnm)) / (1.0 + f * gnp)
-
-        # forward step
-        ynm, yn = forward_stepy(n, ynm, yn, ynp)
-        xnm += dx
-
-    return y
-
 
 def kinematics(
     target: tuple,

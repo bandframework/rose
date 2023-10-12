@@ -9,7 +9,7 @@ from time import perf_counter
 from scipy.stats import qmc
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
-from matplotlib.ticker import MaxNLocator
+from matplotlib import ticker
 import seaborn as sns
 
 from .basis import Basis
@@ -393,14 +393,14 @@ def plot_phase_shifts(fig, ax1, ax2, deltas, shift=0, color=None):
     ax1.set_xlabel(r"$\ell$ [$\hbar$]")
     ax1.yaxis.set_major_locator(plt.MultipleLocator(np.pi / 6))
     ax1.yaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter(denominator=6)))
-    ax1.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax1.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     ax2.set_xlim(ax1.get_xlim())
     ax2.set_ylim(ax1.get_ylim())
     ax2.set_ylabel(r"$\mathfrak{Im}\,\delta$ [radians]")
     ax2.set_xlabel(r"$\ell$ [$\hbar$]")
     ax2.yaxis.set_major_locator(plt.MultipleLocator(np.pi / 6))
     ax2.yaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter(denominator=6)))
-    ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax2.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 
     styles = [
         Line2D(
@@ -437,6 +437,55 @@ def compare_phase_shifts(data_sets: list, labels: list, fig, ax1, ax2):
     ax1.add_artist(leg1)
 
     return fig, ax1, ax2
+
+
+def compare_phase_shifts_err(delta1, delta2, label1, label2, fig, ax1, ax2, ax3, ax4, small_label1=None, small_label2=None):
+    fig, ax1, ax2 = compare_phase_shifts(
+        [delta1, delta2],
+        [label1, label2],
+        fig,
+        ax1,
+        ax2,
+    )
+
+    diffs = []
+    for l in range(len(delta1)):
+        diff = []
+        for j in range(len(delta1[l])):
+            diff.append((delta1[l][j] - delta2[l][j]) ** 2)
+        diffs.append(diff)
+
+    plot_phase_shifts(fig, ax3, ax4, diffs, color="k")
+    if small_label1 is not None:
+        small_label1 = label1
+    if small_label2 is not None:
+        small_label2 = label2
+    ax3.set_ylabel(
+        r"$\mathfrak{Re}\,\left( \delta_{%s} - \delta_{%s} \right)^2$ [radians]"
+        % (small_label1, small_label2)
+    )
+    ax4.set_ylabel(
+        r"$\mathfrak{Im|}\,\left( \delta_{%s} - \delta_{%s} \right)^2$ [radians]"
+        % (small_label1, small_label2)
+    )
+
+    ax3.yaxis.set_major_locator(ticker.AutoLocator())
+    ax3.yaxis.set_major_formatter(ticker.ScalarFormatter())
+    ax4.yaxis.set_major_locator(ticker.AutoLocator())
+    ax4.yaxis.set_major_formatter(ticker.ScalarFormatter())
+
+    ax3.set_yscale("log")
+    ax4.set_yscale("log")
+    ax3.relim()
+    ax3.autoscale()
+    ax4.relim()
+    ax4.autoscale()
+
+    new_lims = [1e-16, 1e-1]
+    ax4.set_ylim(new_lims)
+    ax3.set_ylim(new_lims)
+
+    plt.tight_layout()
 
 
 def plot_wavefunctions(

@@ -44,7 +44,6 @@ class SchroedingerEquation:
 
         Parameters:
             interaction (Interaction): See [Interaction documentation](interaction.md).
-            solver_method= (str) : method for high-fidelty solver
             RK_tolerances (list): 2-element list of numbers specifying tolerances for the
                 Runge-Kutta solver: the relative tolerance and the  absolute tolerance
 
@@ -53,8 +52,7 @@ class SchroedingerEquation:
 
         """
         self.interaction = interaction
-        self.rel_tol = RK_tolerances[0]
-        self.abs_tol = RK_tolerances[1]
+        self.rk_tols = RK_tolerances
 
     def clone_for_new_interaction(self, interaction: Interaction):
         return SchroedingerEquation(interaction, self.RK_tolerances)
@@ -150,8 +148,8 @@ class SchroedingerEquation:
             ),
             [rho_0, domain[1]],
             initial_conditions,
-            rtol=self.rel_tol,
-            atol=self.abs_tol,
+            rtol=self.rk_tols[0],,,
+            atol=self.rk_tols[1],
             dense_output=True,
             **kwargs,
         )
@@ -233,8 +231,7 @@ class SchroedingerEquation:
         s_0: float,  # phaseshift is extracted at phi(s_0)
         **kwargs,  # passed to solver
     ):
-        r"""Calculates the $\ell$-th partial wave phase shift at the specified energy using
-            the solver specified by self.solver_method
+        r"""Calculates the $\ell$-th partial wave phase shift
 
         Parameters:
             alpha (ndarray): parameter vector

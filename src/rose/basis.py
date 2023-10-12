@@ -46,7 +46,6 @@ class Basis:
             l (int): orbital angular momentum
 
         """
-        self.solver_method = solver.solver_method
         self.solver = solver
         self.theta_train = np.copy(theta_train)
         self.rho_mesh = np.copy(rho_mesh)
@@ -118,7 +117,6 @@ class RelativeBasis(Basis):
             l (int): orbital angular momentum
             use_svd (bool): Use principal components for $\tilde{\phi}$?
             phi_0_energy (float): energy at which $\phi_0$ is calculated
-            solver_method (string) : Runge-Kutta or Numerov
 
         Attributes:
             solver (SchroedingerEquation): high-fidelity solver
@@ -136,7 +134,11 @@ class RelativeBasis(Basis):
         """
 
         super().__init__(
-            solver, theta_train, rho_mesh, n_basis, l, solver_method=solver_method
+            solver,
+            theta_train,
+            rho_mesh,
+            n_basis,
+            l,
         )
 
         if phi_0_energy:

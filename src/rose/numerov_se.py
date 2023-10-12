@@ -6,15 +6,15 @@ For details about providing your own solutions, see [Basis
 documentation](basis.md).
 
 """
+from collections.abc import Callable
+
 import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
 from scipy.misc import derivative
 
 from .interaction import Interaction
-from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
-from .utility import regular_inverse_s
-from .schroedinger import SchroedingerEquation, Gamow_factor
+from .schroedinger import SchroedingerEquation
 
 
 class NumerovSolver(SchroedingerEquation):

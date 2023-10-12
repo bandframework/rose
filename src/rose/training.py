@@ -457,9 +457,9 @@ def compare_phase_shifts_err(delta1, delta2, label1, label2, fig, ax1, ax2, ax3,
         diffs.append(diff)
 
     plot_phase_shifts(fig, ax3, ax4, diffs, color="k")
-    if small_label1 is not None:
+    if small_label1 is None:
         small_label1 = label1
-    if small_label2 is not None:
+    if small_label2 is None:
         small_label2 = label2
     ax3.set_ylabel(
         r"$\mathfrak{Re}\,\left| \delta_{%s} - \delta_{%s} \right|$"

@@ -4,8 +4,6 @@ partial wave.
 It instantiates a Basis and precomputes the integrals it can with the basis
 states and operators. When the user asks for an emulated phase shift, the
 emulator computes the $\hat{\phi}$ coefficients.
-
-Kyle is the best everything!
 """
 import pickle
 import numpy as np

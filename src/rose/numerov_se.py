@@ -104,6 +104,7 @@ class NumerovSolver(SchroedingerEquation):
         alpha: np.array,
         l: int,
         s_0: float,
+        domain = None,
         phi_threshold=SchroedingerEquation.PHI_THRESHOLD,
     ):
         r"""Calculates the $\ell$-th partial wave R-matrix element at the specified energy,
@@ -114,6 +115,7 @@ class NumerovSolver(SchroedingerEquation):
             l (int): angular momentum
             rho_0 (float): initial $\rho$ (or $s$) value; starting point for the
                 solver
+            domain : unused
             phi_threshold (float): minimum $\phi$ value; The wave function is
                 considered zero below this value.
 

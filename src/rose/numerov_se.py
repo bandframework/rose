@@ -121,7 +121,7 @@ class NumerovSolver(SchroedingerEquation):
             rl (float)  : r-matrix element, or logarithmic derivative of wavefunction at the channel
                 radius; s_0
         """
-        assert s_0 >= self.domain[0] and s_0 < self.domain[-1]
+        assert s_0 >= self.domain[0] and s_0 < self.domain[1]
 
         # determine initial conditions
         rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l)

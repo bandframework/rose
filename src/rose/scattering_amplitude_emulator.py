@@ -221,11 +221,7 @@ class ScatteringAmplitudeEmulator:
         for interaction_list in tqdm(interaction_space.interactions):
             basis_list = [
                 RelativeBasis(
-                    SchroedingerEquation(
-                        interaction,
-                        domain=[s_mesh[0], s_mesh[-1]],
-                        **solver_kwargs,
-                    ),
+                    base_solver.clone_for_new_interaction(interaction),
                     theta_train,
                     s_mesh,
                     n_basis,

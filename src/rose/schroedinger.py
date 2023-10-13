@@ -55,7 +55,7 @@ class SchroedingerEquation:
         self.rk_tols = RK_tolerances
 
     def clone_for_new_interaction(self, interaction: Interaction):
-        return SchroedingerEquation(interaction, self.RK_tolerances)
+        return SchroedingerEquation(interaction, self.rk_tols)
 
     def initial_conditions(
         self, alpha: np.array, phi_threshold: float, l: int, rho_0=None
@@ -154,15 +154,15 @@ class SchroedingerEquation:
             **kwargs,
         )
 
-        return sol.sol
+        return sol.sol, rho_0
 
     def rmatrix(
         self,
-        alpha: np.array,  # interaction parameters
-        domain: np.array,  # [s_min, s_max]; phi(s) is calculated on this interval
-        l: int,  # angular momentum
-        s_0: float,  # phaseshift is extracted at phi(s_0)
-        **kwargs,  # passed to solve_se
+        alpha: np.array,
+        l: int,
+        s_0: float,
+        domain = [DEFAULT_S_MIN, DEFAULT_S_MAX],
+        **kwargs,
     ):
         r"""Calculates the $\ell$-th partial wave R-matrix element at the specified energy.
             using the Runge-Kutta method for integrating the Radial SE. kwargs are passed to
@@ -170,10 +170,10 @@ class SchroedingerEquation:
 
         Parameters:
             alpha (ndarray): parameter vector
-            domain (ndarray): lower and upper bounds of the $s$ mesh.
             l (int): angular momentum
             s_0 (float): $s$ value where the phase shift is calculated (must be
                 less than the second element in `domain`)
+            domain (ndarray): lower and upper bounds of the $s$ mesh.
 
         Returns:
             rl (float)  : r-matrix element, or logarithmic derivative of wavefunction at the channel
@@ -181,7 +181,7 @@ class SchroedingerEquation:
 
         """
         # Should domain be [s_min, domain[1]]?
-        solution = self.solve_se(alpha, domain, l=l, **kwargs)
+        solution, _ = self.solve_se(alpha, domain, l=l, **kwargs)
         u = solution(s_0)
         rl = 1 / s_0 * (u[0] / u[1])
         return rl
@@ -210,7 +210,7 @@ class SchroedingerEquation:
             phi (ndarray): reduced, radial wave function
 
         """
-        solution = self.solve_se(
+        solution, rho_0 = self.solve_se(
             alpha,
             [rho_0, s_mesh[-1]],
             l,
@@ -229,6 +229,7 @@ class SchroedingerEquation:
         alpha: np.array,  # interaction parameters
         l: int,  # angular momentum
         s_0: float,  # phaseshift is extracted at phi(s_0)
+        domain = [DEFAULT_S_MIN, DEFAULT_S_MAX],
         **kwargs,  # passed to solver
     ):
         r"""Calculates the $\ell$-th partial wave phase shift
@@ -245,7 +246,10 @@ class SchroedingerEquation:
                 wave function
 
         """
-        rl = self.rmatrix(alpha, l, s_0, **kwargs)
+        if domain[1] <= s_0:
+            domain = s_0 + 0.1
+
+        rl = self.rmatrix(alpha, l, s_0, domain=domain,  **kwargs)
 
         return (
             np.log(

@@ -94,11 +94,8 @@ class Interaction:
             u_tilde (float | complex): value of scaled interaction
 
         """
-        vr = self.v_r(s / self.k, alpha)
-        vr += (
-            self.spin_orbit_term.spin_orbit_potential(s / self.k, alpha)
-            if self.include_spin_orbit
-            else 0
+        vr = self.v_r(s / self.k, alpha) + self.spin_orbit_term.spin_orbit_potential(
+            s / self.k, alpha
         )
         return 1.0 / self.energy * vr
 
@@ -195,7 +192,7 @@ def tilde_NJIT(
     energy: np.double,
 ):
     r"""
-    Produces a just-in-time (JIT) compatible function for the scaled radial potential
+    Produces a just-in-time (JIT) compatible function for the scaled radial potential with spin-orbit
 
     Returns:
         v (Callable): an NJIT-compilable function for the scaled radial potential as a function of s
@@ -206,11 +203,12 @@ def tilde_NJIT(
         k (float) : wavenumber [fm^-1]
         alpha (ndarray) : parameter vector, 2nd arg passed into v_r (and spin_orbit)
         energy (float) : in [MeV]
+        v_so (Callable) : same as v_r but for spin orbit term. Must be decorated with @njit
     """
 
     @njit
     def v(s: np.double):
-        return v_r(s / k, alpha) / energy
+        return (v_r(s / k, alpha)) / energy
 
     return v
 

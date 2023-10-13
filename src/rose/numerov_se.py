@@ -11,7 +11,7 @@ from scipy.interpolate import interp1d
 from scipy.misc import derivative
 
 from .utility import regular_inverse_s
-from .interaction import Interaction, tilde_NJIT, tilde_so_NJIT
+from .interaction import Interaction, tilde_NJIT
 from .schroedinger import SchroedingerEquation
 
 
@@ -82,18 +82,13 @@ class NumerovSolver(SchroedingerEquation):
         )
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
-        v_so = (
-            None
-            if not self.interaction.include_spin_orbit
-            else self.interaction.spin_orbit_term.spin_orbit_potential
-        )
         if self.interaction.include_spin_orbit:
             utilde = tilde_so_NJIT(
                 self.interaction.v_r,
                 self.interaction.momentum(alpha),
                 alpha,
                 self.interaction.E(alpha),
-                self.interaction.spin_orbit_term.spin_orbit_potential,
+                self.interaction.spin_orbit_term,
             )
         else:
             utilde = tilde_NJIT(
@@ -152,18 +147,21 @@ class NumerovSolver(SchroedingerEquation):
         # rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l, self.domain[0])
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
-        v_so = (
-            None
-            if not self.interaction.include_spin_orbit
-            else self.interaction.spin_orbit_term.spin_orbit_potential
-        )
-        utilde = tilde_NJIT(
-            self.interaction.v_r,
-            self.interaction.momentum(alpha),
-            alpha,
-            self.interaction.E(alpha),
-            v_so,
-        )
+        if self.interaction.include_spin_orbit:
+            utilde = tilde_so_NJIT(
+                self.interaction.v_r,
+                self.interaction.momentum(alpha),
+                alpha,
+                self.interaction.E(alpha),
+                self.interaction.spin_orbit_term,
+            )
+        else:
+            utilde = tilde_NJIT(
+                self.interaction.v_r,
+                self.interaction.momentum(alpha),
+                alpha,
+                self.interaction.E(alpha),
+            )
         g = radial_se_deriv2_NJIT(
             self.interaction.eta(alpha), utilde, l, alpha, S_C, -1.0
         )

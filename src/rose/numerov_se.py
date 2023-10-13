@@ -127,17 +127,19 @@ class NumerovSolver(SchroedingerEquation):
 
         # determine initial conditions
         rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l)
+        #rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l, self.domain[0])
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
-        y = numerov_kernel(
+        x, y = numerov_kernel_meshless(
             self.s_mesh[0],
             self.s_mesh[1] - self.s_mesh[0],
             self.mesh_size,
+            s_0,
             initial_conditions,
             lambda s: -self.radial_se_deriv2(s, l, alpha, S_C),
         )
-        u = interp1d(self.s_mesh, y, bounds_error=True)
-        rl = 1 / s_0 * (u(s_0) / derivative(u, s_0, 1.0e-6))
+        u = interp1d(x, y, bounds_error=True)
+        rl = 1. / s_0 * (u(s_0) / derivative(u, s_0, 1.0e-6))
         return rl
 
 
@@ -193,3 +195,56 @@ def numerov_kernel(
         xnm += dx
 
     return y
+
+
+#@njit
+def numerov_kernel_meshless(
+    x0: np.double,
+    dx: np.double,
+    N: np.int,
+    s_0 : np.double,
+    initial_conditions: tuple,
+    g: Callable[[np.double], np.double],
+):
+    r"""Solves the the equation y'' + g(x)  y = 0 via the Numerov method,
+    for complex functions over real domain
+
+    Returns:
+    value of y evaluated at the points x_grid
+
+    Parameters:
+        x_grid : the grid of points on which to run the solver and evaluate the solution.
+                 Must be evenly spaced and monotonically increasing.
+        initial_conditions : the value of y and y' at the minimum of x_grid
+        g : callable for g(x)
+    """
+
+    # convenient factor
+    f = dx * dx / 12.0
+
+    # intial conditions
+    xnm = x0
+    xn = x0 + dx
+    xnp = x0 + dx + dx
+    ynm = initial_conditions[0]
+    yn = ynm + initial_conditions[1] * dx
+
+    for n in range(2, N+1):
+        # determine next y
+        gnm = g(xnm)
+        gn = g(xnm + dx)
+        gnp = g(xnm + dx + dx)
+        ynp = (2 * yn * (1.0 - 5.0 * f * gn) - ynm * (1.0 + f * gnm)) / (1.0 + f * gnp)
+
+        if s_0 >= xnm and s_0 < xnp:
+            break
+
+        # forward step
+        ynm = yn
+        yn = ynp
+
+        xnm += dx
+        xn += dx
+        xnp += dx
+
+    return np.array([xnm, xn, xnp]), np.array([ynm, yn, ynp])

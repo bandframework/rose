@@ -27,6 +27,7 @@ class SpinOrbitTerm:
 
         """
         self.l_dot_s = l_dot_s
+        self.v_so = spin_orbit_potential
         self.spin_orbit_potential = lambda r, alpha: spin_orbit_potential(
             r, alpha, self.l_dot_s
         )

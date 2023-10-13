@@ -11,7 +11,7 @@ from scipy.interpolate import interp1d
 from scipy.misc import derivative
 
 from .utility import regular_inverse_s
-from .interaction import Interaction, tilde_NJIT
+from .interaction import Interaction, tilde_NJIT, tilde_so_NJIT
 from .schroedinger import SchroedingerEquation
 
 
@@ -82,13 +82,20 @@ class NumerovSolver(SchroedingerEquation):
         )
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
+        l_dot_s = self.interaction.spin_orbit_term.l_dot_s
+        spin_orbit_potential = self.interaction.spin_orbit_term.v_so
+
+        @njit
+        def v_so(s : np.double, alpha : np.array):
+            return spin_orbit_potential(s, alpha, l_dot_s)
+
         if self.interaction.include_spin_orbit:
             utilde = tilde_so_NJIT(
                 self.interaction.v_r,
                 self.interaction.momentum(alpha),
                 alpha,
                 self.interaction.E(alpha),
-                self.interaction.spin_orbit_term,
+                v_so,
             )
         else:
             utilde = tilde_NJIT(
@@ -147,13 +154,20 @@ class NumerovSolver(SchroedingerEquation):
         # rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l, self.domain[0])
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
+        l_dot_s = self.interaction.spin_orbit_term.l_dot_s
+        spin_orbit_potential = self.interaction.spin_orbit_term.v_so
+
+        @njit
+        def v_so(s : np.double, alpha : np.array):
+            return spin_orbit_potential(s, alpha, l_dot_s)
+
         if self.interaction.include_spin_orbit:
             utilde = tilde_so_NJIT(
                 self.interaction.v_r,
                 self.interaction.momentum(alpha),
                 alpha,
                 self.interaction.E(alpha),
-                self.interaction.spin_orbit_term,
+                v_so,
             )
         else:
             utilde = tilde_NJIT(

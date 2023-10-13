@@ -4,6 +4,8 @@ parameters of the problem.
 
 from typing import Callable
 import numpy as np
+from numba import njit
+
 from .constants import HBARC, ALPHA
 from .spin_orbit import SpinOrbitTerm
 
@@ -142,9 +144,22 @@ class Interaction:
             alpha (ndarray): parameter vector
 
         Returns:
-            eta (float): Sommerfeld parametere
+            eta (float): Sommerfeld parameter
         """
         return self.sommerfeld
+
+    def E(self, alpha: np.array):
+        r"""Energy. Implemented as a function to support energy
+        emulation (where the energy could be a part of the parameter vector,
+        `alpha`).
+
+        Parameters:
+            alpha (ndarray): parameter vector
+
+        Returns:
+            Energy (float): in [MeV]
+        """
+        return self.energy
 
     def momentum(self, alpha: np.array):
         r"""Momentum. Implemented as a function to support energy emulation
@@ -171,6 +186,43 @@ class Interaction:
             R_C (float): Coulomb cutoff
         """
         return self.R_C
+
+
+def tilde_NJIT(
+    v_r: Callable[[float, np.array], float],
+    k: np.double,
+    alpha: np.array,
+    energy: np.double,
+    v_so: Callable[[float, np.array], float] = None,
+):
+    r"""
+    Produces a just-in-time (JIT) compatible function for the scaled radial potential
+
+    Returns:
+        v (Callable): an NJIT-compilable function for the scaled radial potential as a function of s
+
+    Parameters:
+        v_r (Callable) : takes in r [fm] and alpha and returns the radial potential in MeV. Must be
+            decorated with @njit.
+        k (float) : wavenumber [fm^-1]
+        alpha (ndarray) : parameter vector, 2nd arg passed into v_r (and spin_orbit)
+        energy (float) : in [MeV]
+        v_so (Callable) : same as v_r but for spin orbit term; optional. Must be decorated with @njit
+            if provided.
+    """
+
+    @njit
+    def v_no_so(s: np.double):
+        return v_r(s / k, alpha) / energy
+
+    @njit
+    def v_with_so(s: np.double):
+        return (v_r(s / k, alpha) + v_so(s / k, alpha)) / energy
+
+    if v_so is not None:
+        return v_with_so
+    else:
+        return v_no_so
 
 
 class InteractionSpace:

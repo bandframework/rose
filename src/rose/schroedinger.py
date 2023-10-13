@@ -89,9 +89,12 @@ class SchroedingerEquation:
         return rho_0, initial_conditions
 
     def radial_se_deriv2(self, s, l, alpha, S_C):
-        r"""
-        Returns:
+        r"""Evaluates the coefficient of y in RHSof the radial reduced Schroedinger equation as below:
+            $y'' = (\tilde{U}(s, \alpha) + l(l+1) f(s) + 2 eta / s + \tilde{U}_{so}(s, \alpha) - 1.0)y$
 
+            where $f(s)$ is the form of the Coulomb term (a function of only `S_C`).
+
+        Returns:
             (float) : RHS of the scaled SE, with the LHS being the second derivative operator.
             This value, multiplied by the value of the radial wavefunction, gives its second derivative
 
@@ -100,7 +103,6 @@ class SchroedingerEquation:
             s (float): values of dimensionless radial coordinate $s=kr$
             l (int): angular momentum
             S_C (float) : Coulomb cutoff (charge radius)
-
         """
         return (
             self.interaction.tilde(s, alpha)
@@ -161,7 +163,7 @@ class SchroedingerEquation:
         alpha: np.array,
         l: int,
         s_0: float,
-        domain = [DEFAULT_S_MIN, DEFAULT_S_MAX],
+        domain=[DEFAULT_S_MIN, DEFAULT_S_MAX],
         **kwargs,
     ):
         r"""Calculates the $\ell$-th partial wave R-matrix element at the specified energy.
@@ -229,7 +231,7 @@ class SchroedingerEquation:
         alpha: np.array,  # interaction parameters
         l: int,  # angular momentum
         s_0: float,  # phaseshift is extracted at phi(s_0)
-        domain = [DEFAULT_S_MIN, DEFAULT_S_MAX],
+        domain=[DEFAULT_S_MIN, DEFAULT_S_MAX],
         **kwargs,  # passed to solver
     ):
         r"""Calculates the $\ell$-th partial wave phase shift
@@ -249,7 +251,7 @@ class SchroedingerEquation:
         if domain[1] <= s_0:
             domain = s_0 + 0.1
 
-        rl = self.rmatrix(alpha, l, s_0, domain=domain,  **kwargs)
+        rl = self.rmatrix(alpha, l, s_0, domain=domain, **kwargs)
 
         return (
             np.log(

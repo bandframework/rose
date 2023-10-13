@@ -139,7 +139,7 @@ class EnergizedInteractionEIM(Interaction):
             u_tilde (float | complex): energy-scaled interaction
 
         """
-        energy = alpha[0]
+        energy = self.E(alpha)
         k = np.sqrt(2 * self.mu * energy / HBARC)
         return 1.0 / energy * self.v_r(s / k, alpha[1:])
 
@@ -153,7 +153,7 @@ class EnergizedInteractionEIM(Interaction):
             coefficients (ndarray): EIM expansion coefficients
 
         """
-        k = np.sqrt(2 * self.mu * alpha[0] / HBARC)
+        k = np.sqrt(2 * self.mu * self.E(alpha) / HBARC)
         u_true = self.tilde(self.r_i, alpha)
         return 1 / k, self.Ainv @ u_true
 
@@ -167,7 +167,7 @@ class EnergizedInteractionEIM(Interaction):
             eta (float): Sommerfeld parameter
 
         """
-        return self.k_c / np.sqrt(2 * self.mu * alpha[0] / HBARC)
+        return self.k_c / np.sqrt(2 * self.mu * self.E(alpha) / HBARC)
 
     def tilde_emu(self, s: float, alpha: np.array):
         r"""Emulated interaction = $\hat{U}(s, \alpha, E)$
@@ -204,7 +204,20 @@ class EnergizedInteractionEIM(Interaction):
         Returns:
             k (float): momentum
         """
-        return np.sqrt(2 * self.mu * alpha[0] / HBARC)
+        return np.sqrt(2 * self.mu * self.E(alpha) / HBARC)
+
+    def E(self, alpha: np.array):
+        r"""Energy. Implemented as a function to support energy
+        emulation (where the energy could be a part of the parameter vector,
+        `alpha`).
+
+        Parameters:
+            alpha (ndarray): parameter vector
+
+        Returns:
+            Energy (float): in [MeV]
+        """
+        return alpha[0]
 
 
 class EnergizedInteractionEIMSpace(InteractionSpace):

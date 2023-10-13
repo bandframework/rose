@@ -90,7 +90,7 @@ class SchroedingerEquation:
 
     def radial_se_deriv2(self, s, l, alpha, S_C):
         r"""Evaluates the coefficient of y in RHSof the radial reduced Schroedinger equation as below:
-            $y'' = (\tilde{U}(s, \alpha) + l(l+1) f(s) + 2 eta / s + \tilde{U}_{so}(s, \alpha) - 1.0)y$
+            $u'' = (\tilde{U}(s, \alpha) + l(l+1) f(s) + 2 eta / s + \tilde{U}_{so}(s, \alpha) - 1.0)u$
 
             where $f(s)$ is the form of the Coulomb term (a function of only `S_C`).
 

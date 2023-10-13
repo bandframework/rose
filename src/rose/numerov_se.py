@@ -10,8 +10,9 @@ from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
 from scipy.misc import derivative
 
+from .njit_solver_utils import run_solver, numerov_kernel, numerov_kernel_meshless
 from .utility import regular_inverse_s
-from .interaction import Interaction, tilde_NJIT, tilde_so_NJIT
+from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
 
 
@@ -19,6 +20,8 @@ class NumerovSolver(SchroedingerEquation):
     """
     Solver for the single-channel, reduced, radial Schrödinger equation using the Numerov method:
     https://en.wikipedia.org/wiki/Numerov%27s_method
+
+    Wraps the numerov kernels in .njit_solver_utils
     """
 
     def __init__(
@@ -82,39 +85,14 @@ class NumerovSolver(SchroedingerEquation):
         )
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
-        l_dot_s = self.interaction.spin_orbit_term.l_dot_s
-        spin_orbit_potential = self.interaction.spin_orbit_term.v_so
-
-        @njit
-        def v_so(s : np.double, alpha : np.array):
-            return spin_orbit_potential(s, alpha, l_dot_s)
-
-        if self.interaction.include_spin_orbit:
-            utilde = tilde_so_NJIT(
-                self.interaction.v_r,
-                self.interaction.momentum(alpha),
-                alpha,
-                self.interaction.E(alpha),
-                v_so,
-            )
-        else:
-            utilde = tilde_NJIT(
-                self.interaction.v_r,
-                self.interaction.momentum(alpha),
-                alpha,
-                self.interaction.E(alpha),
-            )
-        g = radial_se_deriv2_NJIT(
-            self.interaction.eta(alpha), utilde, l, alpha, S_C, -1.0
-        )
-
-        y = numerov_kernel(
+        solver_args = (
             self.s_mesh[0],
             self.s_mesh[1] - self.s_mesh[0],
             self.mesh_size,
             initial_conditions,
-            g,
         )
+        y = run_solver(self.interaction, alpha, solver_args, numerov_kernel)
+
         mask = np.where(self.s_mesh < rho_0)[0]
         y[mask] = 0
 
@@ -154,190 +132,15 @@ class NumerovSolver(SchroedingerEquation):
         # rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l, self.domain[0])
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
-        l_dot_s = self.interaction.spin_orbit_term.l_dot_s
-        spin_orbit_potential = self.interaction.spin_orbit_term.v_so
-
-        @njit
-        def v_so(s : np.double, alpha : np.array):
-            return spin_orbit_potential(s, alpha, l_dot_s)
-
-        if self.interaction.include_spin_orbit:
-            utilde = tilde_so_NJIT(
-                self.interaction.v_r,
-                self.interaction.momentum(alpha),
-                alpha,
-                self.interaction.E(alpha),
-                v_so,
-            )
-        else:
-            utilde = tilde_NJIT(
-                self.interaction.v_r,
-                self.interaction.momentum(alpha),
-                alpha,
-                self.interaction.E(alpha),
-            )
-        g = radial_se_deriv2_NJIT(
-            self.interaction.eta(alpha), utilde, l, alpha, S_C, -1.0
-        )
-
-        x, y = numerov_kernel_meshless(
+        solver_args = (
             self.s_mesh[0],
             self.s_mesh[1] - self.s_mesh[0],
             self.mesh_size,
             s_0,
             initial_conditions,
-            g,
         )
+        x, y = run_solver(self.interaction, alpha, solver_args, numerov_kernel_meshless)
+
         u = interp1d(x, y, bounds_error=True)
         rl = 1.0 / s_0 * (u(s_0) / derivative(u, s_0, 1.0e-6))
         return rl
-
-
-def radial_se_deriv2_NJIT(
-    eta: np.double,
-    utilde: Callable[[float, np.array], float],
-    l: int,
-    alpha: np.array,
-    S_C: np.double,
-    factor: np.double = 1.0,
-):
-    r"""
-    Produces a just-in-time compilable function of s evaluating the coefficient of y in RHS of the
-    radial reduced Schroedinger equation as below:
-
-        $y'' = (\tilde{U}(s, \alpha) + l(l+1) f(s) + 2 eta / s + \tilde{U}_{so}(s, \alpha) - 1.0) y$,
-
-        where $f(s)$ is the form of the Coulomb term (a function of only `S_C`).
-
-    Returns:
-        (Callable) : RHS of the scaled Schrodinger eqn, as a function of s, where the LHS is
-        the second derivative operator. The value produced at a given s, multiplied by the value
-        of the radial wavefunction evaluated at the same value of ss, gives the second derivative
-        of the radial wavefunction at s
-
-    Parameters:
-        eta (float) : the Sommmerfield parameter
-        utilde (callable[s,alpha]->V/E) : the scaled radial potential, must be decorated with @njit
-        alpha (ndarray): parameter vector
-        s (float): values of dimensionless radial coordinate $s=kr$
-        l (int): angular momentum
-        S_C (float) : Coulomb cutoff (charge radius)
-        factor (float) : optional scaling factor
-
-    """
-
-    @njit
-    def radial_deriv2(s):
-        return factor * (
-            utilde(s) + 2 * eta * regular_inverse_s(s, S_C) + l * (l + 1) / s**2 - 1.0
-        )
-
-    return radial_deriv2
-
-
-@njit
-def numerov_kernel(
-    x0: np.double,
-    dx: np.double,
-    N: np.int,
-    initial_conditions: tuple,
-    g,
-):
-    r"""Solves the the equation y'' + g(x)  y = 0 via the Numerov method,
-    for complex functions over real domain
-
-    Returns:
-    value of y evaluated at the points x_grid
-
-    Parameters:
-        x_grid : the grid of points on which to run the solver and evaluate the solution.
-                 Must be evenly spaced and monotonically increasing.
-        initial_conditions : the value of y and y' at the minimum of x_grid
-        g : callable for g(x)
-    """
-
-    # convenient factor
-    f = dx * dx / 12.0
-
-    # intialize domain walker
-    xnm = x0
-
-    # intial conditions
-    ynm = initial_conditions[0]
-    yn = ynm + initial_conditions[1] * dx
-
-    # initialize range walker
-    y = np.empty(N, dtype=np.cdouble)
-    y[0] = ynm
-    y[1] = yn
-
-    def forward_stepy(n, ynm, yn, ynp):
-        y[n] = ynp
-        return yn, ynp
-
-    for n in range(2, y.shape[0]):
-        # determine next y
-        gnm = g(xnm)
-        gn = g(xnm + dx)
-        gnp = g(xnm + dx + dx)
-        ynp = (2 * yn * (1.0 - 5.0 * f * gn) - ynm * (1.0 + f * gnm)) / (1.0 + f * gnp)
-
-        # forward step
-        ynm, yn = forward_stepy(n, ynm, yn, ynp)
-        xnm += dx
-
-    return y
-
-
-@njit
-def numerov_kernel_meshless(
-    x0: np.double,
-    dx: np.double,
-    N: np.int,
-    s_0: np.double,
-    initial_conditions: tuple,
-    g,
-):
-    r"""Solves the the equation y'' + g(x)  y = 0 via the Numerov method,
-    for complex functions over real domain
-
-    Returns:
-        x (ndarray): values of x [s_0 - dx, s_0, s_0 + dx]
-        y (ndarray): y evaluated at those x values
-
-    Parameters:
-        x_grid : the grid of points on which to run the solver and evaluate the solution.
-                 Must be evenly spaced and monotonically increasing.
-        initial_conditions : the value of y and y' at the minimum of x_grid
-        g : callable for g(x)
-    """
-
-    # convenient factor
-    f = dx * dx / 12.0
-
-    # intial conditions
-    xnm = x0
-    xn = x0 + dx
-    xnp = x0 + dx + dx
-    ynm = initial_conditions[0]
-    yn = ynm + initial_conditions[1] * dx
-
-    for n in range(2, N + 1):
-        # determine next y
-        gnm = g(xnm)
-        gn = g(xnm + dx)
-        gnp = g(xnm + dx + dx)
-        ynp = (2 * yn * (1.0 - 5.0 * f * gn) - ynm * (1.0 + f * gnm)) / (1.0 + f * gnp)
-
-        if s_0 >= xnm and s_0 < xnp:
-            break
-
-        # forward step
-        ynm = yn
-        yn = ynp
-
-        xnm += dx
-        xn += dx
-        xnp += dx
-
-    return np.array([xnm, xn, xnp]), np.array([ynm, yn, ynp])

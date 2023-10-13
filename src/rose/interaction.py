@@ -193,7 +193,6 @@ def tilde_NJIT(
     k: np.double,
     alpha: np.array,
     energy: np.double,
-    v_so: Callable[[float, np.array], float] = None,
 ):
     r"""
     Produces a just-in-time (JIT) compatible function for the scaled radial potential
@@ -207,22 +206,42 @@ def tilde_NJIT(
         k (float) : wavenumber [fm^-1]
         alpha (ndarray) : parameter vector, 2nd arg passed into v_r (and spin_orbit)
         energy (float) : in [MeV]
-        v_so (Callable) : same as v_r but for spin orbit term; optional. Must be decorated with @njit
-            if provided.
     """
 
     @njit
-    def v_no_so(s: np.double):
+    def v(s: np.double):
         return v_r(s / k, alpha) / energy
 
+    return v
+
+
+def tilde_so_NJIT(
+    v_r: Callable[[float, np.array], float],
+    k: np.double,
+    alpha: np.array,
+    energy: np.double,
+    v_so: Callable[[float, np.array], float],
+):
+    r"""
+    Produces a just-in-time (JIT) compatible function for the scaled radial potential with spin-orbit
+
+    Returns:
+        v (Callable): an NJIT-compilable function for the scaled radial potential as a function of s
+
+    Parameters:
+        v_r (Callable) : takes in r [fm] and alpha and returns the radial potential in MeV. Must be
+            decorated with @njit.
+        k (float) : wavenumber [fm^-1]
+        alpha (ndarray) : parameter vector, 2nd arg passed into v_r (and spin_orbit)
+        energy (float) : in [MeV]
+        v_so (Callable) : same as v_r but for spin orbit term. Must be decorated with @njit
+    """
+
     @njit
-    def v_with_so(s: np.double):
+    def v(s: np.double):
         return (v_r(s / k, alpha) + v_so(s / k, alpha)) / energy
 
-    if v_so is not None:
-        return v_with_so
-    else:
-        return v_no_so
+    return v
 
 
 class InteractionSpace:

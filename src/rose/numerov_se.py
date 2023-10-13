@@ -4,12 +4,14 @@ local, complex, single-channel interactions, which uses numba.njit for JIT compi
 
 from collections.abc import Callable
 
+from numba import njit
 import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.interpolate import interp1d
 from scipy.misc import derivative
 
-from .interaction import Interaction, tilde_NJIT
+from .utility import regular_inverse_s
+from .interaction import Interaction, tilde_NJIT, tilde_so_NJIT
 from .schroedinger import SchroedingerEquation
 
 
@@ -82,16 +84,24 @@ class NumerovSolver(SchroedingerEquation):
 
         v_so = (
             None
-            if not interaction.include_spin_orbit
-            else interaction.spin_orbit_term.spin_orbit_potential
+            if not self.interaction.include_spin_orbit
+            else self.interaction.spin_orbit_term.spin_orbit_potential
         )
-        utilde = tilde_NJIT(
-            interaction.v_r,
-            interaction.momentum(alpha),
-            alpha,
-            interaction.E(alpha),
-            v_so,
-        )
+        if self.interaction.include_spin_orbit:
+            utilde = tilde_so_NJIT(
+                self.interaction.v_r,
+                self.interaction.momentum(alpha),
+                alpha,
+                self.interaction.E(alpha),
+                self.interaction.spin_orbit_term.spin_orbit_potential,
+            )
+        else:
+            utilde = tilde_NJIT(
+                self.interaction.v_r,
+                self.interaction.momentum(alpha),
+                alpha,
+                self.interaction.E(alpha),
+            )
         g = radial_se_deriv2_NJIT(
             self.interaction.eta(alpha), utilde, l, alpha, S_C, -1.0
         )
@@ -144,14 +154,14 @@ class NumerovSolver(SchroedingerEquation):
 
         v_so = (
             None
-            if not interaction.include_spin_orbit
-            else interaction.spin_orbit_term.spin_orbit_potential
+            if not self.interaction.include_spin_orbit
+            else self.interaction.spin_orbit_term.spin_orbit_potential
         )
         utilde = tilde_NJIT(
-            interaction.v_r,
-            interaction.momentum(alpha),
+            self.interaction.v_r,
+            self.interaction.momentum(alpha),
             alpha,
-            interaction.E(alpha),
+            self.interaction.E(alpha),
             v_so,
         )
         g = radial_se_deriv2_NJIT(
@@ -207,10 +217,7 @@ def radial_se_deriv2_NJIT(
     @njit
     def radial_deriv2(s):
         return factor * (
-            utilde(s, alpha)
-            + 2 * eta * regular_inverse_s(s, S_C)
-            + l * (l + 1) / s**2
-            - 1.0
+            utilde(s) + 2 * eta * regular_inverse_s(s, S_C) + l * (l + 1) / s**2 - 1.0
         )
 
     return radial_deriv2

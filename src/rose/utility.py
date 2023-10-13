@@ -89,6 +89,7 @@ def regular_inverse_r(r, r_c):
         return np.hstack([1 / (2 * r_c) * (3 - (r[ii] / r_c) ** 2), 1 / r[jj]])
 
 
+@njit
 def regular_inverse_s(s, s_c):
     if isinstance(s, float) or isinstance(s, int):
         return 1 / (2 * s_c) * (3 - (s / s_c) ** 2) if s < s_c else 1 / s

@@ -4,13 +4,15 @@ local, complex, single-channel interactions, which uses numba.njit for JIT compi
 
 from collections.abc import Callable
 
-from numba import njit
 import numpy as np
-from scipy.integrate import solve_ivp
-from scipy.interpolate import interp1d
-from scipy.misc import derivative
+from scipy.interpolate import splrep, splev
 
-from .njit_solver_utils import run_solver, numerov_kernel, numerov_kernel_meshless
+from .njit_solver_utils import (
+    numerov_kernel_meshless,
+    numerov_kernel,
+    g_coeff,
+    bundle_gcoeff_args,
+)
 from .utility import regular_inverse_s
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
@@ -18,33 +20,34 @@ from .schroedinger import SchroedingerEquation
 
 class NumerovSolver(SchroedingerEquation):
     """
-    Solver for the single-channel, reduced, radial Schrödinger equation using the Numerov method:
-    https://en.wikipedia.org/wiki/Numerov%27s_method
-
-    Wraps the numerov kernels in .njit_solver_utils
+    Solver for the single-channel, reduced, radial Schrödinger equation with a local, complex
+    potential, using the Numerov method: https://en.wikipedia.org/wiki/Numerov%27s_method
     """
 
     def __init__(
         self,
         interaction: Interaction,
-        mesh_size: int,
         domain: tuple,
+        dx: np.double,
     ):
-        r"""Solves the Shrödinger equation for local, complex potentials.
+        r"""
 
         Parameters:
-            interaction (Interaction): See [Interaction documentation](interaction.md).
-            mesh_size (int) : the number of grid points in the radial mesh to use
-                for the Numerov solve
+            interaction (Interaction): See [Interaction documentation](interaction.md). To use
+                `NumerovSolver`, the radial interaction, including the spin-orbit term, must be
+                decorated with @njit
             domain (tuple) : the upper and lower bounds of the problem domain $s$
+            dx (double) : the step size with which to integrate over the domain. The numerov method
+                is O(dx**4) in error for a single step
 
         Returns:
             solver (NumerovSolver): instance of `NumerovSolver`
 
         """
         self.domain = domain
-        self.mesh_size = int(mesh_size)
-        self.s_mesh = np.linspace(self.domain[0], self.domain[1], self.mesh_size)
+        self.dx = dx
+        self.s_mesh = np.arange(self.domain[0], self.domain[1], self.dx)
+        self.mesh_size = self.s_mesh.shape[0]
 
         super().__init__(interaction, None)
 
@@ -83,15 +86,14 @@ class NumerovSolver(SchroedingerEquation):
         rho_0, initial_conditions = self.initial_conditions(
             alpha, phi_threshold, l, rho_0
         )
-        S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
-        solver_args = (
-            self.s_mesh[0],
-            self.s_mesh[1] - self.s_mesh[0],
-            self.mesh_size,
+        y = numerov_kernel(
+            g_coeff,
+            bundle_gcoeff_args(self.interaction, alpha),
+            self.domain,
+            self.dx,
             initial_conditions,
         )
-        y = run_solver(self.interaction, alpha, solver_args, numerov_kernel)
 
         mask = np.where(self.s_mesh < rho_0)[0]
         y[mask] = 0
@@ -129,18 +131,17 @@ class NumerovSolver(SchroedingerEquation):
 
         # determine initial conditions
         rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l)
-        # rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l, self.domain[0])
-        S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
-        solver_args = (
-            self.s_mesh[0],
-            self.s_mesh[1] - self.s_mesh[0],
-            self.mesh_size,
-            s_0,
+        x, y = numerov_kernel_meshless(
+            g_coeff,
+            bundle_gcoeff_args(self.interaction, alpha),
+            (self.domain[0], s_0),
+            self.dx,
             initial_conditions,
         )
-        x, y = run_solver(self.interaction, alpha, solver_args, numerov_kernel_meshless)
 
-        u = interp1d(x, y, bounds_error=True)
-        rl = 1.0 / s_0 * (u(s_0) / derivative(u, s_0, 1.0e-6))
+        spl = splrep(x, y)
+        u = splev(s_0, spl)
+        uprime = splev(s_0, spl, der=1)
+        rl = 1.0 / s_0 * (u / uprime)
         return rl

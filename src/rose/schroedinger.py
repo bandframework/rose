@@ -8,8 +8,6 @@ documentation](basis.md).
 """
 import numpy as np
 from scipy.integrate import solve_ivp
-from scipy.interpolate import interp1d
-from scipy.misc import derivative
 
 from .interaction import Interaction
 from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime

@@ -7,181 +7,117 @@ import numpy as np
 from numba import njit
 
 from .interaction import Interaction
-
-
-def run_solver(interaction: Interaction, alpha: np.array, solver, solver_args: tuple):
-    r"""
-    Runs an arbitrary solver, passing in NJIT-compatible versions of the second derivative operator
-    in the reduced radial Schrödinger equation:
-
-        $u'' = (\tilde{U}(s, \alpha) + l(l+1) f(s) + 2 eta / s + \tilde{U}_{so}(s, \alpha) - 1.0)u$
-
-    Returns:
-        output of `solver`
-
-    Parameters:
-        interaction (Interaction) : potential determining $\tilde{U}$ and $\tilde{U}_{so}$, as
-            well as scattering kinematics
-        alpha (ndarray) : potential parameters
-        solver (Callable) : solver for reduced radial Schrödinger equation, takes in `*solver_args`,
-            followed by a Callable for the second derivative operator
-        solver_args (tuple) : all arguments for `solver`, packed into a tuple for safe-keeping
-
-    """
-    if interaction.include_spin_orbit:
-        utilde = tilde_so_NJIT(
-            interaction.v_r,
-            interaction.spin_orbit_term.v_so,
-            interaction.spin_orbit_term.l_dot_s,
-            interaction.momentum(alpha),
-            alpha,
-            interaction.E(alpha),
-        )
-    else:
-        utilde = tilde_NJIT(
-            interaction.v_r,
-            interaction.momentum(alpha),
-            alpha,
-            interaction.E(alpha),
-        )
-
-    return solver(
-        *solver_args,
-        radial_se_deriv2_NJIT(
-            interaction.eta(alpha),
-            l,
-            alpha,
-            S_C,
-            utilde,
-            factor=-1,
-        ),
-    )
+from .utility import regular_inverse_s
 
 
 @njit
-def tilde_NJIT(
-    v_r: Callable[[float, np.array], float],
+def g_coeff(
+    s: np.double,
+    alpha: np.array,
     k: np.double,
-    alpha: np.array,
-    energy: np.double,
-):
-    r"""
-    A just-in-time (JIT) compatible function for the scaled radial potential
-
-    Returns:
-        v (Callable): an NJIT-compilable function for the scaled radial potential as a function of s
-
-    Parameters:
-        v_r (Callable) : takes in r [fm] and alpha and returns the radial potential in MeV. Must be
-            decorated with @njit.
-        k (float) : wavenumber [fm^-1]
-        alpha (ndarray) : parameter vector, 2nd arg passed into v_r (and spin_orbit)
-        energy (float) : in [MeV]
-        v_so (Callable) : same as v_r but for spin orbit term. Must be decorated with @njit
-    """
-
-    return (v_r(s / k, alpha)) / energy
-
-
-@njit
-def tilde_so_NJIT(
-    v_r: Callable[[float, np.array], float],
-    v_so: Callable[[float, np.array], float],
-    l_dot_s: float,
-    k: np.double,
-    alpha: np.array,
-    energy: np.double,
-):
-    r"""
-    A just-in-time (JIT) compatible function for the scaled radial potential with spin-orbit
-
-    Returns:
-        v (Callable): an NJIT-compilable function for the scaled radial potential as a function of s
-
-    Parameters:
-        v_r (Callable) : takes in r [fm] and alpha and returns the radial potential in MeV. Must be
-            decorated with @njit.
-        v_so (Callable) : same as v_r but for spin orbit term. Must be decorated with @njit
-        l_dot_s (int) : expectation value of the projection of the projectile spin onto the COM-frame
-            orbital angular momentum operator
-        k (float) : wavenumber [fm^-1]
-        alpha (ndarray) : parameter vector, 2nd arg passed into v_r (and spin_orbit)
-        energy (float) : in [MeV]
-    """
-
-    return (v_r(s / k, alpha) + v_so(s / k, alpha, l_dot_s)) / energy
-
-
-@njit
-def radial_se_deriv2_NJIT(
-    eta: np.double,
-    l: int,
-    alpha: np.array,
     S_C: np.double,
-    utilde: Callable[[float, np.array], float],
-    factor: np.double = 1.0,
+    E: np.double,
+    eta: np.double,
+    l: np.int,
+    v_r,
+    v_so,
+    l_dot_s: np.int,
 ):
-    r"""
-    Produces a just-in-time compilable function of s evaluating the coefficient of y in RHS of the
-    radial reduced Schroedinger equation as below:
-
-        $y'' = (\tilde{U}(s, \alpha) + l(l+1) f(s) + 2 eta / s + \tilde{U}_{so}(s, \alpha) - 1.0) y$,
-
-        where $f(s)$ is the form of the Coulomb term (a function of only `S_C`).
+    r"""Returns the coefficient g(s )for the parameteric differential equation y'' + g(s, args)  y = 0
+        for the case where y is the wavefunction solution of the scaled, reduced, radial Schrödinger
+        equation in the continuum with local, complex potential depending on parameters alpha
 
     Returns:
-        (Callable) : RHS of the scaled Schrodinger eqn, as a function of s, where the LHS is
-        the second derivative operator. The value produced at a given s, multiplied by the value
-        of the radial wavefunction evaluated at the same value of ss, gives the second derivative
-        of the radial wavefunction at s
+        value of g(x), given other args to g
 
     Parameters:
-        eta (float) : the Sommmerfield parameter
-        utilde (callable[s,alpha]->V/E) : the scaled radial potential including spin-orbit coupling
-            if applicable, must be decorated with @njit
-        alpha (ndarray): parameter vector
-        s (float): values of dimensionless radial coordinate $s=kr$
-        l (int): angular momentum
-        S_C (float) : Coulomb cutoff (charge radius)
-        factor (float) : optional scaling factor
-
+        s (double) : scaled radial coordinate s = k * r
+        alpha (ndarray)
+        k (double)
+        S_C (double)
+        E (double)
+        eta (double)
+        l (int)
+        v_r (callable)
+        v_so (callable)
+        l_dot_s (int)
     """
 
-    return factor * (
-        utilde(s) + 2 * eta * regular_inverse_s(s, S_C) + l * (l + 1) / s**2 - 1.0
+    (alpha, k, S_C, E, eta, l, v_r, v_so, l_dot_s) = args
+
+    return -1 * (
+        (v_r(s / k, alpha) + v_so(s / k, alpha, l_dot_s)) / E
+        + 2 * eta * regular_inverse_s(s, S_C)
+        + l * (l + 1) / s**2
+        - 1.0
     )
+
+
+@njit
+def v_so_return0(r: np.double, alpha: np.array, l_dot_s: np.double):
+    return 0.0
+
+
+def bundle_gcoeff_args(interaction: Interaction, alpha: np.array):
+    r"""Bundles parameters for the Schrödinger equation
+
+    Returns:
+        args (tuple) : all the arguments to g_coeff except for $s$
+
+    Parameters:
+        interaction (Interaction) : the radial potential under consideration
+        alpha (ndarray) : the parameters to the interaction
+    """
+    k = interaction.momentum(alpha)
+    S_C = interaction.coulomb_cutoff(alpha) * k
+    E = interaction.E(alpha)
+    eta = interaction.eta(alpha)
+    l = interaction.ell
+    v_r = interaction.v_r
+    if interaction.include_spin_orbit:
+        l_dot_s = interaction.spin_orbit_term.l_dot_s
+        v_so = interaction.spin_orbit_term.v_so
+    else:
+        l_dot_s = 0
+        v_so = v_so_return0
+
+    return (alpha, k, S_C, E, eta, l, v_r, v_so, l_dot_s)
 
 
 @njit
 def numerov_kernel(
-    x0: np.double,
-    dx: np.double,
-    N: np.int,
-    initial_conditions: tuple,
     g,
+    g_args: tuple,
+    domain: tuple,
+    dx: np.double,
+    initial_conditions: tuple,
 ):
-    r"""Solves the the equation y'' + g(x)  y = 0 via the Numerov method,
-    for complex functions over real domain
+    r"""Solves the parametric differential equation y'' + g(x; g_args)  y = 0 for y via the
+        Numerov method, for complex function y over real domain x
 
     Returns:
-    value of y evaluated at the points x_grid
+        y (ndarray) : values of y evaluated at the points x_grid
 
     Parameters:
-        x_grid : the grid of points on which to run the solver and evaluate the solution.
-                 Must be evenly spaced and monotonically increasing.
-        initial_conditions : the value of y and y' at the minimum of x_grid
-        g : callable for g(x)
+        g : callable for g(x), returns a complex value given real argument
+        g_args : any other arguments for `g`, passed as g(x, *g_args)
+        domain (tuple) : the bounds of the x domain
+        dx (float) : the step size to use in the x domain
+        initial_conditions (list) : the value of y and y' at the minimum of x_grid
     """
 
     # convenient factor
     f = dx * dx / 12.0
 
-    # intialize domain walker
+    # intial conditions
+    (y0, y0_prime) = (initial_conditions[0], initial_conditions[1])
     xnm = x0
 
-    # intial conditions
-    ynm = initial_conditions[0]
-    yn = ynm + initial_conditions[1] * dx
+    # set up initial conditions using Taylor series expansion about x0
+    # using y' and y'' = gy
+    y0_dbl_prime = g(x0) * y0
+    ynm = y0
+    yn = y0 + y0_prime * dx + y0_dbl_prime * dx**2 / 2
 
     # initialize range walker
     y = np.empty(N, dtype=np.cdouble)
@@ -194,9 +130,9 @@ def numerov_kernel(
 
     for n in range(2, y.shape[0]):
         # determine next y
-        gnm = g(xnm)
-        gn = g(xnm + dx)
-        gnp = g(xnm + dx + dx)
+        gnm = g(xnm, *g_args)
+        gn = g(xnm + dx, *g_args)
+        gnp = g(xnm + dx + dx, *g_args)
         ynp = (2 * yn * (1.0 - 5.0 * f * gn) - ynm * (1.0 + f * gnm)) / (1.0 + f * gnp)
 
         # forward step
@@ -208,53 +144,71 @@ def numerov_kernel(
 
 @njit
 def numerov_kernel_meshless(
-    x0: np.double,
-    dx: np.double,
-    N: np.int,
-    s_0: np.double,
-    initial_conditions: tuple,
     g,
+    g_args: tuple,
+    domain: tuple,
+    dx: np.double,
+    initial_conditions: tuple,
+    output_size: int = 8,
 ):
-    r"""Solves the the equation y'' + g(x)  y = 0 via the Numerov method,
-    for complex functions over real domain
+    r"""Solves the parametric differential equation y'' + g(x; g_args)  y = 0 for y via the
+        Numerov method, for complex function y over real domain x
 
     Returns:
-        x (ndarray): values of x [s_0 - dx, s_0, s_0 + dx]
+        x (ndarray): values of x up to x_f + dx
         y (ndarray): y evaluated at those x values
 
     Parameters:
-        x_grid : the grid of points on which to run the solver and evaluate the solution.
-                 Must be evenly spaced and monotonically increasing.
-        initial_conditions : the value of y and y' at the minimum of x_grid
-        g : callable for g(x)
+        g : callable for g(x), returns a complex value given real argument
+        g_args : any other arguments for `g`, passed as g(x, *g_args)
+        domain (tuple) : [x0, xf] the bounds of the x domain
+        dx (float) : the step size to use in the x domain
+        initial_conditions (list) : the value of y and y' at the minimum of x_grid
+        output_size (int) : how many values of x,y to return. For example; output_size = 2
+            corresponds to returning x = [x_f, x_f + dx], and y evaluated at those x values. 3
+            would be x = [x_f - dx, x_f, x_f + dx], and so on. Must be positive integer (not 0).
     """
-
     # convenient factor
     f = dx * dx / 12.0
 
     # intial conditions
+    x0, xf = domain
     xnm = x0
-    xn = x0 + dx
-    xnp = x0 + dx + dx
-    ynm = initial_conditions[0]
-    yn = ynm + initial_conditions[1] * dx
+    (y0, y0_prime) = (initial_conditions[0], initial_conditions[1])
+    y0_dbl_prime = g(x0) * y0
+    y1 = y0 + y0_prime * dx + y0_dbl_prime * dx**2 / 2
 
-    for n in range(2, N + 1):
+    # set up y array
+    y = np.empty(output_size, dtype=np.cdouble)
+    y[0] = y0
+    y[1] = y1
+    ynm = y[0]
+    yn = y[1]
+    idx = 2
+
+    N = int(np.ceil((s_0 + dx - x0) / dx))
+    x = np.linspace(xf - (output_size - 2) * dx, xf + dx, output_size)
+
+    for n in range(2, N):
         # determine next y
-        gnm = g(xnm)
-        gn = g(xnm + dx)
-        gnp = g(xnm + dx + dx)
-        ynp = (2 * yn * (1.0 - 5.0 * f * gn) - ynm * (1.0 + f * gnm)) / (1.0 + f * gnp)
+        gnm = g(xnm, *g_args)
+        gn = g(xnm + dx, *g_args)
+        gnp = g(xnm + 2 * dx, *g_args)
 
-        if s_0 >= xnm and s_0 < xnp:
-            break
+        # index into y array
+        y[idx] = (2 * yn * (1.0 - 5.0 * f * gn) - ynm * (1.0 + f * gnm)) / (
+            1.0 + f * gnp
+        )
 
         # forward step
         ynm = yn
-        yn = ynp
-
+        yn = y[idx]
         xnm += dx
-        xn += dx
-        xnp += dx
 
-    return np.array([xnm, xn, xnp]), np.array([ynm, yn, ynp])
+        idx += 1
+        idx = idx % 8  # if we reach 8, go back to 0
+
+    # cyclic indexing means we need to get back to proper order
+    y = np.hstack([y[idx:], y[:idx]])
+
+    return x, y

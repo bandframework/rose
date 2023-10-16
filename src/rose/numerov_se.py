@@ -52,7 +52,7 @@ class NumerovSolver(SchroedingerEquation):
         super().__init__(interaction, None)
 
     def clone_for_new_interaction(self, interaction: Interaction):
-        return NumerovSolver(interaction, self.mesh_size, self.domain)
+        return NumerovSolver(interaction, self.domain, self.dx)
 
     def phi(
         self,

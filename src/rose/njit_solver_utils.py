@@ -153,7 +153,7 @@ def numerov_kernel_meshless(
     g,
     g_args: tuple,
     domain: tuple,
-    tol: np.double,
+    dx : np.double,
     initial_conditions: tuple,
     output_size: int = 8,
 ):
@@ -187,7 +187,7 @@ def numerov_kernel_meshless(
     y1 = y0 + y0_prime * dx + y0_dbl_prime * dx**2 / 2
 
     # set up y array
-    y = np.empty(output_size, dtype=np.double)
+    y = np.empty(output_size, dtype=np.cdouble)
     y[0] = y0
     y[1] = y1
     ynm = y[0]

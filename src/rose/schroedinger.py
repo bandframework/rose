@@ -139,11 +139,13 @@ class SchroedingerEquation:
         )
         S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
+
+        args = bundle_gcoeff_args(self.interaction, alpha),
         sol = solve_ivp(
             lambda s, phi: np.array(
                 [
                     phi[1],
-                    self.radial_se_deriv2(s, l, alpha, S_C) * phi[0],
+                    -1 * g_coeff(s, *args) * phi[0],
                 ]
             ),
             [rho_0, domain[1]],

@@ -80,13 +80,14 @@ Spacing must be consistent throughout the entire mesh.
     return D2
 
 
+@njit
 def regular_inverse_r(r, r_c):
     if isinstance(r, float):
         return 1 / (2 * r_c) * (3 - (r / r_c) ** 2) if r < r_c else 1 / r
     else:
         ii = np.where(r <= r_c)[0]
         jj = np.where(r > r_c)[0]
-        return np.hstack([1 / (2 * r_c) * (3 - (r[ii] / r_c) ** 2), 1 / r[jj]])
+        return np.hstack((1 / (2 * r_c) * (3 - (r[ii] / r_c) ** 2), 1 / r[jj]))
 
 
 @njit
@@ -98,6 +99,29 @@ def regular_inverse_s(s, s_c):
         jj = np.where(s > s_c)[0]
         return np.hstack([1 / (2 * s_c) * (3 - (s[ii] / s_c) ** 2), 1 / s[jj]])
 
+@njit
+def Gamow_factor(l, eta):
+    r"""This returns the... Gamow factor.
+    See [Wikipedia](https://en.wikipedia.org/wiki/Gamow_factor).
+
+    Parameters:
+        l (int): angular momentum
+        eta (float): Sommerfeld parameter (see
+            [Wikipedia](https://en.wikipedia.org/wiki/Sommerfeld_parameter))
+
+    Returns:
+        C_l (float): Gamow factor
+
+    """
+    if eta == 0.0:
+        if l == 0:
+            return 1
+        else:
+            return 1 / (2 * l + 1) * Gamow_factor(l - 1, 0)
+    elif l == 0:
+        return np.sqrt(2 * np.pi * eta / (np.exp(2 * np.pi * eta) - 1))
+    else:
+        return np.sqrt(l**2 + eta**2) / (l * (2 * l + 1)) * Gamow_factor(l - 1, eta)
 
 def eval_assoc_legendre(n, x):
     if n == 0:

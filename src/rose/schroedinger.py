@@ -9,9 +9,10 @@ documentation](basis.md).
 import numpy as np
 from scipy.integrate import solve_ivp
 
+from .njit_solver_utils import g_coeff, bundle_gcoeff_args
 from .interaction import Interaction
 from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
-from .utility import regular_inverse_s
+from .utility import regular_inverse_s, Gamow_factor
 
 
 class SchroedingerEquation:
@@ -72,9 +73,7 @@ class SchroedingerEquation:
         C_l = Gamow_factor(l, self.interaction.eta(alpha))
 
         if rho_0 is None:
-            rho_0 = (phi_threshold / Gamow_factor(l, self.interaction.eta(alpha))) ** (
-                1 / (l + 1)
-            )
+            rho_0 = (phi_threshold / C_l) ** (1 / (l + 1))
 
         phi_0 = C_l * rho_0 ** (l + 1)
         phi_prime_0 = C_l * (l + 1) * rho_0**l
@@ -111,11 +110,10 @@ class SchroedingerEquation:
 
     def solve_se(
         self,
-        alpha: np.array,  # interaction parameters
-        domain: np.array,  # s where phi(s) is calculated
-        l: int = 0,  # angular momentum
-        rho_0=None,  # initial rho value ("effective zero")
-        phi_threshold=PHI_THRESHOLD,  # minimum phi value (zero below this value)
+        alpha: np.array,
+        domain: np.array,
+        rho_0=None,
+        phi_threshold=PHI_THRESHOLD,
         **kwargs,
     ):
         r"""Solves the reduced, radial Schrödinger equation using the builtin in Runge-Kutta
@@ -124,11 +122,11 @@ class SchroedingerEquation:
         Parameters:
             alpha (ndarray): parameter vector
             domain (ndarray): lower and upper bounds of the $s$ mesh.
-            l (int): angular momentum
             rho_0 (float): initial $\rho$ (or $s$) value; starting point for the
                 solver
             phi_threshold (float): minimum $\phi$ value; The wave function is
                 considered zero below this value.
+            kwargs (dict) : passed to scipy.integrate.solve_ivp
 
         Returns:
             sol  (scipy.integrate.OdeSolution) : the radial wavefunction
@@ -137,10 +135,8 @@ class SchroedingerEquation:
         rho_0, initial_conditions = self.initial_conditions(
             alpha, phi_threshold, l, rho_0
         )
-        S_C = self.interaction.momentum(alpha) * self.interaction.coulomb_cutoff(alpha)
 
-
-        args = bundle_gcoeff_args(self.interaction, alpha),
+        args = bundle_gcoeff_args(self.interaction, alpha)
         sol = solve_ivp(
             lambda s, phi: np.array(
                 [
@@ -176,6 +172,7 @@ class SchroedingerEquation:
             s_0 (float): $s$ value where the phase shift is calculated (must be
                 less than the second element in `domain`)
             domain (ndarray): lower and upper bounds of the $s$ mesh.
+            kwargs (dict) : passed to scipy.integrate.solve_ivp
 
         Returns:
             rl (float)  : r-matrix element, or logarithmic derivative of wavefunction at the channel
@@ -190,12 +187,11 @@ class SchroedingerEquation:
 
     def phi(
         self,
-        alpha: np.array,  # interaction parameters
-        s_mesh: np.array,  # s where phi(s) in calculated
-        l: int,  # angular momentum
-        rho_0: float = None,  # What do we call "zero"?
+        alpha: np.array,
+        s_mesh: np.array,
+        rho_0: float = None,
         phi_threshold: float = PHI_THRESHOLD,
-        **kwargs,  # passed to solve_se
+        **kwargs,
     ):
         r"""Computes the reduced, radial wave function $\phi$ (or $u$) on `s_mesh` using the
         Runge-Kutta method
@@ -203,10 +199,10 @@ class SchroedingerEquation:
         Parameters:
             alpha (ndarray): parameter vector
             s_mesh (ndarray): values of $s$ at which $\phi$ is calculated
-            l (int): angular momentum
             rho_0 (float): starting point for the solver
             phi_threshold (float): minimum $\phi$ value; The wave function is
                 considered zero below this value.
+            kwargs (dict) : passed to scipy.integrate.solve_ivp
 
         Returns:
             phi (ndarray): reduced, radial wave function
@@ -228,11 +224,11 @@ class SchroedingerEquation:
 
     def delta(
         self,
-        alpha: np.array,  # interaction parameters
-        l: int,  # angular momentum
-        s_0: float,  # phaseshift is extracted at phi(s_0)
+        alpha: np.array,
+        l: int,
+        s_0: float,
         domain=[DEFAULT_S_MIN, DEFAULT_S_MAX],
-        **kwargs,  # passed to solver
+        **kwargs,
     ):
         r"""Calculates the $\ell$-th partial wave phase shift
 
@@ -266,27 +262,3 @@ class SchroedingerEquation:
             )
             / 2j
         )
-
-
-def Gamow_factor(l, eta):
-    r"""This returns the... Gamow factor.
-    See [Wikipedia](https://en.wikipedia.org/wiki/Gamow_factor).
-
-    Parameters:
-        l (int): angular momentum
-        eta (float): Sommerfeld parameter (see
-            [Wikipedia](https://en.wikipedia.org/wiki/Sommerfeld_parameter))
-
-    Returns:
-        C_l (float): Gamow factor
-
-    """
-    if eta == 0.0:
-        if l == 0:
-            return 1
-        else:
-            return 1 / (2 * l + 1) * Gamow_factor(l - 1, 0)
-    elif l == 0:
-        return np.sqrt(2 * np.pi * eta / (np.exp(2 * np.pi * eta) - 1))
-    else:
-        return np.sqrt(l**2 + eta**2) / (l * (2 * l + 1)) * Gamow_factor(l - 1, eta)

@@ -140,8 +140,9 @@ class NumerovSolver(SchroedingerEquation):
             initial_conditions,
         )
 
-        spl = splrep(x, y)
-        u = splev(s_0, spl)
-        uprime = splev(s_0, spl, der=1)
+        spl_real = splrep(x, y.real)
+        spl_imag = splrep(x, y.imag)
+        u = splev(s_0, spl_real) + 1j * splev(s_0, spl_imag)
+        uprime = splev(s_0, spl_real, der=1) + 1j * splev(s_0, spl_imag, der=1)
         rl = 1.0 / s_0 * (u / uprime)
         return rl

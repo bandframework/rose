@@ -43,8 +43,6 @@ def g_coeff(
         l_dot_s (int)
     """
 
-    (alpha, k, S_C, E, eta, l, v_r, v_so, l_dot_s) = args
-
     return -1 * (
         (v_r(s / k, alpha) + v_so(s / k, alpha, l_dot_s)) / E
         + 2 * eta * regular_inverse_s(s, S_C)
@@ -105,39 +103,47 @@ def numerov_kernel(
         dx (float) : the step size to use in the x domain
         initial_conditions (list) : the value of y and y' at the minimum of x_grid
     """
-
     # convenient factor
     f = dx * dx / 12.0
 
     # intial conditions
-    (y0, y0_prime) = (initial_conditions[0], initial_conditions[1])
+    x0, xf = domain
     xnm = x0
+    (y0, y0_prime) = (initial_conditions[0], initial_conditions[1])
 
-    # set up initial conditions using Taylor series expansion about x0
-    # using y' and y'' = gy
-    y0_dbl_prime = g(x0) * y0
-    ynm = y0
-    yn = y0 + y0_prime * dx + y0_dbl_prime * dx**2 / 2
+    # number of steps
+    N = int(np.ceil((xf - x0) / dx))
+
+    # use Taylor expansion for y1
+    y0_dbl_prime = -g(x0, *g_args) * y0
+    y1 = y0 + y0_prime * dx + y0_dbl_prime * dx**2 / 2
 
     # initialize range walker
     y = np.empty(N, dtype=np.cdouble)
-    y[0] = ynm
-    y[1] = yn
+    y[0] = y0
+    y[1] = y1
 
-    def forward_stepy(n, ynm, yn, ynp):
+    ynm = y0
+    yn = y1
+
+    gnm = g(xnm, *g_args)
+    gn = g(xnm + dx, *g_args)
+
+    def forward_stepy(n, yn, ynp):
         y[n] = ynp
         return yn, ynp
 
-    for n in range(2, y.shape[0]):
+    for n in range(2, N):
         # determine next y
-        gnm = g(xnm, *g_args)
-        gn = g(xnm + dx, *g_args)
         gnp = g(xnm + dx + dx, *g_args)
         ynp = (2 * yn * (1.0 - 5.0 * f * gn) - ynm * (1.0 + f * gnm)) / (1.0 + f * gnp)
 
         # forward step
-        ynm, yn = forward_stepy(n, ynm, yn, ynp)
+        ynm, yn = forward_stepy(n, yn, ynp)
         xnm += dx
+
+        gnm = gn
+        gn = gnp
 
     return y
 
@@ -147,7 +153,7 @@ def numerov_kernel_meshless(
     g,
     g_args: tuple,
     domain: tuple,
-    dx: np.double,
+    tol: np.double,
     initial_conditions: tuple,
     output_size: int = 8,
 ):
@@ -175,24 +181,27 @@ def numerov_kernel_meshless(
     x0, xf = domain
     xnm = x0
     (y0, y0_prime) = (initial_conditions[0], initial_conditions[1])
-    y0_dbl_prime = g(x0) * y0
+
+    # use Taylor expansion for y1
+    y0_dbl_prime = -g(x0, *g_args) * y0
     y1 = y0 + y0_prime * dx + y0_dbl_prime * dx**2 / 2
 
     # set up y array
-    y = np.empty(output_size, dtype=np.cdouble)
+    y = np.empty(output_size, dtype=np.double)
     y[0] = y0
     y[1] = y1
     ynm = y[0]
     yn = y[1]
     idx = 2
 
-    N = int(np.ceil((s_0 + dx - x0) / dx))
+    gnm = g(xnm, *g_args)
+    gn = g(xnm + dx, *g_args)
+
+    N = int(np.ceil((xf + dx - x0) / dx))
     x = np.linspace(xf - (output_size - 2) * dx, xf + dx, output_size)
 
     for n in range(2, N):
         # determine next y
-        gnm = g(xnm, *g_args)
-        gn = g(xnm + dx, *g_args)
         gnp = g(xnm + 2 * dx, *g_args)
 
         # index into y array
@@ -205,10 +214,13 @@ def numerov_kernel_meshless(
         yn = y[idx]
         xnm += dx
 
+        gnm = gn
+        gn = gnp
+
         idx += 1
         idx = idx % 8  # if we reach 8, go back to 0
 
-    # cyclic indexing means we need to get back to proper order
-    y = np.hstack([y[idx:], y[:idx]])
+    # cyclic indexing means we need to split and merge back to proper order
+    y = np.hstack((y[idx:], y[:idx]))
 
     return x, y

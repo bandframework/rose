@@ -153,7 +153,7 @@ def numerov_kernel_meshless(
     g,
     g_args: tuple,
     domain: tuple,
-    dx : np.double,
+    dx: np.double,
     initial_conditions: tuple,
     output_size: int = 8,
 ):

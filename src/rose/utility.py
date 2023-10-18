@@ -99,6 +99,7 @@ def regular_inverse_s(s, s_c):
         jj = np.where(s > s_c)[0]
         return np.hstack([1 / (2 * s_c) * (3 - (s[ii] / s_c) ** 2), 1 / s[jj]])
 
+
 @njit
 def Gamow_factor(l, eta):
     r"""This returns the... Gamow factor.
@@ -122,6 +123,7 @@ def Gamow_factor(l, eta):
         return np.sqrt(2 * np.pi * eta / (np.exp(2 * np.pi * eta) - 1))
     else:
         return np.sqrt(l**2 + eta**2) / (l * (2 * l + 1)) * Gamow_factor(l - 1, eta)
+
 
 def eval_assoc_legendre(n, x):
     if n == 0:

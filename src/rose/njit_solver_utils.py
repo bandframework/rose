@@ -18,10 +18,10 @@ def g_coeff(
     S_C: np.double,
     E: np.double,
     eta: np.double,
-    l: np.int,
+    l: np.int32,
     v_r,
     v_so,
-    l_dot_s: np.int,
+    l_dot_s: np.int32,
 ):
     r"""Returns the coefficient g(s )for the parameteric differential equation y'' + g(s, args)  y = 0
         for the case where y is the wavefunction solution of the scaled, reduced, radial Schrödinger

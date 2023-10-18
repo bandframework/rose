@@ -261,7 +261,7 @@ class ReducedBasisEmulator:
             delta (float | complex): high-fidelity phase shift (extracted at $s_0$)
 
         """
-        return self.basis.solver.delta(theta, self.l, self.s_0)
+        return self.basis.solver.delta(theta, self.s_0, self.l)
 
     def save(self, filename):
         r"""Write the current emulator to file.

@@ -112,6 +112,7 @@ class SchroedingerEquation:
         self,
         alpha: np.array,
         domain: np.array,
+        l : int,
         rho_0=None,
         phi_threshold=PHI_THRESHOLD,
         **kwargs,
@@ -157,8 +158,8 @@ class SchroedingerEquation:
     def rmatrix(
         self,
         alpha: np.array,
-        l: int,
         s_0: float,
+        l : int = None,
         domain=[DEFAULT_S_MIN, DEFAULT_S_MAX],
         **kwargs,
     ):
@@ -180,7 +181,9 @@ class SchroedingerEquation:
 
         """
         # Should domain be [s_min, domain[1]]?
-        solution, _ = self.solve_se(alpha, domain, l=l, **kwargs)
+        if l is None:
+            l = self.interaction.ell
+        solution, _ = self.solve_se(alpha, domain, l, **kwargs)
         u = solution(s_0)
         rl = 1 / s_0 * (u[0] / u[1])
         return rl
@@ -189,6 +192,7 @@ class SchroedingerEquation:
         self,
         alpha: np.array,
         s_mesh: np.array,
+        l : int = None,
         rho_0: float = None,
         phi_threshold: float = PHI_THRESHOLD,
         **kwargs,
@@ -208,6 +212,10 @@ class SchroedingerEquation:
             phi (ndarray): reduced, radial wave function
 
         """
+self.interaction.ell
+        if l is None:
+            l = self.interaction.ell
+
         solution, rho_0 = self.solve_se(
             alpha,
             [rho_0, s_mesh[-1]],
@@ -225,8 +233,8 @@ class SchroedingerEquation:
     def delta(
         self,
         alpha: np.array,
-        l: int,
         s_0: float,
+        l: int = None,
         domain=[DEFAULT_S_MIN, DEFAULT_S_MAX],
         **kwargs,
     ):
@@ -244,10 +252,13 @@ class SchroedingerEquation:
                 wave function
 
         """
+        if l is None:
+            l = self.interaction.ell
+
         if domain[1] <= s_0:
             domain = s_0 + 0.1
 
-        rl = self.rmatrix(alpha, l, s_0, domain=domain, **kwargs)
+        rl = self.rmatrix(alpha, s_0, l, domain=domain, **kwargs)
 
         return (
             np.log(

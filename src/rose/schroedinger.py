@@ -212,7 +212,6 @@ class SchroedingerEquation:
             phi (ndarray): reduced, radial wave function
 
         """
-self.interaction.ell
         if l is None:
             l = self.interaction.ell
 

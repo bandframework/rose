@@ -183,6 +183,7 @@ class SchroedingerEquation:
         # Should domain be [s_min, domain[1]]?
         if l is None:
             l = self.interaction.ell
+
         solution, _ = self.solve_se(alpha, domain, l, **kwargs)
         u = solution(s_0)
         rl = 1 / s_0 * (u[0] / u[1])
@@ -257,7 +258,7 @@ class SchroedingerEquation:
         if domain[1] <= s_0:
             domain = s_0 + 0.1
 
-        rl = self.rmatrix(alpha, s_0, l, domain=domain, **kwargs)
+        rl = self.rmatrix(alpha, s_0, l=l, domain=domain, **kwargs)
 
         return (
             np.log(

@@ -58,7 +58,7 @@ class NumerovSolver(SchroedingerEquation):
         self,
         alpha: np.array,
         s_mesh: np.array = None,
-        l: int = 0,
+        l: int = None,
         rho_0=None,
         phi_threshold=SchroedingerEquation.PHI_THRESHOLD,
     ):
@@ -79,8 +79,12 @@ class NumerovSolver(SchroedingerEquation):
             phi (ndarray): reduced, radial wave function
 
         """
-        assert s_mesh[0] >= self.domain[0]
-        assert s_mesh[1] <= self.domain[1]
+        if l is None:
+            l = self.interaction.ell
+
+        if s_mesh is not None:
+            assert s_mesh[0] >= self.domain[0]
+            assert s_mesh[1] <= self.domain[1]
 
         # determine initial conditions
         rho_0, initial_conditions = self.initial_conditions(
@@ -95,19 +99,18 @@ class NumerovSolver(SchroedingerEquation):
             initial_conditions,
         )
 
-        mask = np.where(self.s_mesh < rho_0)[0]
-        y[mask] = 0
-
         if s_mesh is None:
             return y
         else:
+            mask = np.where(self.s_mesh < rho_0)[0]
+            y[mask] = 0
             return np.interp(s_mesh, self.s_mesh, y)
 
     def rmatrix(
         self,
         alpha: np.array,
-        l: int,
         s_0: float,
+        l: int = None,
         domain=None,
         phi_threshold=SchroedingerEquation.PHI_THRESHOLD,
     ):
@@ -127,6 +130,9 @@ class NumerovSolver(SchroedingerEquation):
             rl (float)  : r-matrix element, or logarithmic derivative of wavefunction at the channel
                 radius; s_0
         """
+        if l is None:
+            l = self.interaction.ell
+
         assert s_0 >= self.domain[0] and s_0 < self.domain[1]
 
         # determine initial conditions

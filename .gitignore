@@ -16,3 +16,4 @@ tests/__pycache__/test_schroedinger_equation.cpython-310.pyc
 site/
 __version__.py
 docs/tutorials/Cal-*
+*/.ipynb_checkpoints/*

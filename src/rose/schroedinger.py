@@ -185,6 +185,7 @@ class SchroedingerEquation:
             l = self.interaction.ell
 
         solution, _ = self.solve_se(alpha, domain, l, **kwargs)
+
         u = solution(s_0)
         rl = 1 / s_0 * (u[0] / u[1])
         return rl
@@ -230,6 +231,24 @@ class SchroedingerEquation:
         y[mask] = 0
         return y
 
+    def smatrix(
+        self,
+        alpha: np.array,
+        s_0: float,
+        l: int = None,
+        domain=[DEFAULT_S_MIN, DEFAULT_S_MAX],
+        **kwargs,
+    ):
+        rl = self.rmatrix(alpha, s_0, l=l, domain=domain, **kwargs)
+
+        return (
+            H_minus(s_0, l, self.interaction.eta(alpha))
+            - s_0 * rl * H_minus_prime(s_0, l, self.interaction.eta(alpha))
+        ) / (
+            H_plus(s_0, l, self.interaction.eta(alpha))
+            - s_0 * rl * H_plus_prime(s_0, l, self.interaction.eta(alpha))
+        )
+
     def delta(
         self,
         alpha: np.array,
@@ -252,24 +271,6 @@ class SchroedingerEquation:
                 wave function
 
         """
-        if l is None:
-            l = self.interaction.ell
+        sl = self.smatrix(alpha, s_0, l=l, domain=domain, **kwargs)
 
-        if domain[1] <= s_0:
-            domain = s_0 + 0.1
-
-        rl = self.rmatrix(alpha, s_0, l=l, domain=domain, **kwargs)
-
-        return (
-            np.log(
-                (
-                    H_minus(s_0, l, self.interaction.eta(alpha))
-                    - s_0 * rl * H_minus_prime(s_0, l, self.interaction.eta(alpha))
-                )
-                / (
-                    H_plus(s_0, l, self.interaction.eta(alpha))
-                    - s_0 * rl * H_plus_prime(s_0, l, self.interaction.eta(alpha))
-                )
-            )
-            / 2j
-        )
+        return np.log(sl) / 2j

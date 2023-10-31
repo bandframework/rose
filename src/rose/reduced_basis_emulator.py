@@ -261,7 +261,19 @@ class ReducedBasisEmulator:
             delta (float | complex): high-fidelity phase shift (extracted at $s_0$)
 
         """
-        return self.basis.solver.delta(theta, self.s_0, self.l)
+        return self.basis.solver.delta(theta, self.s_0)
+
+    def exact_smatrix_element(self, theta: np.array):
+        r"""Calculate the high-fidelity phase shift.
+
+        Parameters:
+            theta (ndarray): point in parameters space
+
+        Returns:
+            delta (float | complex): high-fidelity phase shift (extracted at $s_0$)
+
+        """
+        return self.basis.solver.smatrix(theta, self.s_0)
 
     def save(self, filename):
         r"""Write the current emulator to file.

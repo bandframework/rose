@@ -184,6 +184,8 @@ class CATPerformance:
         # take median along all axes but 0
         axes = [i + 1 for i in range(len(self.output_shape))]
         self.median_rel_err = np.median(self.rel_err, axis=axes)
+        # self.mean_rel_err = np.mean(self.rel_err, axis=axes)
+        # self.max_rel_err = np.max(self.rel_err, axis=axes)
 
 
 def CAT_plot(data_sets: list, labels=None, border_styles=None):

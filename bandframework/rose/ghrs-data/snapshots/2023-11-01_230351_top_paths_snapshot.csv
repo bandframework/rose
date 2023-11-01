@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose,15,8
+/bandframework/rose/tree/main/src/rose,9,3
+/bandframework/rose/issues,8,5
+/bandframework/rose/blob/main/src/rose/scattering_amplitude_emulator.py,8,3
+/bandframework/rose/tree/bc9e9caac25506944c9b5888e88882ca54809f66/docs,8,2
+/bandframework/rose/releases/tag/v1.0.0,6,6
+/bandframework/rose/tree/bc9e9caac25506944c9b5888e88882ca54809f66,4,3
+/bandframework/rose/blob/main/src/rose/basis.py,4,2
+/bandframework/rose/blob/feature-kd-global/examples/ROSE_HF_comp.ipynb,4,1
+/bandframework/rose/tree/bc9e9caac25506944c9b5888e88882ca54809f66/docs/tutorials,4,1

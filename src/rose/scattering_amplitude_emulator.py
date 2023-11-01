@@ -508,7 +508,8 @@ class ScatteringAmplitudeEmulator:
 
         Parameters:
             alpha (ndarray): parameter-space vector
-            deltas (ndarray): phase shifts
+            Splus (ndarray): spin-up smatrix elements
+            Sminus (ndarray): spin-down smatrix elements
 
         Returns:
             dsdo (ndarray): differential cross section (fm^2)
@@ -516,6 +517,8 @@ class ScatteringAmplitudeEmulator:
         """
         k = self.rbes[0][0].interaction.momentum(alpha)
 
+        Splus = Splus[:,np.newaxis]
+        Sminus = Sminus[:,np.newaxis]
         lmax = Splus.shape[0]
         l = self.ls[:lmax]
 
@@ -540,13 +543,9 @@ class ScatteringAmplitudeEmulator:
 
     def exact_smatrix_elements(self, alpha):
         r"""Returns:
-            Sl_plus (ndarray) : l-s aligned S-matrix elements for partial waves up to where
-                Splus.real - 1 < Sl_cutoff
-            Sl_minus (ndarray) : same as Splus, but l-s anti-aligned
-
-        Parameters:
-            deltas (list) : list of phase shifts for each partial wave. Each element,
-                for l > 0, should have two phase shifts; spin aligned and anti-aligned
+        Sl_plus (ndarray) : l-s aligned S-matrix elements for partial waves up to where
+            Splus.real - 1 < Sl_cutoff
+        Sl_minus (ndarray) : same as Splus, but l-s anti-aligned
         """
         Splus = np.array(
             [
@@ -555,22 +554,19 @@ class ScatteringAmplitudeEmulator:
             ]
         )
         Sminus = np.array(
-            [
+            [Splus[0]]
+            + [
                 rbe_list[1].basis.solver.smatrix(alpha, rbe_list[1].s_0)
-                for rbe_list in self.rbes
+                for rbe_list in self.rbes[1:]
             ]
         )
         return Splus, Sminus
 
     def emulate_smatrix_elements(self, alpha):
         r"""Returns:
-            Sl_plus (ndarray) : l-s aligned S-matrix elements for partial waves up to where
-                Splus.real - 1 < Sl_cutoff
-            Sl_minus (ndarray) : same as Splus, but l-s anti-aligned
-
-        Parameters:
-            deltas (list) : list of phase shifts for each partial wave. Each element,
-                for l > 0, should have two phase shifts; spin aligned and anti-aligned
+        Sl_plus (ndarray) : l-s aligned S-matrix elements for partial waves up to where
+            Splus.real - 1 < Sl_cutoff
+        Sl_minus (ndarray) : same as Splus, but l-s anti-aligned
         """
         Splus = np.array(
             [rbe_list[0].S_matrix_element(alpha) for rbe_list in self.rbes]
@@ -586,7 +582,8 @@ class ScatteringAmplitudeEmulator:
             notes.
 
         Parameters:
-            deltas (ndarry) : phase shifts for each partial wave
+            Splus (ndarray) : spin-up phase shifs
+            Sminus (ndarray) : spin-down phase shifts
 
         Returns:
             total cross section (float): emulated total cross section
@@ -628,8 +625,8 @@ class ScatteringAmplitudeEmulator:
             - total and reacion cross sections in mb
 
             Paramaters:
-                Splus (ndarray) :
-                Sminus (ndarray) :
+                Splus (ndarray) : spin-up phase shifs
+                Sminus (ndarray) : spin-down phase shifts
                 alpha (ndarray) : interaction parameters
                 angles (ndarray) : (optional), angular grid on which to evaluate analyzing \
                 powers and differential cross section
@@ -637,7 +634,7 @@ class ScatteringAmplitudeEmulator:
             Returns :
                 cross sections (NucleonNucleusXS) :
         """
-        k = self.rbes[0][0].interaction.momentum(theta)
+        k = self.rbes[0][0].interaction.momentum(alpha)
 
         # determine desired angle grid and precompute
         # Legendre functions if necessary
@@ -663,7 +660,7 @@ class ScatteringAmplitudeEmulator:
                 * np.exp(-1j * self.eta * np.log(sin2) + 2j * self.sigma_l[0])
             )
 
-        if self.rbes[0][0].interaction.eta(theta) > 0:
+        if self.rbes[0][0].interaction.eta(alpha) > 0:
             return NucleonNucleusXS(
                 *xs_calc_coulomb(
                     k,

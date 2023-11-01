@@ -239,6 +239,9 @@ class SchroedingerEquation:
         domain=[DEFAULT_S_MIN, DEFAULT_S_MAX],
         **kwargs,
     ):
+        if l is None:
+            l = self.interaction.ell
+
         rl = self.rmatrix(alpha, s_0, l=l, domain=domain, **kwargs)
 
         return (

@@ -517,8 +517,8 @@ class ScatteringAmplitudeEmulator:
         """
         k = self.rbes[0][0].interaction.momentum(alpha)
 
-        Splus = Splus[:,np.newaxis]
-        Sminus = Sminus[:,np.newaxis]
+        Splus = Splus[:, np.newaxis]
+        Sminus = Sminus[:, np.newaxis]
         lmax = Splus.shape[0]
         l = self.ls[:lmax]
 
@@ -561,6 +561,26 @@ class ScatteringAmplitudeEmulator:
             ]
         )
         return Splus, Sminus
+
+    def exact_rmatrix_elements(self, alpha):
+        r"""Returns:
+        Rl_plus (ndarray) : l-s aligned R-matrix elements for partial waves up to where
+        Rl_minus (ndarray) : same as Splus, but l-s anti-aligned
+        """
+        Rplus = np.array(
+            [
+                rbe_list[0].basis.solver.rmatrix(alpha, rbe_list[0].s_0)
+                for rbe_list in self.rbes
+            ]
+        )
+        Rminus = np.array(
+            [Rplus[0]]
+            + [
+                rbe_list[1].basis.solver.rmatrix(alpha, rbe_list[1].s_0)
+                for rbe_list in self.rbes[1:]
+            ]
+        )
+        return Rplus, Rminus
 
     def emulate_smatrix_elements(self, alpha):
         r"""Returns:

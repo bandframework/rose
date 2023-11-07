@@ -263,7 +263,6 @@ class ReducedBasisEmulator:
         """
         return self.basis.solver.delta(theta, self.s_0)
 
-
     def save(self, filename):
         r"""Write the current emulator to file.
 

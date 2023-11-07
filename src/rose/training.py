@@ -168,24 +168,30 @@ class CATPerformance:
         self.output_shape = benchmark_ground_truth[0].shape
         self.num_inputs = len(benchmark_inputs)
         all_output_shape = (self.num_inputs,) + self.output_shape
-        self.runner_residuals = np.zeros(all_output_shape)
-        self.rel_err = np.zeros(all_output_shape)
+        self.runner_residuals = np.zeros(
+            all_output_shape, dtype=benchmark_ground_truth[0].dtype
+        )
+        self.runner_output = np.zeros_like(self.runner_residuals)
+        self.rel_err = np.zeros(all_output_shape, dtype=np.double)
         self.times = np.zeros(self.num_inputs)
         for i in range(self.num_inputs):
             st = perf_counter()
             predicted = benchmark_runner(benchmark_inputs[i])
             et = perf_counter()
+            self.runner_output[i,...] = predicted
             self.runner_residuals[i, ...] = benchmark_ground_truth[i] - predicted
-            self.rel_err[i, ...] = (
-                np.fabs(self.runner_residuals[i, ...]) / benchmark_ground_truth[i]
+            self.rel_err[i, ...] = np.sqrt(
+                np.real(
+                    self.runner_residuals[i, ...] * self.runner_residuals[i, ...].conj()
+                )
+            ) / np.sqrt(
+                np.real(benchmark_ground_truth[i] * benchmark_ground_truth[i].conj())
             )
             self.times[i] = et - st
 
         # take median along all axes but 0
         axes = [i + 1 for i in range(len(self.output_shape))]
         self.median_rel_err = np.median(self.rel_err, axis=axes)
-        # self.mean_rel_err = np.mean(self.rel_err, axis=axes)
-        # self.max_rel_err = np.max(self.rel_err, axis=axes)
 
 
 def CAT_plot(data_sets: list, labels=None, border_styles=None):

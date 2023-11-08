@@ -29,5 +29,5 @@ class SpinOrbitTerm:
         self.l_dot_s = l_dot_s
         self.v_so = spin_orbit_potential
 
-    def spin_orbit_potential(r, alpha):
+    def spin_orbit_potential(self, r, alpha):
         return self.v_so(r, alpha, self.l_dot_s)

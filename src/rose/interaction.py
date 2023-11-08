@@ -53,11 +53,13 @@ class Interaction:
             spin_orbit_term (SpinOrbitTerm): See [Spin-Orbit section](#spin-orbit)
 
         """
+        self.Z_1 = Z_1
+        self.Z_2 = Z_2
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
-        self.mu = mu / HBARC  # Go ahead and convert to 1/fm
+        self.mu = mu
         self.ell = ell
-        self.k_c = ALPHA * Z_1 * Z_2 * self.mu
+        self.k_c = ALPHA * Z_1 * Z_2 * self.mu / HBARC
         self.R_C = R_C
         self.is_complex = is_complex
         self.spin_orbit_term = spin_orbit_term
@@ -71,7 +73,7 @@ class Interaction:
             # If the energy is specified (not None as it is when subclass
             # EnergizedInteraction instantiates), set up associated attributes.
             self.energy = energy
-            self.k = np.sqrt(2 * self.mu * self.energy / HBARC)
+            self.k = np.sqrt(2 * self.mu * self.energy / HBARC**2)
             self.sommerfeld = self.k_c / self.k
         else:
             # If the energy is not specified, these will be set up when the

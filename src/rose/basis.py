@@ -142,11 +142,11 @@ class RelativeBasis(Basis):
         )
 
         if phi_0_energy:
-            k = np.sqrt(2 * self.solver.interaction.mu * phi_0_energy / HBARC)
+            k = np.sqrt(2 * self.solver.interaction.mu * phi_0_energy / HBARC**2)
             eta = self.solver.interaction.k_c / k
         else:
             if isinstance(self.solver.interaction, EnergizedInteractionEIM):
-                # k_mean = np.sqrt(2*self.solver.interaction.mu*np.mean(theta_train[:, 0])/HBARC)
+                # k_mean = np.sqrt(2*self.solver.interaction.mu*np.mean(theta_train[:, 0])/HBARC**2)
                 # eta = self.solver.interaction.k_c / k_mean
                 # Does not support Coulomb (yet).
                 eta = 0.0

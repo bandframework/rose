@@ -126,6 +126,7 @@ class InteractionEIM(Interaction):
             spin_orbit_term=spin_orbit_term,
         )
 
+        self.training_info = training_info
         self.s_mesh = rho_mesh.copy()
         # Generate a basis used to approximate the potential.
         # Did the user specify the training points?

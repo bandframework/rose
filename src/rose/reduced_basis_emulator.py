@@ -114,7 +114,8 @@ class ReducedBasisEmulator:
             self.basis.solver = basis.solver
 
         self.s_mesh = np.copy(basis.rho_mesh)
-        self.s_0 = s_0
+        self.i_0 = np.argmin(np.abs(self.s_mesh - s_0))
+        self.s_0 = self.s_mesh[self.i_0]
 
         if initialize_emulator:
             self.initialize_emulator()
@@ -146,10 +147,6 @@ class ReducedBasisEmulator:
         phi_basis = self.basis.vectors
         ang_mom = self.l * (self.l + 1) / self.s_mesh**2
 
-        # This is not going to work when we implement energy emulation with Coulomb.
-        S_C = self.interaction.R_C * self.interaction.k
-        k_c = 2 * self.interaction.k_c * regular_inverse_s(self.s_mesh, S_C)
-
         self.d2 = -d2_operator @ phi_basis
         self.A_1 = phi_basis.T @ self.d2
         self.A_2 = np.array(
@@ -160,6 +157,10 @@ class ReducedBasisEmulator:
         )
         self.A_3 = np.einsum("ij,j,jk", phi_basis.T, ang_mom - 1, phi_basis)
         self.A_13 = self.A_1 + self.A_3
+
+        # This is not going to work when we implement energy emulation with Coulomb.
+        S_C = self.interaction.R_C * self.interaction.k
+        k_c = 2 * self.interaction.k_c * regular_inverse_s(self.s_mesh, S_C)
         self.A_3_coulomb = np.einsum("ij,j,jk", phi_basis.T, k_c, phi_basis)
 
         # Precompute what we can for the inhomogeneous term ( -< psi | F(phi_0) > ).

@@ -58,11 +58,53 @@ def sample_params_LHC(
     )
 
 
-def CAT_trainer_EIM(
+def build_sae_config_set(
+    sae_configs: list,
+    base_interaction: InteractionEIMSpace,
+    theta_train: np.array,
+    bounds = None,
+    **SAE_kwargs,
+):
+    r"""
+    build a list of `ScatteringAmplitudeEmulator`s to the specification of sae_configs
+    """
+
+    # first build the largest one, which has all the bases we need
+    imax = np.argmax([conf[0] for conf in sae_configs])
+    saes = []
+    saes.append(
+        build_sae(
+            sae_configs[imax],
+            base_interaction,
+            theta_train,
+            **SAE_kwargs,
+        )
+    )
+
+    # get the largest set of bases (for each partial wave)
+    bases = [[rbe.basis for rbe in rbe_list] for rbe_list in sae[0].rbes]
+
+    # now do the rest using the bases we've built
+    sae_configs = [conf for i, conf in enumerate(sae_configs) if i != imax]
+    for conf in sae_configs:
+        saes.append(
+            build_sae(
+                conf,
+                base_interaction,
+                bases,
+                **SAE_kwargs,
+            )
+        )
+
+    return saes
+
+
+def build_sae(
     sae_config: tuple,
     base_interaction: InteractionEIMSpace,
-    bases: list = None,
     theta_train: np.array = None,
+    bounds = None,
+    bases: list = None,
     **SAE_kwargs,
 ):
     r"""
@@ -79,26 +121,35 @@ def CAT_trainer_EIM(
 
     (n_basis, n_EIM) = sae_config
 
+    base = base_interaction.interactions[0][0]
+
+    if theta_train is None:
+        assert bounds is not None
+        explicit_training = False
+        training_info = bounds
+    else:
+        explicit_training=True
+        training_info = theta_train
+
+
     interactions = InteractionEIMSpace(
-        base_interaction.coordinate_space_potential,
-        base_interaction.n_theta,
-        base_interaction.mu,
-        base_interaction.energy,
-        base_interaction.training_info,
+        base.v_r,
+        base.n_theta,
+        base.mu,
+        base.energy,
+        training_info=training_info,
         l_max=base_interaction.l_max,
-        Z_1=base_interaction.Z_1,
-        Z_2=base_interaction.Z_2,
-        R_C=base_interaction.R_C,
-        is_complex=base_interaction.is_complex,
-        spin_orbit_potential=base_interaction.spin_orbit_potential,
-        explicit_training=base_interaction.explicit_training,
-        n_train=base_interaction.n_train,
-        rho_mesh=base_interaction.rho_mesh,
+        Z_1=base.Z_1,
+        Z_2=base.Z_2,
+        R_C=base.R_C,
+        is_complex=base.is_complex,
+        spin_orbit_potential=base.spin_orbit_term.v_so,
+        explicit_training=explicit_training,
+        rho_mesh=base.s_mesh,
         n_basis=n_EIM,
     )
 
-    if theta_train is None:
-        assert bases is not None
+    if bases is not None:
         new_bases = []
         for interaction_list, basis_list in zip(interactions.interactions, bases):
             basis_list = []
@@ -119,7 +170,7 @@ def CAT_trainer_EIM(
     else:
         emulator = ScatteringAmplitudeEmulator.from_train(
             interaction,
-            training_samples,
+            theta_train,
             n_basis=n_basis,
             **SAE_kwargs,
         )
@@ -178,7 +229,7 @@ class CATPerformance:
             st = perf_counter()
             predicted = benchmark_runner(benchmark_inputs[i])
             et = perf_counter()
-            self.runner_output[i,...] = predicted
+            self.runner_output[i, ...] = predicted
             self.runner_residuals[i, ...] = benchmark_ground_truth[i] - predicted
             self.rel_err[i, ...] = np.sqrt(
                 np.real(

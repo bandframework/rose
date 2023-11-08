@@ -592,7 +592,8 @@ class ScatteringAmplitudeEmulator:
             [rbe_list[0].S_matrix_element(alpha) for rbe_list in self.rbes]
         )
         Sminus = np.array(
-            [rbe_list[1].S_matrix_element(alpha) for rbe_list in self.rbes]
+            [Splus[0]]
+            + [rbe_list[1].S_matrix_element(alpha) for rbe_list in self.rbes[1:]]
         )
         return Splus, Sminus
 

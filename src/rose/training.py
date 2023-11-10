@@ -11,8 +11,9 @@ from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib import ticker
 import seaborn as sns
+from tqdm import tqdm
 
-from .basis import Basis
+from .basis import Basis, CustomBasis
 from .interaction_eim import InteractionEIM, InteractionEIMSpace
 from .scattering_amplitude_emulator import ScatteringAmplitudeEmulator
 
@@ -62,7 +63,7 @@ def build_sae_config_set(
     sae_configs: list,
     base_interaction: InteractionEIMSpace,
     theta_train: np.array,
-    bounds = None,
+    bounds=None,
     **SAE_kwargs,
 ):
     r"""
@@ -72,38 +73,43 @@ def build_sae_config_set(
     # first build the largest one, which has all the bases we need
     imax = np.argmax([conf[0] for conf in sae_configs])
     saes = []
-    saes.append(
-        build_sae(
-            sae_configs[imax],
-            base_interaction,
-            theta_train,
-            **SAE_kwargs,
-        )
+    inters = []
+    corresponding_inter, biggest_sae = build_sae(
+        sae_configs[imax],
+        base_interaction,
+        theta_train,
+        bounds,
+        **SAE_kwargs,
     )
 
     # get the largest set of bases (for each partial wave)
-    bases = [[rbe.basis for rbe in rbe_list] for rbe_list in sae[0].rbes]
+    bases = [[rbe.basis for rbe in rbe_list] for rbe_list in biggest_sae.rbes]
 
     # now do the rest using the bases we've built
-    sae_configs = [conf for i, conf in enumerate(sae_configs) if i != imax]
-    for conf in sae_configs:
-        saes.append(
-            build_sae(
-                conf,
+    for i in tqdm(range(len(sae_configs))):
+        if i == imax:
+            saes.append(biggest_sae)
+            inters.append(corresponding_inter)
+        else:
+            inter, sae = build_sae(
+                sae_configs[i],
                 base_interaction,
+                theta_train,
+                bounds,
                 bases,
                 **SAE_kwargs,
             )
-        )
+            saes.append(sae)
+            inters.append(inter)
 
-    return saes
+    return inters, saes
 
 
 def build_sae(
     sae_config: tuple,
     base_interaction: InteractionEIMSpace,
     theta_train: np.array = None,
-    bounds = None,
+    bounds=None,
     bases: list = None,
     **SAE_kwargs,
 ):
@@ -123,28 +129,26 @@ def build_sae(
 
     base = base_interaction.interactions[0][0]
 
-    if theta_train is None:
-        assert bounds is not None
-        explicit_training = False
-        training_info = bounds
+    if bounds is not None:
+        eim_explicit_training = False
+        eim_training_info = bounds
     else:
-        explicit_training=True
-        training_info = theta_train
-
+        eim_explicit_training = True
+        eim_training_info = theta_train
 
     interactions = InteractionEIMSpace(
         base.v_r,
         base.n_theta,
         base.mu,
         base.energy,
-        training_info=training_info,
+        training_info=eim_training_info,
         l_max=base_interaction.l_max,
         Z_1=base.Z_1,
         Z_2=base.Z_2,
         R_C=base.R_C,
         is_complex=base.is_complex,
         spin_orbit_potential=base.spin_orbit_term.v_so,
-        explicit_training=explicit_training,
+        explicit_training=eim_explicit_training,
         rho_mesh=base.s_mesh,
         n_basis=n_EIM,
     )
@@ -152,10 +156,10 @@ def build_sae(
     if bases is not None:
         new_bases = []
         for interaction_list, basis_list in zip(interactions.interactions, bases):
-            basis_list = []
+            new_basis_list = []
             for interaction, basis in zip(interaction_list, basis_list):
-                solutions = basis.solutions[:, :nbasis]
-                basis_list.append(
+                solutions = basis.solutions[:, :n_basis] - basis.phi_0[:, np.newaxis]
+                new_basis_list.append(
                     CustomBasis(
                         solutions,
                         basis.phi_0,
@@ -163,13 +167,14 @@ def build_sae(
                         n_basis,
                         interaction.ell,
                         use_svd=False,
+                        solver=basis.solver,
                     )
                 )
-            new_bases.append(basis_list)
-        emulator = ScatteringAmplitudeEmulator(interaction, new_bases, **SAE_kwargs)
+            new_bases.append(new_basis_list)
+        emulator = ScatteringAmplitudeEmulator(interactions, new_bases, **SAE_kwargs)
     else:
         emulator = ScatteringAmplitudeEmulator.from_train(
-            interaction,
+            interactions,
             theta_train,
             n_basis=n_basis,
             **SAE_kwargs,
@@ -225,7 +230,7 @@ class CATPerformance:
         self.runner_output = np.zeros_like(self.runner_residuals)
         self.rel_err = np.zeros(all_output_shape, dtype=np.double)
         self.times = np.zeros(self.num_inputs)
-        for i in range(self.num_inputs):
+        for i in tqdm(range(self.num_inputs)):
             st = perf_counter()
             predicted = benchmark_runner(benchmark_inputs[i])
             et = perf_counter()

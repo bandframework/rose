@@ -290,15 +290,6 @@ class ScatteringAmplitudeEmulator:
         self.Sl_cutoff = Sl_cutoff
 
         # construct bases
-        bases_types = [isinstance(bases[l], CustomBasis) for l in range(self.l_max + 1)]
-        if np.any(bases_types) and verbose:
-            print(
-                """
-                NOTE: When supplying a CustomBasis, the ROSE high-fidelity solver is \n
-                instantiated for the sake of future evaluations.  Any requests to the solver \n
-                will NOT be communicated to the user's own high-fidelity solver.
-                """
-            )
         self.rbes = []
         for interaction_list, basis_list in zip(interaction_space.interactions, bases):
             self.rbes.append(

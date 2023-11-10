@@ -193,6 +193,7 @@ class CustomBasis(Basis):
         n_basis: int,
         ell: int,  # angular momentum, l
         use_svd: bool,
+        solver: SchroedingerEquation = None,
     ):
         r"""Builds a custom basis. Allows the user to supply their own.
 
@@ -224,7 +225,7 @@ class CustomBasis(Basis):
 
         """
 
-        super().__init__(None, None, rho_mesh, n_basis, ell)
+        super().__init__(solver, None, rho_mesh, n_basis, ell)
 
         # TODO why are we copying here?
         self.solutions = solutions.copy()

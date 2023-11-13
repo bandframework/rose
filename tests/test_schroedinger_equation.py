@@ -58,8 +58,6 @@ class TestSchrEq(unittest.TestCase):
 
         phi1 = se1.phi(theta1, rho, ell)
         phi2 = se2.phi(theta2, rho, ell)
-        print(interaction.tilde(0.8, theta1))
-        print(energized_interaction.tilde(0.8, theta2))
         norm_diff = np.linalg.norm(phi1 - phi2)
 
         self.assertTrue(

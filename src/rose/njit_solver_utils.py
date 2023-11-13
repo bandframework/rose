@@ -52,11 +52,6 @@ def g_coeff(
 
 
 @njit
-def v_so_return0(r: np.double, alpha: np.array, l_dot_s: np.double):
-    return 0.0
-
-
-@njit
 def numerov_kernel(
     g,
     g_args: tuple,

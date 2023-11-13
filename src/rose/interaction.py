@@ -7,7 +7,7 @@ import numpy as np
 from numba import njit
 
 from .constants import HBARC, ALPHA
-from .spin_orbit import SpinOrbitTerm
+from .spin_orbit import SpinOrbitTerm, null
 
 
 class Interaction:
@@ -207,7 +207,7 @@ class Interaction:
             v_so = self.spin_orbit_term.v_so
         else:
             l_dot_s = 0
-            v_so = v_so_return0
+            v_so = null
 
         return (alpha, k, S_C, E, eta, l, v_r, v_so, l_dot_s)
 

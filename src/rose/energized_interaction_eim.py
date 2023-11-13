@@ -10,7 +10,7 @@ from scipy.stats import qmc
 from .interaction import Interaction, InteractionSpace, couplings
 from .interaction_eim import InteractionEIM, max_vol
 from .constants import HBARC, DEFAULT_RHO_MESH
-from .spin_orbit import SpinOrbitTerm
+from .spin_orbit import SpinOrbitTerm, null
 
 
 class EnergizedInteractionEIM(Interaction):
@@ -242,7 +242,7 @@ class EnergizedInteractionEIM(Interaction):
             v_so = self.spin_orbit_term.v_so
         else:
             l_dot_s = 0
-            v_so = v_so_return0
+            v_so = null
 
         # remove the energy term for alpha, so we return just the parameters that plug into v_r
         return (alpha[1:], k, S_C, E, eta, l, v_r, v_so, l_dot_s)

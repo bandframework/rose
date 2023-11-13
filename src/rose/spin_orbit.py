@@ -8,9 +8,7 @@ import numpy as np
 class SpinOrbitTerm:
     def __init__(
         self,
-        spin_orbit_potential: Callable[
-            [float, np.array, float], float
-        ] = None,
+        spin_orbit_potential: Callable[[float, np.array, float], float] = None,
         l_dot_s: float = None,
     ):
         r"""Spin-orbit interaction
@@ -39,5 +37,4 @@ class SpinOrbitTerm:
 
 @njit
 def null(r, alpha, l_dot_s):
-    return 0.
-
+    return 0.0

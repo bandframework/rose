@@ -74,7 +74,7 @@ class Interaction:
             # If the energy is specified (not None as it is when subclass
             # EnergizedInteraction instantiates), set up associated attributes.
             self.energy = energy
-            self.k = np.sqrt(2 * self.mu * self.energy ) / HBARC
+            self.k = np.sqrt(2 * self.mu * self.energy) / HBARC
             self.sommerfeld = self.k_c / self.k
         else:
             # If the energy is not specified, these will be set up when the
@@ -97,9 +97,8 @@ class Interaction:
             u_tilde (float | complex): value of scaled interaction
 
         """
-        vr = (
-            self.v_r(s / self.k, alpha)
-          + self.spin_orbit_term.spin_orbit_potential(s / self.k, alpha)
+        vr = self.v_r(s / self.k, alpha) + self.spin_orbit_term.spin_orbit_potential(
+            s / self.k, alpha
         )
         return 1.0 / self.energy * vr
 
@@ -187,6 +186,30 @@ class Interaction:
             R_C (float): Coulomb cutoff
         """
         return self.R_C
+
+    def bundle_gcoeff_args(self, alpha: np.array):
+        r"""Bundles parameters for the Schrödinger equation
+
+        Returns:
+            args (tuple) : all the arguments to g_coeff except for $s$
+
+        Parameters:
+            alpha (ndarray) : the parameters for the interaction
+        """
+        k = self.momentum(alpha)
+        S_C = self.coulomb_cutoff(alpha) * k
+        E = self.E(alpha)
+        eta = self.eta(alpha)
+        l = self.ell
+        v_r = self.v_r
+        if self.include_spin_orbit:
+            l_dot_s = self.spin_orbit_term.l_dot_s
+            v_so = self.spin_orbit_term.v_so
+        else:
+            l_dot_s = 0
+            v_so = v_so_return0
+
+        return (alpha, k, S_C, E, eta, l, v_r, v_so, l_dot_s)
 
 
 class InteractionSpace:

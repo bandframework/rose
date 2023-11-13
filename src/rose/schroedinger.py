@@ -9,7 +9,7 @@ documentation](basis.md).
 import numpy as np
 from scipy.integrate import solve_ivp
 
-from .njit_solver_utils import g_coeff, bundle_gcoeff_args
+from .njit_solver_utils import g_coeff
 from .interaction import Interaction
 from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
 from .utility import regular_inverse_s, Gamow_factor

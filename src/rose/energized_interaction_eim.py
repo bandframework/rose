@@ -141,9 +141,8 @@ class EnergizedInteractionEIM(Interaction):
         """
         energy = self.E(alpha)
         k = self.momentum(alpha)
-        vr = (
-            self.v_r(s / k, alpha[1:])
-            + self.spin_orbit_term.spin_orbit_potential(s / k, alpha[1:])
+        vr = self.v_r(s / k, alpha[1:]) + self.spin_orbit_term.spin_orbit_potential(
+            s / k, alpha[1:]
         )
         return 1.0 / energy * vr
 
@@ -171,7 +170,7 @@ class EnergizedInteractionEIM(Interaction):
             eta (float): Sommerfeld parameter
 
         """
-        return self.k_c /  self.momentum(alpha)
+        return self.k_c / self.momentum(alpha)
 
     def tilde_emu(self, s: float, alpha: np.array):
         r"""Emulated interaction = $\hat{U}(s, \alpha, E)$
@@ -208,7 +207,7 @@ class EnergizedInteractionEIM(Interaction):
         Returns:
             k (float): momentum
         """
-        return np.sqrt(2 * self.mu * self.E(alpha) ) / HBARC
+        return np.sqrt(2 * self.mu * self.E(alpha)) / HBARC
 
     def E(self, alpha: np.array):
         r"""Energy. Implemented as a function to support energy

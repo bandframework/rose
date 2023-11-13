@@ -11,7 +11,6 @@ from .njit_solver_utils import (
     numerov_kernel_meshless,
     numerov_kernel,
     g_coeff,
-    bundle_gcoeff_args,
 )
 from .utility import regular_inverse_s
 from .interaction import Interaction

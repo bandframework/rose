@@ -98,7 +98,7 @@ def regular_inverse_s(s, s_c):
         ii = np.where(s <= s_c)[0]
         jj = np.where(s > s_c)[0]
         within_cutoff = np.zeros(ii.shape)
-        if ii:
+        if ii.size > 0:
             within_cutoff = 1.0 / (2.0 * s_c) * (3.0 - (s[ii] / s_c) ** 2)
 
         return np.hstack((within_cutoff, 1.0 / s[jj]))

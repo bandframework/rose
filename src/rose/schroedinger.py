@@ -163,7 +163,7 @@ class SchroedingerEquation:
             l = self.interaction.ell
 
         solution, _ = self.solve_se(alpha, domain, l, **kwargs)
-
+        u = solution(s_0)
         rl = 1 / s_0 * (u[0] / u[1])
         return rl
 

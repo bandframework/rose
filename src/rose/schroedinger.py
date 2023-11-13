@@ -200,7 +200,7 @@ class SchroedingerEquation:
             l,
             rho_0=rho_0,
             phi_threshold=phi_threshold,
-            **solve_ivp_kwargs,
+            **kwargs,
         )
 
         mask = np.where(s_mesh < rho_0)

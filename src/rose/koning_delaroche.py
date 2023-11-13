@@ -75,29 +75,6 @@ def woods_saxon_safe(r, R, a):
         return np.hstack((1 / (1 + np.exp(x[ii])), np.zeros(jj.size)))
 
 
-def woods_saxon_prime(r, R, a):
-    """derivative of the Woods-Saxon potential w.r.t. $r$"""
-    return -1 / a * np.exp((r - R) / a) / (1 + np.exp((r - R) / a)) ** 2
-
-
-def woods_saxon_prime_safe(r, R, a):
-    """derivative of the Woods-Saxon potential w.r.t. $r$
-
-    * avoids `exp` overflows
-
-    """
-    x = (r - R) / a
-    if isinstance(x, float):
-        return -1 / a * np.exp(x) / (1 + np.exp(x)) ** 2 if x < MAX_ARG else 0
-    else:
-        ii = np.where(x <= MAX_ARG)[0]
-        jj = np.where(x > MAX_ARG)[0]
-        return np.hstack(
-            [-1 / a * np.exp(x[ii]) / (1 + np.exp(x[ii])) ** 2, np.zeros(jj.size)]
-        )
->>>>>>> 9597d9a047f7c129c04fd50b263d7dda069188c4
-
-
 @njit
 def woods_saxon_prime(r, R, a):
     """derivative of the Woods-Saxon potential w.r.t. $r$"""

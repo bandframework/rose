@@ -15,6 +15,7 @@ from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
 from .utility import regular_inverse_s, Gamow_factor
 
 
+
 class SchroedingerEquation:
     """
     Solver for the single-channel, reduced, radial Schrödinger equation using scipy.integrate
@@ -163,7 +164,6 @@ class SchroedingerEquation:
 
         solution, _ = self.solve_se(alpha, domain, l, **kwargs)
 
-        u = solution(s_0)
         rl = 1 / s_0 * (u[0] / u[1])
         return rl
 
@@ -200,7 +200,7 @@ class SchroedingerEquation:
             l,
             rho_0=rho_0,
             phi_threshold=phi_threshold,
-            **kwargs,
+            **solve_ivp_kwargs,
         )
 
         mask = np.where(s_mesh < rho_0)

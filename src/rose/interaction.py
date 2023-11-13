@@ -10,6 +10,7 @@ from .constants import HBARC, ALPHA
 from .spin_orbit import SpinOrbitTerm, null
 
 
+
 class Interaction:
     """Defines a local, (possibly) complex, affine, fixed-energy interaction."""
 

@@ -13,6 +13,7 @@ from .constants import HBARC, DEFAULT_RHO_MESH
 from .spin_orbit import SpinOrbitTerm, null
 
 
+
 class EnergizedInteractionEIM(Interaction):
     def __init__(
         self,

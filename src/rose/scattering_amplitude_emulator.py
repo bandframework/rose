@@ -706,4 +706,4 @@ class ScatteringAmplitudeEmulator:
 
         """
         with open(filename, "wb") as f:
-            pickle.dump(self, filename)
+            pickle.dump(self, f)

@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+from numba import njit
 
 import rose
 
@@ -19,7 +20,7 @@ class TestSchrEq(unittest.TestCase):
     #     self.assertTrue(
     #         np.linalg.norm(u - u_pg) < 0.1
     #     )
-    
+
 
     def test_energy(self):
         '''
@@ -33,7 +34,10 @@ class TestSchrEq(unittest.TestCase):
         ell = 0
         z = 0
         rho = rose.constants.DEFAULT_RHO_MESH
-        potential = lambda r, theta: theta[0] * rose.koning_delaroche.woods_saxon(r, theta[1], theta[2]) 
+
+        @njit
+        def potential(r, theta):
+            return theta[0] * rose.koning_delaroche.woods_saxon(r, theta[1], theta[2])
 
         interaction = rose.Interaction(potential, 3, mu, energy, z, z)
         se1 = rose.SchroedingerEquation(interaction)
@@ -54,13 +58,15 @@ class TestSchrEq(unittest.TestCase):
 
         phi1 = se1.phi(theta1, rho, ell)
         phi2 = se2.phi(theta2, rho, ell)
+        print(interaction.tilde(0.8, theta1))
+        print(energized_interaction.tilde(0.8, theta2))
         norm_diff = np.linalg.norm(phi1 - phi2)
 
         self.assertTrue(
             norm_diff < 1e-16,
             msg=f'norm(difference) = {norm_diff:.2e}'
         )
-    
+
 
     def test_emulation(self):
         AMU = 931.5

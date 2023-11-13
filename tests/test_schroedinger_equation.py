@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 
 from pathlib import Path
+
 test_dir = Path(__file__).parent
 
 import rose
@@ -10,7 +11,7 @@ import rose
 ENERGY = 50  # MeV
 V0R = 200
 V0S = -91.85
-_, u_pg = np.loadtxt( test_dir / "u_mn_test.txt", unpack=True)
+_, u_pg = np.loadtxt(test_dir / "u_mn_test.txt", unpack=True)
 u_pg /= np.max(u_pg)  # This is a very hacky way to handle normalization.
 
 

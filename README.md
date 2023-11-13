@@ -1,3 +1,5 @@
+[![Python package](https://github.com/bandframework/rose/actions/workflows/python-package.yml/badge.svg)](https://github.com/bandframework/rose/actions/workflows/python-package.yml)
+
 # ROSE - The **R**educed-**O**rder **S**cattering **E**mulator
 
 ROSE makes it easy to build and train a scattering emulator. ROSE enables aspiring graduate students and long-suffering postdocs to emulate nuclear scattering observables with optical potentials, trading negligible amounts of accuracy for orders-of-magnitude gains in speed.

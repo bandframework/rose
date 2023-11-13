@@ -1,6 +1,9 @@
 from .interaction import Interaction, InteractionSpace
 from .interaction_eim import InteractionEIM, InteractionEIMSpace
-from .energized_interaction_eim import EnergizedInteractionEIM, EnergizedInteractionEIMSpace
+from .energized_interaction_eim import (
+    EnergizedInteractionEIM,
+    EnergizedInteractionEIMSpace,
+)
 from .mn_potential import MN_Potential
 from .schroedinger import SchroedingerEquation
 from . import constants, metrics

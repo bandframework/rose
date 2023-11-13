@@ -140,8 +140,12 @@ class EnergizedInteractionEIM(Interaction):
 
         """
         energy = self.E(alpha)
-        k = np.sqrt(2 * self.mu * energy / HBARC**2)
-        return 1.0 / energy * self.v_r(s / k, alpha[1:])
+        k = self.momentum(alpha)
+        vr = (
+            self.v_r(s / k, alpha[1:])
+            + self.spin_orbit_term.spin_orbit_potential(s / k, alpha[1:])
+        )
+        return 1.0 / energy * vr
 
     def coefficients(self, alpha: np.array):  # interaction parameters
         r"""Computes the EIM expansion coefficients.
@@ -153,7 +157,7 @@ class EnergizedInteractionEIM(Interaction):
             coefficients (ndarray): EIM expansion coefficients
 
         """
-        k = np.sqrt(2 * self.mu * self.E(alpha) / HBARC**2)
+        k = self.momentum(alpha)
         u_true = self.tilde(self.r_i, alpha)
         return 1 / k, self.Ainv @ u_true
 
@@ -167,7 +171,7 @@ class EnergizedInteractionEIM(Interaction):
             eta (float): Sommerfeld parameter
 
         """
-        return self.k_c / np.sqrt(2 * self.mu * self.E(alpha) / HBARC**2)
+        return self.k_c /  self.momentum(alpha)
 
     def tilde_emu(self, s: float, alpha: np.array):
         r"""Emulated interaction = $\hat{U}(s, \alpha, E)$
@@ -204,7 +208,7 @@ class EnergizedInteractionEIM(Interaction):
         Returns:
             k (float): momentum
         """
-        return np.sqrt(2 * self.mu * self.E(alpha) / HBARC**2)
+        return np.sqrt(2 * self.mu * self.E(alpha) ) / HBARC
 
     def E(self, alpha: np.array):
         r"""Energy. Implemented as a function to support energy
@@ -218,6 +222,31 @@ class EnergizedInteractionEIM(Interaction):
             Energy (float): in [MeV]
         """
         return alpha[0]
+
+    def bundle_gcoeff_args(self, alpha: np.array):
+        r"""Bundles parameters for the Schrödinger equation
+
+        Returns:
+            args (tuple) : all the arguments to g_coeff except for $s$
+
+        Parameters:
+            alpha (ndarray) : the parameters for the interaction
+        """
+        k = self.momentum(alpha)
+        S_C = self.coulomb_cutoff(alpha) * k
+        E = self.E(alpha)
+        eta = self.eta(alpha)
+        l = self.ell
+        v_r = self.v_r
+        if self.include_spin_orbit:
+            l_dot_s = self.spin_orbit_term.l_dot_s
+            v_so = self.spin_orbit_term.v_so
+        else:
+            l_dot_s = 0
+            v_so = v_so_return0
+
+        # remove the energy term for alpha, so we return just the parameters that plug into v_r
+        return (alpha[1:], k, S_C, E, eta, l, v_r, v_so, l_dot_s)
 
 
 class EnergizedInteractionEIMSpace(InteractionSpace):

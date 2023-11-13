@@ -56,32 +56,6 @@ def v_so_return0(r: np.double, alpha: np.array, l_dot_s: np.double):
     return 0.0
 
 
-def bundle_gcoeff_args(interaction: Interaction, alpha: np.array):
-    r"""Bundles parameters for the Schrödinger equation
-
-    Returns:
-        args (tuple) : all the arguments to g_coeff except for $s$
-
-    Parameters:
-        interaction (Interaction) : the radial potential under consideration
-        alpha (ndarray) : the parameters to the interaction
-    """
-    k = interaction.momentum(alpha)
-    S_C = interaction.coulomb_cutoff(alpha) * k
-    E = interaction.E(alpha)
-    eta = interaction.eta(alpha)
-    l = interaction.ell
-    v_r = interaction.v_r
-    if interaction.include_spin_orbit:
-        l_dot_s = interaction.spin_orbit_term.l_dot_s
-        v_so = interaction.spin_orbit_term.v_so
-    else:
-        l_dot_s = 0
-        v_so = v_so_return0
-
-    return (alpha, k, S_C, E, eta, l, v_r, v_so, l_dot_s)
-
-
 @njit
 def numerov_kernel(
     g,

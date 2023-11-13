@@ -85,29 +85,6 @@ class SchroedingerEquation:
 
         return rho_0, initial_conditions
 
-    def radial_se_deriv2(self, s, l, alpha, S_C):
-        r"""Evaluates the coefficient of y in RHSof the radial reduced Schroedinger equation as below:
-            $u'' = (\tilde{U}(s, \alpha) + l(l+1) f(s) + 2 eta / s + \tilde{U}_{so}(s, \alpha) - 1.0)u$
-
-            where $f(s)$ is the form of the Coulomb term (a function of only `S_C`).
-
-        Returns:
-            (float) : RHS of the scaled SE, with the LHS being the second derivative operator.
-            This value, multiplied by the value of the radial wavefunction, gives its second derivative
-
-        Parameters:
-            alpha (ndarray): parameter vector
-            s (float): values of dimensionless radial coordinate $s=kr$
-            l (int): angular momentum
-            S_C (float) : Coulomb cutoff (charge radius)
-        """
-        return (
-            self.interaction.tilde(s, alpha)
-            + 2 * self.interaction.eta(alpha) * regular_inverse_s(s, S_C)
-            + l * (l + 1) / s**2
-            - 1.0
-        )
-
     def solve_se(
         self,
         alpha: np.array,
@@ -137,7 +114,7 @@ class SchroedingerEquation:
             alpha, phi_threshold, l, rho_0
         )
 
-        args = bundle_gcoeff_args(self.interaction, alpha)
+        args = self.interaction.bundle_gcoeff_args(alpha)
         sol = solve_ivp(
             lambda s, phi: np.array(
                 [

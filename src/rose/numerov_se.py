@@ -91,9 +91,10 @@ class NumerovSolver(SchroedingerEquation):
             alpha, phi_threshold, l, rho_0
         )
 
+        args = self.interaction.bundle_gcoeff_args(alpha)
         y = numerov_kernel(
             g_coeff,
-            bundle_gcoeff_args(self.interaction, alpha),
+            args,
             self.domain,
             self.dx,
             initial_conditions,
@@ -138,9 +139,10 @@ class NumerovSolver(SchroedingerEquation):
         # determine initial conditions
         rho_0, initial_conditions = self.initial_conditions(alpha, phi_threshold, l)
 
+        args = self.interaction.bundle_gcoeff_args(alpha)
         x, y = numerov_kernel_meshless(
             g_coeff,
-            bundle_gcoeff_args(self.interaction, alpha),
+            args,
             (self.domain[0], s_0),
             self.dx,
             initial_conditions,

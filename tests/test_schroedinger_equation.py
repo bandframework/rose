@@ -1,13 +1,16 @@
 import unittest
 import numpy as np
 
+from pathlib import Path
+test_dir = Path(__file__).parent
+
 import rose
 
 # Values used in Pablo's notebook.
 ENERGY = 50  # MeV
 V0R = 200
 V0S = -91.85
-_, u_pg = np.loadtxt("u_mn_test.txt", unpack=True)
+_, u_pg = np.loadtxt( test_dir / "u_mn_test.txt", unpack=True)
 u_pg /= np.max(u_pg)  # This is a very hacky way to handle normalization.
 
 
@@ -82,7 +85,7 @@ class TestSchrEq(unittest.TestCase):
         )
         ntheta = alphastar.size
 
-        train = np.load("train.npy")
+        train = np.load(test_dir / "train.npy")
 
         ell = 3
         interaction = rose.InteractionEIM(

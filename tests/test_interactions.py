@@ -2,6 +2,8 @@ import unittest
 import numpy as np
 import rose
 
+from pathlib import Path
+test_dir = Path(__file__).parent
 
 def relative_difference(a, b):
     return np.abs((a - b) / b)

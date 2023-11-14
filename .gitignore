@@ -17,3 +17,4 @@ site/
 __version__.py
 docs/tutorials/Cal-*
 */.ipynb_checkpoints/*
+docs/tutorials/.ipynb_checkpoints/

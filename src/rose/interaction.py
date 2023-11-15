@@ -58,9 +58,7 @@ class Interaction:
         self.Z_2 = Z_2
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
-        self.mu = mu
         self.ell = ell
-        self.k_c = ALPHA * Z_1 * Z_2 * self.mu / HBARC
         self.R_C = R_C
         self.is_complex = is_complex
         self.spin_orbit_term = spin_orbit_term
@@ -71,12 +69,20 @@ class Interaction:
         else:
             self.include_spin_orbit = True
 
+        self.mu = mu
+        if mu:
+            self.k_c = ALPHA * Z_1 * Z_2 * self.mu / HBARC
+        else:
+            self.k_c = 0 #TODO mu/energy emulation does not support Coulomb
+            assert self.Z_1 * self.Z_1 == 0
+
         if energy:
             # If the energy is specified (not None as it is when subclass
             # EnergizedInteraction instantiates), set up associated attributes.
             self.energy = energy
-            self.k = np.sqrt(2 * self.mu * self.energy) / HBARC
-            self.sommerfeld = self.k_c / self.k
+            if mu:
+                self.k = np.sqrt(2 * self.mu * self.energy) / HBARC
+                self.sommerfeld = self.k_c / self.k
         else:
             # If the energy is not specified, these will be set up when the
             # methods are called.

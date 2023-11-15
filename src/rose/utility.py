@@ -194,7 +194,8 @@ def mass(A, Z, Eb):
 def kinematics(
     target: tuple,
     projectile: tuple,
-    E_lab: float,
+    E_lab: float = None,
+    E_com : float = None,
     binding_model: Callable[[int, int], float] = get_binding_energy,
 ):
     r"""Calculates the reduced mass, COM frame kinetic energy and wavenumber for a projectile (A,Z)
@@ -204,7 +205,8 @@ def kinematics(
     Parameters:
         t : target (A,Z)
         p : projectile (A,Z)
-        E_lab: bombarding energy in the lab frame [MeV]
+        E_lab: bombarding energy in the lab frame [MeV]. Either E_lab or E_com must be provided, not both.
+        E_com: bombarding energy in the com frame [MeV]. Either E_lab or E_com must be provided, not both.
         binding_model : optional callable taking in (A,Z) and returning binding energy in [MeV/c^2],
                         defaults to lookup in AME2020, and semi-empirical mass formula if not available
                         there
@@ -218,7 +220,13 @@ def kinematics(
     m_t = mass(*target, Eb_target)
     m_p = mass(*projectile, Eb_projectile)
 
-    E_com = m_t / (m_t + m_p) * E_lab
+    if E_lab is None:
+        assert E_com is not None
+        E_lab =  (m_t + m_p) / m_t * E_com
+    else:
+        assert E_com is None
+        E_com = m_t / (m_t + m_p) * E_lab
+
     Ep = E_com + m_p
 
     # relativisitic correction from A. Ingemarsson 1974, Eqs. 17 & 20

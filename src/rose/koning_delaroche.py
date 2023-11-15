@@ -374,7 +374,7 @@ class KDGlobal:
                 self.rc_A = data["KDCoulomb_r_C_A"]
                 self.rc_A2 = data["KDCoulomb_r_C_A2"]
 
-    def get_params(self, A, Z, Elab):
+    def get_params(self, A, Z, E_lab = None, E_com = None):
         """
         Calculates Koning-Delaroche global neutron-nucleus OMP parameters for given A, Z,
         and COM-frame energy, returns params in form useable by EnergizedKoningDelaroche
@@ -385,7 +385,7 @@ class KDGlobal:
         elif self.projectile == Projectile.proton:
             projectile = (1, 1)
 
-        mu, Ecom, k = kinematics((A, Z), projectile, Elab)
+        mu, E_com, k = kinematics((A, Z), projectile, E_lab=E_lab, E_com=E_com)
         eta = 0
         if self.projectile == Projectile.proton:
             k_c = ALPHA * Z * mu
@@ -406,7 +406,7 @@ class KDGlobal:
         v2 = self.v2_0 - self.v2_A * A * factor
         v3 = self.v3_0 - self.v3_A * A * factor
         v4 = self.v4_0
-        vv = Vv(Ecom, v1, v2, v3, v4, Ef)
+        vv = Vv(E_com, v1, v2, v3, v4, Ef)
 
         # real central form
         rv = self.rv_0 - self.rv_A * A ** (-1.0 / 3.0)
@@ -415,7 +415,7 @@ class KDGlobal:
         # imag volume depth
         w1 = self.w1_0 + self.w1_A * A
         w2 = self.w2_0 + self.w2_A * A
-        wv = Wv(Ecom, w1, w2, Ef)
+        wv = Wv(E_com, w1, w2, Ef)
 
         # imag volume form
         rwv = rv
@@ -425,7 +425,7 @@ class KDGlobal:
         d1 = self.d1_0 + self.d1_asymm * delta
         d2 = self.d2_0 + self.d2_A / (1 + np.exp((A - self.d2_A3) / self.d2_A2))
         d3 = self.d3_0
-        wd = Wd(Ecom, d1, d2, d3, Ef)
+        wd = Wd(E_com, d1, d2, d3, Ef)
 
         # imag surface form
         rd = self.rd_0 - self.rd_A * A ** (1.0 / 3.0)
@@ -434,7 +434,7 @@ class KDGlobal:
         # real spin orbit depth
         vso1 = self.Vso1_0 + self.Vso1_A * A
         vso2 = self.Vso2_0
-        vso = Vso(Ecom, vso1, vso2, Ef)
+        vso = Vso(E_com, vso1, vso2, Ef)
 
         # real spin orbit form
         rso = self.rso_0 - self.rso_A * A ** (-1.0 / 3.0)
@@ -443,7 +443,7 @@ class KDGlobal:
         # imag spin orbit form
         wso1 = self.Wso1_0
         wso2 = self.Wso2_0
-        wso = Wso(Ecom, wso1, wso2, Ef)
+        wso = Wso(E_com, wso1, wso2, Ef)
 
         # imag spin orbit form
         rwso = rso
@@ -481,6 +481,6 @@ class KDGlobal:
         )
 
         return (
-            (mu, Ecom, k, eta, R_C),
+            (mu, E_com, k, eta, R_C),
             params,
         )

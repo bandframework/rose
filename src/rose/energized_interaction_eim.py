@@ -15,6 +15,10 @@ from .spin_orbit import SpinOrbitTerm, null
 
 
 class EnergizedInteractionEIM(Interaction):
+    r"""
+    Extension of InteractionEIM that supports energy and, optionally, mu as parameters. Expected format
+    for alpha depends on optional parameters passed in during initialization.
+    """
     def __init__(
         self,
         coordinate_space_potential: Callable[[float, np.array], float],  # V(r, theta)
@@ -38,7 +42,12 @@ class EnergizedInteractionEIM(Interaction):
             coordinate_space_potential (Callable[[float,ndarray],float]): V(r,
                 theta) where theta are the interaction parameters
             n_theta (int): number of interaction parameters
-            mu (float): reduced mass (MeV); converted to 1/fm
+            mu (float): reduced mass (MeV); By default, energy (in Mev) is expected to be in position 0
+                of the param array; alpha. If a value of mu i
+                n MeV is provided, then the rest of alpha (positons 1:), are expected to the parameters
+                passed to `coordinate_space_potential`; otherwise, is the value of mu passed
+                is None, mu in MeV is expected to be in position 1 of alpha, and alpha[2:] will be
+                passed to `coordinate_space_potential`.
             ell (int): angular momentum
             training_info (ndarray): Either (1) parameters bounds or (2)
                 explicit training points
@@ -89,6 +98,13 @@ class EnergizedInteractionEIM(Interaction):
             is_complex=is_complex,
             spin_orbit_term=spin_orbit_term,
         )
+
+        if mu is None:
+            self.param_idx_start = 2
+        else:
+            self.param_idx_start = 1
+            self.reduced_mass = lambda alpha : self.mu
+
 
         # Generate a basis used to approximate the potential.
         # Did the user specify the training points?
@@ -208,7 +224,7 @@ class EnergizedInteractionEIM(Interaction):
         Returns:
             k (float): momentum
         """
-        return np.sqrt(2 * self.mu * self.E(alpha)) / HBARC
+        return np.sqrt(2 * self.reduced_mass(alpha) * self.E(alpha)) / HBARC
 
     def E(self, alpha: np.array):
         r"""Energy. Implemented as a function to support energy
@@ -222,6 +238,19 @@ class EnergizedInteractionEIM(Interaction):
             Energy (float): in [MeV]
         """
         return alpha[0]
+
+    def reduced_mass(self, alpha : np.array):
+        r"""Mu. Implemented as a function to support energy
+        emulation (where the mu could be a part of the parameter vector,
+        `alpha`).
+
+        Parameters:
+            alpha (ndarray): parameter vector
+
+        Returns:
+            Mu (float): in [MeV/c^2]
+        """
+        return alpha[1]
 
     def bundle_gcoeff_args(self, alpha: np.array):
         r"""Bundles parameters for the Schrödinger equation
@@ -246,7 +275,7 @@ class EnergizedInteractionEIM(Interaction):
             v_so = null
 
         # remove the energy term for alpha, so we return just the parameters that plug into v_r
-        return (alpha[1:], k, S_C, E, eta, l, v_r, v_so, l_dot_s)
+        return (alpha[self.param_idx_start:], k, S_C, E, eta, l, v_r, v_so, l_dot_s)
 
 
 class EnergizedInteractionEIMSpace(InteractionSpace):

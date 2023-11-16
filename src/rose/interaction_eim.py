@@ -10,41 +10,7 @@ from scipy.stats import qmc
 from .interaction import Interaction, InteractionSpace, couplings
 from .constants import HBARC, DEFAULT_RHO_MESH
 from .spin_orbit import SpinOrbitTerm
-from .utility import latin_hypercube_sample
-
-
-def max_vol(basis, indxGuess):
-    r"""basis looks like a long matrix, the columns are the "pillars" V_i(x):
-    [   V_1(x)
-        V_2(x)
-        .
-        .
-        .
-    ]
-    indxGuess is a first guess of where we should "measure", or ask the questions
-
-    """
-    nbases = basis.shape[1]
-    interpBasis = np.copy(basis)
-
-    for ij in range(len(indxGuess)):
-        interpBasis[[ij, indxGuess[ij]], :] = interpBasis[[indxGuess[ij], ij], :]
-    indexing = np.array(range(len(interpBasis)))
-
-    for ij in range(len(indxGuess)):
-        indexing[[ij, indxGuess[ij]]] = indexing[[indxGuess[ij], ij]]
-
-    for iIn in range(1, 100):
-        B = np.dot(interpBasis, np.linalg.inv(interpBasis[:nbases]))
-        b = np.max(B)
-        if b > 1:
-            p1, p2 = np.where(B == b)[0][0], np.where(B == b)[1][0]
-            interpBasis[[p1, p2], :] = interpBasis[[p2, p1], :]
-            indexing[[p1, p2]] = indexing[[p2, p1]]
-        else:
-            break
-        # this thing returns the indexes of where we should measure
-    return np.sort(indexing[:nbases])
+from .utility import latin_hypercube_sample, max_vol
 
 
 class InteractionEIM(Interaction):

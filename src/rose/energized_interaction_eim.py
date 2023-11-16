@@ -7,8 +7,8 @@ from typing import Callable
 import numpy as np
 from scipy.stats import qmc
 
-from .interaction import Interaction, InteractionSpace, couplings
-from .interaction_eim import InteractionEIM, max_vol
+from .interaction import couplings
+from .interaction_eim import InteractionEIM, InteractionEIMSpace
 from .constants import HBARC, DEFAULT_RHO_MESH
 from .spin_orbit import SpinOrbitTerm, null
 

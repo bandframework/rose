@@ -68,7 +68,8 @@ class InteractionEIM(Interaction):
                 is generated (used for training)
             match_points (ndarray): $\rho$ points where agreement with the true
                 potential is enforced
-            method (str) : 'collocation' or 'least-squares'.
+            method (str) : 'collocation' or 'least-squares'. If 'collocation', match_points must be the
+                same length as n_basis; otherwise match_points can be any size.
 
         Attributes:
             s_mesh (ndarray): $s$ points

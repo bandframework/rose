@@ -36,6 +36,7 @@ class EnergizedInteractionEIM(InteractionEIM):
         n_train: int = 1000,
         rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None,
+        method="collocation",
     ):
         r"""
         Parameters:
@@ -75,6 +76,8 @@ class EnergizedInteractionEIM(InteractionEIM):
                 is generated (used for training)
             match_points (ndarray): $\rho$ points where agreement with the true
                 potential is enforced
+            method (str) : 'collocation' or 'least-squares'. If 'collocation', match_points must be the
+                same length as n_basis; otherwise match_points can be any size.
 
         Attributes:
             singular_values (ndarray): `S` in `U, S, Vt = numpy.linalg.svd(...)`
@@ -109,6 +112,7 @@ class EnergizedInteractionEIM(InteractionEIM):
             n_train=n_train,
             rho_mesh=rho_mesh,
             match_points=match_points,
+            method,
         )
 
     def tilde(self, s: float, alpha: np.array):

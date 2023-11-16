@@ -265,6 +265,7 @@ class EnergizedInteractionEIMSpace(InteractionEIMSpace):
         n_train: int = 1000,
         rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None,
+        method="collocation",
     ):
         r"""Generates a list of $\ell$-specific, energy-emulated, EIMed interactions.
 
@@ -313,6 +314,7 @@ class EnergizedInteractionEIMSpace(InteractionEIMSpace):
                             n_train=n_train,
                             rho_mesh=rho_mesh,
                             match_points=match_points,
+                            method=method,
                         )
                     ]
                 )
@@ -336,6 +338,7 @@ class EnergizedInteractionEIMSpace(InteractionEIMSpace):
                             n_train=n_train,
                             rho_mesh=rho_mesh,
                             match_points=match_points,
+                            method=method,
                         )
                         for lds in couplings(l)
                     ]

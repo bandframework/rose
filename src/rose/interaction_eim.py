@@ -32,6 +32,7 @@ class InteractionEIM(Interaction):
         n_train: int = 1000,
         rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None,
+        method = "collocation",
     ):
         r"""
         Parameters:
@@ -67,6 +68,7 @@ class InteractionEIM(Interaction):
                 is generated (used for training)
             match_points (ndarray): $\rho$ points where agreement with the true
                 potential is enforced
+            method (str) : 'collocation' or 'least-squares'.
 
         Attributes:
             s_mesh (ndarray): $s$ points
@@ -110,7 +112,16 @@ class InteractionEIM(Interaction):
         U, S, _ = np.linalg.svd(snapshots, full_matrices=False)
         self.singular_values = np.copy(S)
 
-        if match_points is None:
+        if match_points is not None and method == "collocation":
+            n_basis = match_points.size
+            self.snapshots = np.copy(U[:, :n_basis])
+            self.match_points = np.copy(match_points)
+            self.match_indices = np.array(
+                [np.argmin(np.abs(rho_mesh - ri)) for ri in self.match_points]
+            )
+            self.r_i = rho_mesh[self.match_indices]
+            self.Ainv = np.linalg.inv(self.snapshots[self.match_indices])
+        elif match_points is None and method == "collocation":
             if n_basis is None:
                 n_basis = n_theta
             self.snapshots = np.copy(U[:, :n_basis])
@@ -122,16 +133,18 @@ class InteractionEIM(Interaction):
             # np.random.randint(0, self.snapshots.shape[0], size=self.snapshots.shape[1]))
             self.match_points = rho_mesh[self.match_indices]
             self.r_i = np.copy(self.match_points)
-        else:
-            n_basis = match_points.size
+            self.Ainv = np.linalg.inv(self.snapshots[self.match_indices])
+        elif method == "least-squares":
+            if n_basis is None:
+                n_basis = n_theta
             self.snapshots = np.copy(U[:, :n_basis])
-            self.match_points = np.copy(match_points)
-            self.match_indices = np.array(
-                [np.argmin(np.abs(rho_mesh - ri)) for ri in self.match_points]
-            )
-            self.r_i = rho_mesh[self.match_indices]
-
-        self.Ainv = np.linalg.inv(self.snapshots[self.match_indices])
+            # random r points between 0 and 2π fm
+            if match_points is None:
+                self.match_points = rho_mesh
+            self.r_i = np.copy(self.match_points)
+            self.Ainv = np.linalg.pinv(self.snapshots)
+        else:
+            raise ValueError("argument 'method' should be one of `collocation` or `least-squares`")
 
     def coefficients(self, alpha: np.array):
         r"""Computes the EIM expansion coefficients.
@@ -208,6 +221,7 @@ class InteractionEIMSpace(InteractionSpace):
         n_train: int = 1000,
         rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None,
+        method="collocation",
     ):
         r"""Generates a list of $\ell$-specific, EIMed interactions.
 
@@ -259,6 +273,7 @@ class InteractionEIMSpace(InteractionSpace):
                             n_train=n_train,
                             rho_mesh=rho_mesh,
                             match_points=match_points,
+                            method=method,
                         )
                     ]
                 )
@@ -283,6 +298,7 @@ class InteractionEIMSpace(InteractionSpace):
                             n_train=n_train,
                             rho_mesh=rho_mesh,
                             match_points=match_points,
+                            method=method,
                         )
                         for lds in couplings(l)
                     ]

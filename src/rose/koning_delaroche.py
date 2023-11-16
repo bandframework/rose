@@ -162,10 +162,9 @@ class KoningDelaroche(InteractionEIMSpace):
 
     def __init__(
         self,
-        mu: float,
-        ell: int,
         energy: float,
         training_info: np.array,
+        mu: float,
         l_max=20,
         n_basis: int = 8,
         explicit_training: bool = False,
@@ -202,16 +201,16 @@ class KoningDelaroche(InteractionEIMSpace):
 
         """
         super().__init__(
-            KD_simple_so,
+            KD_simple,
             NUM_PARAMS,
             mu,
-            ell,
             energy,
             training_info=training_info,
             Z_1=0,
             Z_2=0,
-            l_max=lmax,
+            l_max=l_max,
             is_complex=True,
+            spin_orbit_potential=KD_simple_so,
             n_basis=n_basis,
             explicit_training=explicit_training,
             n_train=n_train,
@@ -223,9 +222,8 @@ class KoningDelaroche(InteractionEIMSpace):
 class EnergizedKoningDelaroche(EnergizedInteractionEIMSpace):
     def __init__(
         self,
-        mu: float,
-        ell: int,
         training_info: np.array,
+        mu: float = None,
         l_max=20,
         n_basis: int = 8,
         explicit_training: bool = False,
@@ -262,16 +260,19 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIMSpace):
         Returns:
             instance (EnergizedKoningDelaroche): instance of the class
         """
+        n_params = NUM_PARAMS + 1  # include energy
+        if mu is None:
+            n_params = 17  # include mu
         super().__init__(
-            KD_simple_so,
-            NUM_PARAMS,
+            KD_simple,
+            n_params,
             mu,
-            ell,
             training_info=training_info,
             Z_1=0,
             Z_2=0,
-            l_max=lmax,
+            l_max=l_max,
             is_complex=True,
+            spin_orbit_potential=KD_simple_so,
             n_basis=n_basis,
             explicit_training=explicit_training,
             n_train=n_train,
@@ -374,7 +375,7 @@ class KDGlobal:
                 self.rc_A = data["KDCoulomb_r_C_A"]
                 self.rc_A2 = data["KDCoulomb_r_C_A2"]
 
-    def get_params(self, A, Z, E_lab = None, E_com = None):
+    def get_params(self, A, Z, E_lab=None, E_com=None):
         """
         Calculates Koning-Delaroche global neutron-nucleus OMP parameters for given A, Z,
         and COM-frame energy, returns params in form useable by EnergizedKoningDelaroche

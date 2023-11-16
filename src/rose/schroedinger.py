@@ -15,7 +15,6 @@ from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
 from .utility import regular_inverse_s, Gamow_factor
 
 
-
 class SchroedingerEquation:
     """
     Solver for the single-channel, reduced, radial Schrödinger equation using scipy.integrate

@@ -195,7 +195,7 @@ def kinematics(
     target: tuple,
     projectile: tuple,
     E_lab: float = None,
-    E_com : float = None,
+    E_com: float = None,
     binding_model: Callable[[int, int], float] = get_binding_energy,
 ):
     r"""Calculates the reduced mass, COM frame kinetic energy and wavenumber for a projectile (A,Z)
@@ -222,7 +222,7 @@ def kinematics(
 
     if E_lab is None:
         assert E_com is not None
-        E_lab =  (m_t + m_p) / m_t * E_com
+        E_lab = (m_t + m_p) / m_t * E_com
     else:
         assert E_com is None
         E_com = m_t / (m_t + m_p) * E_lab

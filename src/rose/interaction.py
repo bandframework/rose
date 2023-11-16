@@ -10,7 +10,6 @@ from .constants import HBARC, ALPHA
 from .spin_orbit import SpinOrbitTerm, null
 
 
-
 class Interaction:
     """Defines a local, (possibly) complex, affine, fixed-energy interaction."""
 
@@ -73,7 +72,7 @@ class Interaction:
         if mu:
             self.k_c = ALPHA * Z_1 * Z_2 * self.mu / HBARC
         else:
-            self.k_c = 0 #TODO mu/energy emulation does not support Coulomb
+            self.k_c = 0  # TODO mu/energy emulation does not support Coulomb
             assert self.Z_1 * self.Z_1 == 0
 
         if energy:

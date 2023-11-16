@@ -128,6 +128,7 @@ class InteractionEIM(Interaction):
 
         self.training_info = training_info
         self.s_mesh = rho_mesh.copy()
+
         # Generate a basis used to approximate the potential.
         # Did the user specify the training points?
         if explicit_training:
@@ -135,10 +136,28 @@ class InteractionEIM(Interaction):
                 [self.tilde(rho_mesh, theta) for theta in training_info]
             ).T
         else:
-            # Generate training points using the user-provided bounds.
-            sampler = qmc.LatinHypercube(d=len(training_info))
-            sample = sampler.random(n_train)
-            train = qmc.scale(sample, training_info[:, 0], training_info[:, 1])
+            # Generate training points using the user-provided bounds,
+            # first sanitizing bounds to freeze parameters that are equal
+            mask = training_info[:, 0] == training_info[:, 1]
+            frozen_params = training_info[mask][:, 0]
+            n_unfrozen = training_info[np.logical_not(mask)][:, 0].size
+
+            # bounds for unfrozen params only
+            bounds = training_info[np.logical_not(mask)]
+
+            # set up training array (just copy lower bounds for now, we will keep
+            # only the frozen parameter values)
+            train = np.tile(training_info[:, 0], (n_train, 1))
+
+            # perform latin hypercube sampling for only the un-frozen params
+            sampler = qmc.LatinHypercube(d=n_unfrozen)
+            samples = sampler.random(n_train)
+            samples = qmc.scale(samples, bounds[:, 0], bounds[:, 1])
+
+            # fil un frozen indices of training away with samples
+            train[:, np.logical_not(mask)] = samples
+
+            # create an array of snapshots of the potential at each of the training samples
             snapshots = np.array([self.tilde(rho_mesh, theta) for theta in train]).T
 
         U, S, _ = np.linalg.svd(snapshots, full_matrices=False)
@@ -149,7 +168,7 @@ class InteractionEIM(Interaction):
                 n_basis = n_theta
             self.snapshots = np.copy(U[:, :n_basis])
             # random r points between 0 and 2π fm
-            i_max = self.snapshots.shape[0] // 2
+            i_max = self.snapshots.shape[0] // 4
             di = i_max // (n_basis - 1)
             i_init = np.arange(0, i_max + 1, di)
             self.match_indices = max_vol(self.snapshots, i_init)

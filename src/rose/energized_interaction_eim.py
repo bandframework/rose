@@ -13,12 +13,12 @@ from .constants import HBARC, DEFAULT_RHO_MESH
 from .spin_orbit import SpinOrbitTerm, null
 
 
-
-class EnergizedInteractionEIM(Interaction):
+class EnergizedInteractionEIM(InteractionEIM):
     r"""
     Extension of InteractionEIM that supports energy and, optionally, mu as parameters. Expected format
     for alpha depends on optional parameters passed in during initialization.
     """
+
     def __init__(
         self,
         coordinate_space_potential: Callable[[float, np.array], float],  # V(r, theta)
@@ -86,64 +86,30 @@ class EnergizedInteractionEIM(Interaction):
             r_i (ndarray): copy of `match_points` (???)
             Ainv (ndarray): inverse of A matrix (Ax = b)
         """
+        self.param_mask = np.ones((n_theta), dtype=bool)
+        if mu is None:
+            self.param_mask[:2] = False
+        else:
+            self.param_mask[:1] = False
+            self.reduced_mass = lambda alpha: self.mu
+
         super().__init__(
             coordinate_space_potential,
             n_theta,
             mu,
             None,
             ell,
+            training_info,
             Z_1=Z_1,
             Z_2=Z_2,
             R_C=R_C,
             is_complex=is_complex,
             spin_orbit_term=spin_orbit_term,
+            explicit_training=explicit_training,
+            n_train=n_train,
+            rho_mesh=rho_mesh,
+            match_points=match_points,
         )
-
-        if mu is None:
-            self.param_idx_start = 2
-        else:
-            self.param_idx_start = 1
-            self.reduced_mass = lambda alpha : self.mu
-
-
-        # Generate a basis used to approximate the potential.
-        # Did the user specify the training points?
-        if explicit_training:
-            snapshots = np.array(
-                [self.tilde(rho_mesh, theta) for theta in training_info]
-            ).T
-        else:
-            # Generate training points using the user-provided bounds.
-            sampler = qmc.LatinHypercube(d=len(training_info))
-            sample = sampler.random(n_train)
-            train = qmc.scale(sample, training_info[:, 0], training_info[:, 1])
-            snapshots = np.array([self.tilde(rho_mesh, theta) for theta in train]).T
-
-        U, S, _ = np.linalg.svd(snapshots, full_matrices=False)
-        self.singular_values = np.copy(S)
-
-        if match_points is None:
-            if n_basis is None:
-                n_basis = n_theta
-            self.snapshots = np.copy(U[:, :n_basis])
-            # random r points between 0 and 2π fm
-            i_max = self.snapshots.shape[0] // 4
-            di = i_max // (n_basis - 1)
-            i_init = np.arange(0, i_max + 1, di)
-            self.match_indices = max_vol(self.snapshots, i_init)
-            # np.random.randint(0, self.snapshots.shape[0], size=self.snapshots.shape[1]))
-            self.match_points = rho_mesh[self.match_indices]
-            self.r_i = np.copy(self.match_points)
-        else:
-            n_basis = match_points.size
-            self.snapshots = np.copy(U[:, :n_basis])
-            self.match_points = np.copy(match_points)
-            self.match_indices = np.array(
-                [np.argmin(np.abs(rho_mesh - ri)) for ri in self.match_points]
-            )
-            self.r_i = rho_mesh[self.match_indices]
-
-        self.Ainv = np.linalg.inv(self.snapshots[self.match_indices])
 
     def tilde(self, s: float, alpha: np.array):
         r"""Computes the energy-scaled interaction.
@@ -158,9 +124,10 @@ class EnergizedInteractionEIM(Interaction):
         """
         energy = self.E(alpha)
         k = self.momentum(alpha)
-        vr = self.v_r(s / k, alpha[1:]) + self.spin_orbit_term.spin_orbit_potential(
-            s / k, alpha[1:]
-        )
+        alpha_truncated = alpha[self.param_mask]
+        vr = self.v_r(
+            s / k, alpha_truncated
+        ) + self.spin_orbit_term.spin_orbit_potential(s / k, alpha_truncated)
         return 1.0 / energy * vr
 
     def coefficients(self, alpha: np.array):  # interaction parameters
@@ -239,7 +206,7 @@ class EnergizedInteractionEIM(Interaction):
         """
         return alpha[0]
 
-    def reduced_mass(self, alpha : np.array):
+    def reduced_mass(self, alpha: np.array):
         r"""Mu. Implemented as a function to support energy
         emulation (where the mu could be a part of the parameter vector,
         `alpha`).
@@ -275,7 +242,7 @@ class EnergizedInteractionEIM(Interaction):
             v_so = null
 
         # remove the energy term for alpha, so we return just the parameters that plug into v_r
-        return (alpha[self.param_idx_start:], k, S_C, E, eta, l, v_r, v_so, l_dot_s)
+        return (alpha[self.param_mask], k, S_C, E, eta, l, v_r, v_so, l_dot_s)
 
 
 class EnergizedInteractionEIMSpace(InteractionSpace):

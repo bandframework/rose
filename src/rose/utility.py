@@ -57,7 +57,6 @@ def max_vol(basis, indxGuess):
     return np.sort(indexing[:nbases])
 
 
-
 def latin_hypercube_sample(n_sample: int, bounds: np.array, seed=None):
     r"""
     Generates N Latin hypercube samples in the k-Dimensional box

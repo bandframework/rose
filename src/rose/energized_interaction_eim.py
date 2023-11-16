@@ -112,7 +112,7 @@ class EnergizedInteractionEIM(InteractionEIM):
             n_train=n_train,
             rho_mesh=rho_mesh,
             match_points=match_points,
-            method,
+            method="collocation",
         )
 
     def tilde(self, s: float, alpha: np.array):

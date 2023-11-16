@@ -32,7 +32,7 @@ class InteractionEIM(Interaction):
         n_train: int = 1000,
         rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None,
-        method = "collocation",
+        method="collocation",
     ):
         r"""
         Parameters:
@@ -145,7 +145,9 @@ class InteractionEIM(Interaction):
             self.r_i = np.copy(self.match_points)
             self.Ainv = np.linalg.pinv(self.snapshots)
         else:
-            raise ValueError("argument 'method' should be one of `collocation` or `least-squares`")
+            raise ValueError(
+                "argument 'method' should be one of `collocation` or `least-squares`"
+            )
 
     def coefficients(self, alpha: np.array):
         r"""Computes the EIM expansion coefficients.
@@ -186,7 +188,7 @@ class InteractionEIM(Interaction):
         """
         return np.copy(self.snapshots)
 
-    def percent_explained_variance(self, n = None):
+    def percent_explained_variance(self, n=None):
         r"""
         Returns:
             (float) : percent of variance explained in the training set by the first n_basis principal

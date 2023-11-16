@@ -284,12 +284,14 @@ class CustomBasis(Basis):
         """
         return self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
 
-    def percent_explained_variance(self):
+    def percent_explained_variance(self, n=None):
         r"""
         Returns:
             (float) : percent of variance explained in the training set by the first n_basis principal
             components
         """
+        if n is None:
+            n = self.n_basis
         if self.singular_values is None:
             return 100
         else:

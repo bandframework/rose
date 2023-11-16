@@ -206,15 +206,17 @@ class InteractionEIM(Interaction):
         """
         return np.copy(self.snapshots)
 
-    def percent_explained_variance(self):
+    def percent_explained_variance(self, n = None):
         r"""
         Returns:
             (float) : percent of variance explained in the training set by the first n_basis principal
             components
         """
+        if n is None:
+            n = self.n_basis
         return (
             100
-            * np.sum(self.singular_values[: self.n_basis] ** 2)
+            * np.sum(self.singular_values[:n] ** 2)
             / np.sum(self.singular_values**2)
         )
 
@@ -320,10 +322,10 @@ class InteractionEIMSpace(InteractionSpace):
                     ]
                 )
 
-    def percent_explained_variance(self):
+    def percent_explained_variance(self, n=None):
         return [
             [
-                interaction.percent_explained_variance()
+                interaction.percent_explained_variance(n)
                 for interaction in interaction_list
             ]
             for interaction_list in self.interactions

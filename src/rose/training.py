@@ -33,7 +33,11 @@ colors = [
 
 
 def sample_params_LHC(
-    N: int, central_vals: np.array = None, scale: float = None, seed: int = None, bounds : np.array = None,
+    N: int,
+    central_vals: np.array = None,
+    scale: float = None,
+    seed: int = None,
+    bounds: np.array = None,
 ):
     r"""
     Sampling parameters from a finite box in parameter space around some central values using the Latin hypercube method

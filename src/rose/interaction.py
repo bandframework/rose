@@ -69,13 +69,13 @@ class Interaction:
             self.include_spin_orbit = True
 
         self.mu = mu
-        if mu:
+        if mu is not None:
             self.k_c = ALPHA * Z_1 * Z_2 * self.mu / HBARC
         else:
             self.k_c = 0  # TODO mu/energy emulation does not support Coulomb
             assert self.Z_1 * self.Z_1 == 0
 
-        if energy:
+        if energy is not None:
             # If the energy is specified (not None as it is when subclass
             # EnergizedInteraction instantiates), set up associated attributes.
             self.energy = energy

@@ -245,7 +245,7 @@ class EnergizedInteractionEIM(InteractionEIM):
         return (alpha[self.param_mask], k, S_C, E, eta, l, v_r, v_so, l_dot_s)
 
 
-class EnergizedInteractionEIMSpace(InteractionSpace):
+class EnergizedInteractionEIMSpace(InteractionEIMSpace):
     def __init__(
         self,
         coordinate_space_potential: Callable[[float, np.array], float],  # V(r, theta)

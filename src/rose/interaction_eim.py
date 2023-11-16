@@ -12,6 +12,7 @@ from .constants import HBARC, DEFAULT_RHO_MESH
 from .spin_orbit import SpinOrbitTerm
 from .utility import latin_hypercube_sample
 
+
 def max_vol(basis, indxGuess):
     r"""basis looks like a long matrix, the columns are the "pillars" V_i(x):
     [   V_1(x)
@@ -126,6 +127,7 @@ class InteractionEIM(Interaction):
             spin_orbit_term=spin_orbit_term,
         )
 
+        self.n_basis = n_basis
         self.training_info = training_info
         self.s_mesh = rho_mesh.copy()
 
@@ -203,6 +205,18 @@ class InteractionEIM(Interaction):
 
         """
         return np.copy(self.snapshots)
+
+    def percent_explained_variance(self):
+        r"""
+        Returns:
+            (float) : percent of variance explained in the training set by the first n_basis principal
+            components
+        """
+        return (
+            100
+            * np.sum(self.singular_values[: self.n_basis] ** 2)
+            / np.sum(self.singular_values**2)
+        )
 
 
 class InteractionEIMSpace(InteractionSpace):
@@ -305,3 +319,12 @@ class InteractionEIMSpace(InteractionSpace):
                         for lds in couplings(l)
                     ]
                 )
+
+    def percent_explained_variance(self):
+        return [
+            [
+                interaction.percent_explained_variance()
+                for interaction in interaction_list
+            ]
+            for interaction_list in self.interactions
+        ]

@@ -183,6 +183,21 @@ class RelativeBasis(Basis):
         """
         return self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
 
+    def percent_explained_variance(self):
+        r"""
+        Returns:
+            (float) : percent of variance explained in the training set by the first n_basis principal
+            components
+        """
+        if self.singular_values is None:
+            return 100
+        else:
+            return (
+                100
+                * np.sum(self.singular_values[: self.n_basis] ** 2)
+                / np.sum(self.singular_values**2)
+            )
+
 
 class CustomBasis(Basis):
     def __init__(
@@ -268,3 +283,18 @@ class CustomBasis(Basis):
 
         """
         return self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
+
+    def percent_explained_variance(self):
+        r"""
+        Returns:
+            (float) : percent of variance explained in the training set by the first n_basis principal
+            components
+        """
+        if self.singular_values is None:
+            return 100
+        else:
+            return (
+                100
+                * np.sum(self.singular_values[: self.n_basis] ** 2)
+                / np.sum(self.singular_values**2)
+            )

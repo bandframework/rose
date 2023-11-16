@@ -23,7 +23,7 @@ class Projectile(Enum):
     proton = 1
 
 
-def latin_hypercube_sample(n_sample : int, bounds : np.array, seed=None):
+def latin_hypercube_sample(n_sample: int, bounds: np.array, seed=None):
     r"""
     Generates N Latin hypercube samples in the k-Dimensional box
     defined by bounds, with the first column being lower and 2nd being upper

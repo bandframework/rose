@@ -149,9 +149,10 @@ def KD_simple_so(r, alpha, lds):
     lds: l • s = 1/2 * (j(j+1) - l(l+1) - s(s+1))
     """
     vso, rso, aso, wso, rwso, awso = decompose_alpha(alpha)[1]
-    return lds * vso / MASS_PION**2 / r * woods_saxon_prime_safe(
-        r, rso, aso
-    ) + 1j * wso / MASS_PION**2 / r * woods_saxon_prime_safe(r, rwso, awso)
+    return lds * (
+        vso / MASS_PION**2 / r * woods_saxon_prime_safe(r, rso, aso)
+        + 1j * wso / MASS_PION**2 / r * woods_saxon_prime_safe(r, rwso, awso)
+    )
 
 
 class KoningDelaroche(InteractionEIMSpace):

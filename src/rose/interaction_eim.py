@@ -10,7 +10,7 @@ from scipy.stats import qmc
 from .interaction import Interaction, InteractionSpace, couplings
 from .constants import HBARC, DEFAULT_RHO_MESH
 from .spin_orbit import SpinOrbitTerm
-
+from .utility import latin_hypercube_sample
 
 def max_vol(basis, indxGuess):
     r"""basis looks like a long matrix, the columns are the "pillars" V_i(x):
@@ -136,28 +136,7 @@ class InteractionEIM(Interaction):
                 [self.tilde(rho_mesh, theta) for theta in training_info]
             ).T
         else:
-            # Generate training points using the user-provided bounds,
-            # first sanitizing bounds to freeze parameters that are equal
-            mask = training_info[:, 0] == training_info[:, 1]
-            frozen_params = training_info[mask][:, 0]
-            n_unfrozen = training_info[np.logical_not(mask)][:, 0].size
-
-            # bounds for unfrozen params only
-            bounds = training_info[np.logical_not(mask)]
-
-            # set up training array (just copy lower bounds for now, we will keep
-            # only the frozen parameter values)
-            train = np.tile(training_info[:, 0], (n_train, 1))
-
-            # perform latin hypercube sampling for only the un-frozen params
-            sampler = qmc.LatinHypercube(d=n_unfrozen)
-            samples = sampler.random(n_train)
-            samples = qmc.scale(samples, bounds[:, 0], bounds[:, 1])
-
-            # fil un frozen indices of training away with samples
-            train[:, np.logical_not(mask)] = samples
-
-            # create an array of snapshots of the potential at each of the training samples
+            train = latin_hypercube_sample(n_train, training_info)
             snapshots = np.array([self.tilde(rho_mesh, theta) for theta in train]).T
 
         U, S, _ = np.linalg.svd(snapshots, full_matrices=False)

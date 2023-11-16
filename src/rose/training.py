@@ -6,7 +6,6 @@ from collections.abc import Callable
 
 import numpy as np
 from time import perf_counter
-from scipy.stats import qmc
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib import ticker
@@ -16,6 +15,7 @@ from tqdm import tqdm
 from .basis import Basis, CustomBasis
 from .interaction_eim import InteractionEIM, InteractionEIMSpace
 from .scattering_amplitude_emulator import ScatteringAmplitudeEmulator
+from .utility import latin_hypercube_sample
 
 # some colors Pablo likes for plotting
 colors = [
@@ -33,7 +33,7 @@ colors = [
 
 
 def sample_params_LHC(
-    N: int, central_vals: np.array, scale: float = 0.5, seed: int = None
+    N: int, central_vals: np.array = None, scale: float = None, seed: int = None, bounds : np.array = None,
 ):
     r"""
     Sampling parameters from a finite box in parameter space around some central values using the Latin hypercube method
@@ -46,17 +46,17 @@ def sample_params_LHC(
     Returns:
         (ndarray) : N samples
     """
-    bounds = np.array(
-        [
-            central_vals - np.fabs(central_vals * scale),
-            central_vals + np.fabs(central_vals * scale),
-        ]
-    ).T
-    return qmc.scale(
-        qmc.LatinHypercube(d=central_vals.size, seed=seed).random(N),
-        bounds[:, 0],
-        bounds[:, 1],
-    )
+    if bounds is None:
+        assert scale is not None
+        assert central_vals is not None
+        bounds = np.array(
+            [
+                central_vals - np.fabs(central_vals * scale),
+                central_vals + np.fabs(central_vals * scale),
+            ]
+        ).T
+
+    return latin_hypercube_sample(N, bounds, seed)
 
 
 def build_sae_config_set(

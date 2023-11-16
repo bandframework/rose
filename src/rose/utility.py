@@ -13,6 +13,7 @@ from numba import njit
 from scipy.sparse import diags, lil_matrix
 from scipy.misc import derivative
 from scipy.special import eval_legendre
+from scipy.stats import qmc
 
 from .constants import MASS_N, MASS_P, HBARC, AMU
 
@@ -20,6 +21,37 @@ from .constants import MASS_N, MASS_P, HBARC, AMU
 class Projectile(Enum):
     neutron = 0
     proton = 1
+
+
+def latin_hypercube_sample(n_sample : int, bounds : np.array, seed=None):
+    r"""
+    Generates N Latin hypercube samples in the k-Dimensional box
+    defined by bounds, with the first column being lower and 2nd being upper
+    bounds, and the column lengths determine the dimension k. If, for any dimension,
+    the upper and lower bounds are equal, keeps them frozen.
+    """
+    # Generate training points using the user-provided bounds,
+    # first sanitizing bounds to freeze parameters that are equal
+    mask = bounds[:, 0] == bounds[:, 1]
+    frozen_params = bounds[mask][:, 0]
+    n_unfrozen = bounds[np.logical_not(mask)][:, 0].size
+
+    # bounds for unfrozen params only
+    bounds_unfrozen = bounds[np.logical_not(mask)]
+
+    # set up training array (just copy lower bounds for now, we will keep
+    # only the frozen parameter values)
+    train = np.tile(bounds[:, 0], (n_sample, 1))
+
+    # perform latin hypercube sampling for only the un-frozen params
+    sampler = qmc.LatinHypercube(d=n_unfrozen, seed=seed)
+    samples = sampler.random(n_sample)
+    samples = qmc.scale(samples, bounds_unfrozen[:, 0], bounds_unfrozen[:, 1])
+
+    # fil un frozen indices of training away with samples
+    train[:, np.logical_not(mask)] = samples
+
+    return train
 
 
 def finite_difference_first_derivative(s_mesh: npt.ArrayLike, sparse: bool = False):

@@ -108,6 +108,7 @@ class EnergizedInteractionEIM(InteractionEIM):
             R_C=R_C,
             is_complex=is_complex,
             spin_orbit_term=spin_orbit_term,
+            n_basis=n_basis,
             explicit_training=explicit_training,
             n_train=n_train,
             rho_mesh=rho_mesh,

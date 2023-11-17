@@ -298,6 +298,7 @@ class EnergizedInteractionEIMSpace(InteractionEIMSpace):
         Attributes:
             interaction (list): list of `InteractionEIM`s
         """
+        self.l_max = l_max
         self.interactions = []
         if spin_orbit_potential is None:
             for l in range(l_max + 1):

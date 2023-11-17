@@ -158,10 +158,12 @@ class ReducedBasisEmulator:
         self.A_3 = np.einsum("ij,j,jk", phi_basis.T, ang_mom - 1, phi_basis)
         self.A_13 = self.A_1 + self.A_3
 
-        # This is not going to work when we implement energy emulation with Coulomb.
-        S_C = self.interaction.R_C * self.interaction.k
-        k_c = 2 * self.interaction.k_c * regular_inverse_s(self.s_mesh, S_C)
-        self.A_3_coulomb = np.einsum("ij,j,jk", phi_basis.T, k_c, phi_basis)
+        if self.interaction.k is not None:
+            S_C = self.interaction.R_C * self.interaction.k
+            k_c = 2 * self.interaction.k_c * regular_inverse_s(self.s_mesh, S_C)
+            self.A_3_coulomb = np.einsum("ij,j,jk", phi_basis.T, k_c, phi_basis)
+        else:
+            self.A_3_coulomb = np.zeros_like(self.A_3)
 
         # Precompute what we can for the inhomogeneous term ( -< psi | F(phi_0) > ).
         d2_phi_0 = d2_operator @ self.basis.phi_0
@@ -174,7 +176,11 @@ class ReducedBasisEmulator:
         )
         self.b_3 = phi_basis.T @ ((1 - ang_mom) * self.basis.phi_0)
         self.b_13 = self.b_1 + self.b_3
-        self.b_3_coulomb = -phi_basis.T @ (k_c * self.basis.phi_0)
+
+        if self.interaction.k is not None:
+            self.b_3_coulomb = -phi_basis.T @ (k_c * self.basis.phi_0)
+        else:
+            self.b_3_coulomb = np.zeros_like(self.b_3)
 
         # Can we extract the phase shift faster?
         self.phi_components = np.hstack(

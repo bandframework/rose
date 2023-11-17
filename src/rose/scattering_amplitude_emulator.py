@@ -21,8 +21,8 @@ class NucleonNucleusXS:
     """
     dsdo: np.array
     Ay: np.array
-    xst: float
-    xsrxn: float
+    t: float
+    rxn: float
 
 
 @njit
@@ -329,6 +329,12 @@ class ScatteringAmplitudeEmulator:
             self.rutherford = (
                 10 * self.eta**2 / (4 * k**2 * np.sin(self.angles / 2) ** 4)
             )
+        else:
+            self.rutherford = np.zeros_like(self.angles)
+            self.f_c = np.zeros_like(self.angles)
+            self.sigma_l = np.zeros_like(self.angles)
+            self.k_c = 0
+            self.eta = 0
 
     def emulate_phase_shifts(self, alpha: np.array):
         r"""Gives the phase shifts for each partial wave.  Order is [l=0, l=1,

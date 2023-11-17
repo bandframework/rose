@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 from .basis import Basis, CustomBasis
 from .interaction_eim import InteractionEIM, InteractionEIMSpace
+from .energized_interaction_eim import EnergizedInteractionEIMSpace
 from .scattering_amplitude_emulator import ScatteringAmplitudeEmulator
 from .utility import latin_hypercube_sample
 
@@ -74,11 +75,16 @@ def build_sae_config_set(
     build a list of `ScatteringAmplitudeEmulator`s to the specification of sae_configs
     """
 
+    if isinstance(base_interaction, InteractionEIMSpace):
+        build = build_sae
+    elif isinstance(base_interaction, EnergizedInteractionEIMSpace):
+        build = build_sae_energized
+
     # first build the largest one, which has all the bases we need
     imax = np.argmax([conf[0] for conf in sae_configs])
     saes = []
     inters = []
-    corresponding_inter, biggest_sae = build_sae(
+    corresponding_inter, biggest_sae = build(
         sae_configs[imax],
         base_interaction,
         theta_train,
@@ -95,7 +101,7 @@ def build_sae_config_set(
             saes.append(biggest_sae)
             inters.append(corresponding_inter)
         else:
-            inter, sae = build_sae(
+            inter, sae = build(
                 sae_configs[i],
                 base_interaction,
                 theta_train,
@@ -155,6 +161,86 @@ def build_sae(
         explicit_training=eim_explicit_training,
         rho_mesh=base.s_mesh,
         n_basis=n_EIM,
+    )
+
+    if bases is not None:
+        new_bases = []
+        for interaction_list, basis_list in zip(interactions.interactions, bases):
+            new_basis_list = []
+            for interaction, basis in zip(interaction_list, basis_list):
+                solutions = basis.solutions[:, :n_basis] - basis.phi_0[:, np.newaxis]
+                new_basis_list.append(
+                    CustomBasis(
+                        solutions,
+                        basis.phi_0,
+                        basis.rho_mesh,
+                        n_basis,
+                        interaction.ell,
+                        use_svd=False,
+                        solver=basis.solver,
+                    )
+                )
+            new_bases.append(new_basis_list)
+        emulator = ScatteringAmplitudeEmulator(interactions, new_bases, **SAE_kwargs)
+    else:
+        emulator = ScatteringAmplitudeEmulator.from_train(
+            interactions,
+            theta_train,
+            n_basis=n_basis,
+            **SAE_kwargs,
+        )
+
+    return interactions, emulator
+
+
+def build_sae_energized(
+    sae_config: tuple,
+    base_interaction: EnergizedInteractionEIMSpace,
+    theta_train: np.array = None,
+    bounds=None,
+    bases: list = None,
+    **SAE_kwargs,
+):
+    r"""
+    build an EIM emulator to specification of sae_config, using base_interaction
+    Parameters:
+        sae_config :  (size of reduced basis, number of EIM terms)
+        base_interaction :  interaction on which to train
+        bases (optional) : if a full set of bases for each interaction has been solved
+            for already, re-use basis.vectors rather than re-calculating them
+        theta_train (optional) : if bases is not provided, simply pass in the
+            training samples and re-train the emulator
+        SAE_kwargs : passed to ScatteringAmplitudeEmulator
+    """
+
+    (n_basis, n_EIM) = sae_config
+
+    base = base_interaction.interactions[0][0]
+
+    if bounds is not None:
+        eim_explicit_training = False
+        eim_training_info = bounds
+    else:
+        eim_explicit_training = True
+        eim_training_info = theta_train
+
+    interactions = EnergizedInteractionEIMSpace(
+        base.v_r,
+        base.n_theta,
+        base.mu,
+        training_info=eim_training_info,
+        l_max=base_interaction.l_max,
+        Z_1=base.Z_1,
+        Z_2=base.Z_2,
+        R_C=base.R_C,
+        is_complex=base.is_complex,
+        spin_orbit_potential=base.spin_orbit_term.v_so,
+        explicit_training=eim_explicit_training,
+        n_train=base.n_train,
+        rho_mesh=base.s_mesh,
+        n_basis=n_EIM,
+        match_points=base.match_points,
+        method=base.method,
     )
 
     if bases is not None:

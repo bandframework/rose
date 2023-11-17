@@ -75,9 +75,7 @@ def build_sae_config_set(
     build a list of `ScatteringAmplitudeEmulator`s to the specification of sae_configs
     """
 
-    if isinstance(base_interaction, InteractionEIMSpace):
-        build = build_sae
-    elif isinstance(base_interaction, EnergizedInteractionEIMSpace):
+    if isinstance(base_interaction, EnergizedInteractionEIMSpace):
         build = build_sae_energized
 
     # first build the largest one, which has all the bases we need
@@ -161,6 +159,8 @@ def build_sae(
         explicit_training=eim_explicit_training,
         rho_mesh=base.s_mesh,
         n_basis=n_EIM,
+        n_train=base.n_train,
+        method=base.method,
     )
 
     if bases is not None:

@@ -96,6 +96,8 @@ class InteractionEIM(Interaction):
             spin_orbit_term=spin_orbit_term,
         )
 
+        self.method = method
+        self.n_train = n_train
         self.n_basis = n_basis
         self.training_info = training_info
         self.s_mesh = rho_mesh.copy()

@@ -548,14 +548,14 @@ class ScatteringAmplitudeEmulator:
         Splus = np.array(
             [
                 rbe_list[0].basis.solver.smatrix(alpha, rbe_list[0].s_0)
-                for rbe_list in self.rbes
+                for rbe_list in self.rbes[:self.l_max]
             ]
         )
         Sminus = np.array(
             [Splus[0]]
             + [
                 rbe_list[1].basis.solver.smatrix(alpha, rbe_list[1].s_0)
-                for rbe_list in self.rbes[1:]
+                for rbe_list in self.rbes[1:self.l_max]
             ]
         )
         return Splus, Sminus
@@ -568,14 +568,34 @@ class ScatteringAmplitudeEmulator:
         Rplus = np.array(
             [
                 rbe_list[0].basis.solver.rmatrix(alpha, rbe_list[0].s_0)
-                for rbe_list in self.rbes
+                for rbe_list in self.rbes[1:self.l_max]
             ]
         )
         Rminus = np.array(
             [Rplus[0]]
             + [
                 rbe_list[1].basis.solver.rmatrix(alpha, rbe_list[1].s_0)
-                for rbe_list in self.rbes[1:]
+                for rbe_list in self.rbes[1:self.l_max]
+            ]
+        )
+        return Rplus, Rminus
+
+    def emulate_rmatrix_elements(self, alpha):
+        r"""Returns:
+        Rl_plus (ndarray) : l-s aligned R-matrix elements for partial waves up to where
+        Rl_minus (ndarray) : same as Splus, but l-s anti-aligned
+        """
+        Rplus = np.array(
+            [
+                rbe_list[0].logarithmic_derivative(alpha)
+                for rbe_list in self.rbes[1:self.l_max]
+            ]
+        )
+        Rminus = np.array(
+            [Rplus[0]]
+            + [
+                rbe_list[1].logarithmic_derivative(alpha)
+                for rbe_list in self.rbes[1:self.l_max]
             ]
         )
         return Rplus, Rminus
@@ -587,11 +607,11 @@ class ScatteringAmplitudeEmulator:
         Sl_minus (ndarray) : same as Splus, but l-s anti-aligned
         """
         Splus = np.array(
-            [rbe_list[0].S_matrix_element(alpha) for rbe_list in self.rbes]
+            [rbe_list[0].S_matrix_element(alpha) for rbe_list in self.rbes[:self.l_max]]
         )
         Sminus = np.array(
             [Splus[0]]
-            + [rbe_list[1].S_matrix_element(alpha) for rbe_list in self.rbes[1:]]
+            + [rbe_list[1].S_matrix_element(alpha) for rbe_list in self.rbes[1:self.l_max]]
         )
         return Splus, Sminus
 

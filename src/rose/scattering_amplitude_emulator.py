@@ -330,11 +330,11 @@ class ScatteringAmplitudeEmulator:
                 10 * self.eta**2 / (4 * k**2 * np.sin(self.angles / 2) ** 4)
             )
         else:
-            self.rutherford = np.zeros_like(self.angles)
-            self.f_c = np.zeros_like(self.angles)
-            self.sigma_l = np.zeros_like(self.angles)
+            self.sigma_l = np.angle(gamma(1 + self.ls + 1j * 0))
             self.k_c = 0
             self.eta = 0
+            self.f_c = 0.0 * np.exp(2j * self.sigma_l[0])
+            self.rutherford = 0.0 / (np.sin(self.angles / 2) ** 4)
 
     def emulate_phase_shifts(self, alpha: np.array):
         r"""Gives the phase shifts for each partial wave.  Order is [l=0, l=1,
@@ -548,14 +548,14 @@ class ScatteringAmplitudeEmulator:
         Splus = np.array(
             [
                 rbe_list[0].basis.solver.smatrix(alpha, rbe_list[0].s_0)
-                for rbe_list in self.rbes[:self.l_max]
+                for rbe_list in self.rbes[: self.l_max]
             ]
         )
         Sminus = np.array(
             [Splus[0]]
             + [
                 rbe_list[1].basis.solver.smatrix(alpha, rbe_list[1].s_0)
-                for rbe_list in self.rbes[1:self.l_max]
+                for rbe_list in self.rbes[1 : self.l_max]
             ]
         )
         return Splus, Sminus
@@ -568,14 +568,14 @@ class ScatteringAmplitudeEmulator:
         Rplus = np.array(
             [
                 rbe_list[0].basis.solver.rmatrix(alpha, rbe_list[0].s_0)
-                for rbe_list in self.rbes[1:self.l_max]
+                for rbe_list in self.rbes[1 : self.l_max]
             ]
         )
         Rminus = np.array(
             [Rplus[0]]
             + [
                 rbe_list[1].basis.solver.rmatrix(alpha, rbe_list[1].s_0)
-                for rbe_list in self.rbes[1:self.l_max]
+                for rbe_list in self.rbes[1 : self.l_max]
             ]
         )
         return Rplus, Rminus
@@ -588,14 +588,14 @@ class ScatteringAmplitudeEmulator:
         Rplus = np.array(
             [
                 rbe_list[0].logarithmic_derivative(alpha)
-                for rbe_list in self.rbes[1:self.l_max]
+                for rbe_list in self.rbes[1 : self.l_max]
             ]
         )
         Rminus = np.array(
             [Rplus[0]]
             + [
                 rbe_list[1].logarithmic_derivative(alpha)
-                for rbe_list in self.rbes[1:self.l_max]
+                for rbe_list in self.rbes[1 : self.l_max]
             ]
         )
         return Rplus, Rminus
@@ -607,11 +607,17 @@ class ScatteringAmplitudeEmulator:
         Sl_minus (ndarray) : same as Splus, but l-s anti-aligned
         """
         Splus = np.array(
-            [rbe_list[0].S_matrix_element(alpha) for rbe_list in self.rbes[:self.l_max]]
+            [
+                rbe_list[0].S_matrix_element(alpha)
+                for rbe_list in self.rbes[: self.l_max]
+            ]
         )
         Sminus = np.array(
             [Splus[0]]
-            + [rbe_list[1].S_matrix_element(alpha) for rbe_list in self.rbes[1:self.l_max]]
+            + [
+                rbe_list[1].S_matrix_element(alpha)
+                for rbe_list in self.rbes[1 : self.l_max]
+            ]
         )
         return Splus, Sminus
 
@@ -724,6 +730,17 @@ class ScatteringAmplitudeEmulator:
                     P_1_l_costheta,
                 )
             )
+
+    def percent_explained_variance(self):
+        r"""
+        Returns:
+            (float) : percent of variance explained in the training set by the first n_basis principal
+            components
+        """
+        return [
+            [rbe.basis.percent_explained_variance() for rbe in rbe_list]
+            for rbe_list in self.rbes
+        ]
 
     def save(self, filename):
         r"""Saves the emulator to the desired file.

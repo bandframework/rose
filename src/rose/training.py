@@ -180,6 +180,7 @@ def build_sae(
                         solver=basis.solver,
                     )
                 )
+                new_basis_list[-1].singular_values = basis.singular_values[:n_basis]
             new_bases.append(new_basis_list)
         emulator = ScatteringAmplitudeEmulator(interactions, new_bases, **SAE_kwargs)
     else:

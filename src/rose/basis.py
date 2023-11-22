@@ -102,6 +102,7 @@ class RelativeBasis(Basis):
         l: int,
         use_svd: bool,
         phi_0_energy: float = None,
+        pre_process = False,
     ):
         r"""Builds a "relative" reduced basis. This is the default choice.
 
@@ -157,17 +158,37 @@ class RelativeBasis(Basis):
 
         # Returns Bessel functions when eta = 0.
         self.phi_0 = np.array(
-            [coulombf(self.l, eta, rho) for rho in self.rho_mesh], dtype=np.float64
+            [coulombf(self.l, eta, rho) for rho in self.rho_mesh], dtype=np.complex128
         )
         self.solutions = np.array([self.phi_exact(theta) for theta in theta_train]).T
-
-        self.all_vectors = self.solutions - self.phi_0[:, np.newaxis]
-        self.pillars = self.all_vectors.copy()
+        self.mean = np.zeros_like(self.phi_0)
 
         if use_svd:
+            s = self.rho_mesh
+            if pre_process:
+                A = self.solutions
+                self.phi_0 /= np.trapz(self.phi_0,s)
+                row_norms = np.array(
+                    [
+                        np.trapz(np.absolute(A[:, i]), self.rho_mesh)
+                        for i in range(A.shape[1])
+                    ]
+                )
+                A /= row_norms
+                self.mean = np.mean(A, axis=1)
+                self.phi_0 += self.mean
+                A -= self.phi_0[:, np.newaxis]
+                self.all_vectors = A
+            else:
+                self.all_vectors = self.solutions - self.phi_0[:, np.newaxis]
+
             U, S, _ = np.linalg.svd(self.all_vectors, full_matrices=False)
-            self.singular_values = np.copy(S)
-            self.pillars = np.copy(U)
+            self.singular_values = S.copy()
+            self.pillars = U.copy()
+        else:
+            self.singular_values = None
+            self.all_vectors = self.solutions - self.phi_0[:, np.newaxis]
+            self.pillars = self.all_vectors
 
         self.vectors = np.copy(self.pillars[:, : self.n_basis])
 
@@ -181,7 +202,15 @@ class RelativeBasis(Basis):
             phi_hat (ndarray): approximate wave function
 
         """
-        return self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
+        return self.mean + self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
+
+    def project(self, x):
+        r"""
+        Return projection of x onto vectors
+        """
+        x -= self.phi_0
+        x /= np.trapz(np.absolute(x),self.rho_mesh)
+        return [ np.trapz( self.vectors[:,i].conj() *x ,s) for i in range(self.n_basis) ]
 
     def percent_explained_variance(self):
         r"""
@@ -209,6 +238,7 @@ class CustomBasis(Basis):
         ell: int,  # angular momentum, l
         use_svd: bool,
         solver: SchroedingerEquation = None,
+        pre_process=False,
     ):
         r"""Builds a custom basis. Allows the user to supply their own.
 
@@ -247,17 +277,29 @@ class CustomBasis(Basis):
         self.pillars = solutions.copy()
         self.rho_mesh = rho_mesh.copy()
         self.n_basis = n_basis
-        # Energy and angular momentum are not actually used, but it may be
-        # useful to store them here to help the user keep track of which
-        # CustomBasis this is.
         self.ell = ell
 
         self.phi_0 = phi_0.copy()
+        self.mean = np.zeros_like(self.phi_0)
 
         if use_svd:
-            U, S, _ = np.linalg.svd(
-                self.solutions - self.phi_0[:, np.newaxis], full_matrices=False
-            )
+            if pre_process:
+                A = self.solutions
+                self.phi_0 /= np.trapz(self.phi_0,s)
+                row_norms = np.array(
+                    [
+                        np.trapz(np.absolute(A[:, i]), self.rho_mesh)
+                        for i in range(A.shape[1])
+                    ]
+                )
+                A /= row_norms[:, np.newaxis]
+                self.mean = np.mean(A, axis=1)
+                self.phi_0 += self.mean
+                A -= self.phi_0
+            else:
+                A = self.solutions - self.phi_0[:, np.newaxis]
+
+            U, S, _ = np.linalg.svd(A, full_matrices=False)
             self.singular_values = S.copy()
             self.pillars = U.copy()
         else:
@@ -282,7 +324,16 @@ class CustomBasis(Basis):
             phi_hat (ndarray): approximate wave function
 
         """
-        return self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
+        return self.mean + self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
+
+    def project(self, x):
+        r"""
+        Return projection of x onto vectors
+        """
+        x -= self.phi_0
+        x /= np.trapz(np.absolute(x),self.rho_mesh)
+        return [ np.trapz( self.vectors[:,i].conj() *x ,s) for i in range(self.n_basis) ]
+
 
     def percent_explained_variance(self, n=None):
         r"""

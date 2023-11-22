@@ -189,6 +189,7 @@ class ScatteringAmplitudeEmulator:
         s_mesh: np.array = DEFAULT_RHO_MESH,
         s_0: float = 6 * np.pi,
         Sl_cutoff: float = 1.0e-4,
+        **basis_kwargs,
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
 
@@ -227,6 +228,7 @@ class ScatteringAmplitudeEmulator:
                     n_basis,
                     interaction.ell,
                     use_svd,
+                    **basis_kwargs,
                 )
                 for interaction in interaction_list
             ]

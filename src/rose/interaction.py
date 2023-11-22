@@ -302,9 +302,7 @@ def couplings(l):
         l (int): angular momentum
 
     Returns:
-        couplings (list): total angular momentum possibilities
+        couplings (list): epectation value of l dot s
     """
-    if l == 0:
-        return [l]
-    else:
-        return [l, -(l + 1)]
+    js = [l+1./2] if l ==0 else [l - 1./2, l + 1./2]
+    return [ 0.5*( j*(j+1) - l*(l+1) - 0.5*(0.5+1)) for j in js]

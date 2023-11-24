@@ -364,7 +364,7 @@ class KDGlobal:
 
             # fermi energy
             if self.projectile == Projectile.neutron:
-                self.Ef_0 = 11.2814
+                self.Ef_0 = -11.2814
                 self.Ef_A = 0.02646
             else:
                 self.Ef_0 = -8.4075
@@ -395,10 +395,10 @@ class KDGlobal:
 
         N = A - Z
         delta = (N - Z) / A
-        factor = 1
+        factor = 1.0
         if self.projectile == Projectile.proton:
             delta *= -1.0
-            factor *= -1
+            factor *= -1.0
 
         # fermi energy
         Ef = self.Ef_0 + self.Ef_A * A
@@ -424,7 +424,7 @@ class KDGlobal:
         awv = av
 
         # imag surface depth
-        d1 = self.d1_0 + self.d1_asymm * delta
+        d1 = self.d1_0 - self.d1_asymm * delta
         d2 = self.d2_0 + self.d2_A / (1 + np.exp((A - self.d2_A3) / self.d2_A2))
         d3 = self.d3_0
         wd = Wd(E_com, d1, d2, d3, Ef)

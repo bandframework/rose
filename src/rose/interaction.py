@@ -79,7 +79,7 @@ class Interaction:
             # If the energy is specified (not None as it is when subclass
             # EnergizedInteraction instantiates), set up associated attributes.
             self.energy = energy
-            if mu:
+            if mu is not None:
                 self.k = np.sqrt(2 * self.mu * self.energy) / HBARC
                 self.sommerfeld = self.k_c / self.k
         else:
@@ -87,7 +87,7 @@ class Interaction:
             # methods are called.
             self.energy = None
             self.k = None
-            self.sommerfeld = None
+            self.sommerfeld = 0.0
 
     def tilde(self, s: float, alpha: np.array):
         r"""Scaled potential, $\tilde{U}(s, \alpha, E)$.

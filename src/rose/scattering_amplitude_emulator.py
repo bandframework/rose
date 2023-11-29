@@ -319,6 +319,7 @@ class ScatteringAmplitudeEmulator:
             self.rbes[0][0].interaction.k is not None
             and self.rbes[0][0].interaction.k_c > 0
         ):
+            k = self.rbes[0][0].interaction.k
             self.k_c = self.rbes[0][0].interaction.k_c
             self.eta = self.k_c / k
             self.sigma_l = np.angle(gamma(1 + self.ls + 1j * self.eta))

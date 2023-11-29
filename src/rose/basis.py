@@ -102,7 +102,7 @@ class RelativeBasis(Basis):
         l: int,
         use_svd: bool,
         phi_0_energy: float = None,
-        pre_process = False,
+        pre_process=False,
     ):
         r"""Builds a "relative" reduced basis. This is the default choice.
 
@@ -167,7 +167,7 @@ class RelativeBasis(Basis):
             s = self.rho_mesh
             if pre_process:
                 A = self.solutions
-                self.phi_0 /= np.trapz(self.phi_0,s)
+                self.phi_0 /= np.trapz(self.phi_0, s)
                 row_norms = np.array(
                     [
                         np.trapz(np.absolute(A[:, i]), self.rho_mesh)
@@ -209,8 +209,11 @@ class RelativeBasis(Basis):
         Return projection of x onto vectors
         """
         x -= self.phi_0
-        x /= np.trapz(np.absolute(x),self.rho_mesh)
-        return [ np.trapz( self.vectors[:,i].conj() *x ,s) for i in range(self.n_basis) ]
+        x /= np.trapz(np.absolute(x), self.rho_mesh)
+        return [
+            np.trapz(self.vectors[:, i].conj() * x, self.rho_mesh)
+            for i in range(self.n_basis)
+        ]
 
     def percent_explained_variance(self):
         r"""
@@ -285,7 +288,7 @@ class CustomBasis(Basis):
         if use_svd:
             if pre_process:
                 A = self.solutions
-                self.phi_0 /= np.trapz(self.phi_0,s)
+                self.phi_0 /= np.trapz(self.phi_0, s)
                 row_norms = np.array(
                     [
                         np.trapz(np.absolute(A[:, i]), self.rho_mesh)
@@ -331,9 +334,8 @@ class CustomBasis(Basis):
         Return projection of x onto vectors
         """
         x -= self.phi_0
-        x /= np.trapz(np.absolute(x),self.rho_mesh)
-        return [ np.trapz( self.vectors[:,i].conj() *x ,s) for i in range(self.n_basis) ]
-
+        x /= np.trapz(np.absolute(x), self.rho_mesh)
+        return [np.trapz(self.vectors[:, i].conj() * x, s) for i in range(self.n_basis)]
 
     def percent_explained_variance(self, n=None):
         r"""

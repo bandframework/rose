@@ -304,5 +304,5 @@ def couplings(l):
     Returns:
         couplings (list): epectation value of l dot s
     """
-    js = [l+1./2] if l ==0 else [l - 1./2, l + 1./2]
-    return [ 0.5*( j*(j+1) - l*(l+1) - 0.5*(0.5+1)) for j in js]
+    js = [l + 1.0 / 2] if l == 0 else [l + 1.0 / 2, l - 1.0 / 2]
+    return [0.5 * (j * (j + 1) - l * (l + 1) - 0.5 * (0.5 + 1)) for j in js]

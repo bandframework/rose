@@ -172,6 +172,7 @@ class KoningDelaroche(InteractionEIMSpace):
         n_train: int = 1000,
         rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None,
+        method="collocation",
     ):
         r"""Wraps the Koning-Delaroche potential into a `rose`-friendly class.
         Saves system-specific information.
@@ -217,6 +218,7 @@ class KoningDelaroche(InteractionEIMSpace):
             n_train=n_train,
             rho_mesh=rho_mesh,
             match_points=match_points,
+            method=method,
         )
 
 
@@ -231,6 +233,7 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIMSpace):
         n_train: int = 1000,
         rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None,
+        method="collocation",
     ):
         r"""Wraps the Koning-Delaroche potential into a `rose`-friendly class.
         Saves system-specific information. Allows the user to emulate across
@@ -279,6 +282,7 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIMSpace):
             n_train=n_train,
             rho_mesh=rho_mesh,
             match_points=match_points,
+            method=method,
         )
 
 

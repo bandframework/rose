@@ -77,6 +77,8 @@ def build_sae_config_set(
 
     if isinstance(base_interaction, EnergizedInteractionEIMSpace):
         build = build_sae_energized
+    else:
+        build = build_sae
 
     # first build the largest one, which has all the bases we need
     imax = np.argmax([conf[0] for conf in sae_configs])

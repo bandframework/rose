@@ -114,6 +114,7 @@ class InteractionEIM(Interaction):
 
         U, S, _ = np.linalg.svd(snapshots, full_matrices=False)
         self.singular_values = np.copy(S)
+        self.match_points = np.copy(match_points)
 
         if match_points is not None and method == "collocation":
             n_basis = match_points.size
@@ -144,6 +145,8 @@ class InteractionEIM(Interaction):
             # random r points between 0 and 2π fm
             if match_points is None:
                 self.match_points = rho_mesh
+            else:
+                self.match_points = match_points
             self.r_i = np.copy(self.match_points)
             self.Ainv = np.linalg.pinv(self.snapshots)
         else:

@@ -124,17 +124,33 @@ will NOT be communicated to the user's own high-fidelity solver.
         self.ls = np.arange(self.l_max+1)[:, np.newaxis]
         self.P_l_costheta = eval_legendre(self.ls, np.cos(self.angles))
         self.P_1_l_costheta = np.array([eval_assoc_legendre(l, np.cos(self.angles)) for l in self.ls])
+
+
         # Coulomb scattering amplitude
-        # (This is dangerous because it's not fixed when we emulate across
-        # energies, BUT we don't do that with Coulomb (yet). When we do emulate
-        # across energies, f_c is zero anyway.)
-        k = self.rbes[0][0].interaction.momentum(None)
-        self.k_c = self.rbes[0][0].interaction.k_c
-        self.eta = self.k_c / k
-        self.sigma_l = np.angle(gamma(1 + self.ls + 1j*self.eta))
-        sin2 = np.sin(self.angles/2)**2
-        self.f_c = -self.eta / (2*k*sin2) * np.exp(-1j*self.eta*np.log(sin2) + 2j*self.sigma_l[0])
-        self.rutherford = self.eta**2 / (4*k**2*np.sin(self.angles/2)**4)
+        if (
+            self.rbes[0][0].interaction.k is not None
+            and self.rbes[0][0].interaction.k_c > 0
+        ):
+            k = self.rbes[0][0].interaction.k
+            self.k_c = self.rbes[0][0].interaction.k_c
+            self.eta = self.k_c / k
+            self.sigma_l = np.angle(gamma(1 + self.ls + 1j * self.eta))
+            sin2 = np.sin(self.angles / 2) ** 2
+            self.f_c = (
+                -self.eta
+                / (2 * k * sin2)
+                * np.exp(-1j * self.eta * np.log(sin2) + 2j * self.sigma_l[0])
+            )
+            self.rutherford = (
+                10 * self.eta**2 / (4 * k**2 * np.sin(self.angles / 2) ** 4)
+            )
+        else:
+            self.sigma_l = np.angle(gamma(1 + self.ls + 1j * 0))
+            self.k_c = 0
+            self.eta = 0
+            self.f_c = 0.0 * np.exp(2j * self.sigma_l[0])
+            self.rutherford = 0.0 / (np.sin(self.angles / 2) ** 4)
+
 
 
     def emulate_phase_shifts(self,

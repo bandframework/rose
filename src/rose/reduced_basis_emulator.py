@@ -130,13 +130,6 @@ class ReducedBasisEmulator:
         phi_basis = self.basis.vectors
         ang_mom = self.l*(self.l+1) / self.s_mesh**2
 
-        if self.interaction.k is not None:
-            S_C = self.interaction.R_C * self.interaction.k
-            k_c = 2 * self.interaction.k_c * regular_inverse_s(self.s_mesh, S_C)
-            self.A_3_coulomb = np.einsum("ij,j,jk", phi_basis.T, k_c, phi_basis)
-        else:
-            self.A_3_coulomb = np.zeros_like(self.A_3)
-
         self.d2 = -d2_operator @ phi_basis
         self.A_1 = phi_basis.T @ self.d2
         self.A_2 = np.array([
@@ -147,6 +140,14 @@ class ReducedBasisEmulator:
                              ang_mom - 1,
                              phi_basis)
         self.A_13 = self.A_1 + self.A_3
+        if self.interaction.k is not None:
+
+            S_C = self.interaction.R_C * self.interaction.k
+            k_c = 2 * self.interaction.k_c * regular_inverse_s(self.s_mesh, S_C)
+            self.A_3_coulomb = np.einsum("ij,j,jk", phi_basis.T, k_c, phi_basis)
+        else:
+            self.A_3_coulomb = np.zeros_like(self.A_3)
+
 
         # Precompute what we can for the inhomogeneous term ( -< psi | F(phi_0) > ).
         d2_phi_0 = d2_operator @ self.basis.phi_0

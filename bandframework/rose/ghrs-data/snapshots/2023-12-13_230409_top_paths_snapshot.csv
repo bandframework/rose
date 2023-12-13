@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose/tree/main/docs/tutorials,12,3
+/bandframework/rose,9,7
+/bandframework/rose/blob/v1.0.0/docs/tutorials/ROSE_tutorial_2_optical_potential_surmise_UQ.ipynb,4,1
+/bandframework/rose/blob/ae2b519e2679a42cf3f1d898d039a8566f4117ef/src/rose/interaction.py,2,1
+/bandframework/rose/blob/ae2b519e2679a42cf3f1d898d039a8566f4117ef/src/rose/koning_delaroche.py,2,1
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_1_building_an_emulator.ipynb,2,1
+/bandframework/rose/blob/main/src/rose/__init__.py,2,1
+/bandframework/rose/blob/v1.0.0/docs/hifi_solver.md,2,1
+/bandframework/rose/blob/v1.0.0/docs/interaction.md,2,1
+/bandframework/rose/tree/ae2b519e2679a42cf3f1d898d039a8566f4117ef/src/rose,2,1

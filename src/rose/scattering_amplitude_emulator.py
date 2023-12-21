@@ -119,7 +119,6 @@ class ScatteringAmplitudeEmulator:
         base_solver: SchroedingerEquation = SchroedingerEquation(None),
         l_max: int = None,
         angles: np.array = DEFAULT_ANGLE_MESH,
-        s_0: float = 6 * np.pi,
         verbose: bool = True,
         Sl_cutoff: float = 1.0e-4,
         s_mesh=None,
@@ -147,21 +146,20 @@ class ScatteringAmplitudeEmulator:
             sae (ScatteringAmplitudeEmulator): scattering amplitude emulator
 
         """
+        if s_mesh is None:
+            s_mesh = np.linspace(
+                base_solver.domain[0],
+                base_solver.domain[1],
+                SchroedingerEquation.DEFAULT_NUM_PTS)
+
+        assert s_mesh[0] >= base_solver.domain[0] and s_mesh[-1] <= base_solver.domain[1]
+
         bases = []
         for interaction_list in interaction_space.interactions:
             basis_list = []
             for interaction in interaction_list:
                 solver = base_solver.clone_for_new_interaction(interaction)
-                if s_mesh is None:
-                    if hasattr(solver, "s_mesh"):
-                        s_mesh = solver.s_mesh
-                    else:
-                        s_mesh = np.linspace(
-                            SchroedingerEquation.DEFAULT_S_MIN,
-                            s_0 + 1.0e-1,
-                            SchroedingerEquation.DEFAULT_NUM_PTS,
-                        )
-                basis = Basis(solver, None, s_mesh, None, interaction.ell)
+                basis = Basis(solver, None, s_mesh, None)
                 basis_list.append(basis)
             bases.append(basis_list)
 
@@ -186,9 +184,8 @@ class ScatteringAmplitudeEmulator:
         angles: np.array = DEFAULT_ANGLE_MESH,
         n_basis: int = 4,
         use_svd: bool = True,
-        s_mesh: np.array = DEFAULT_RHO_MESH,
-        s_0: float = 6 * np.pi,
         Sl_cutoff: float = 1.0e-4,
+        s_mesh: np.array = None,
         **basis_kwargs,
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
@@ -218,6 +215,15 @@ class ScatteringAmplitudeEmulator:
         """
         if l_max is None:
             l_max = interaction_space.l_max
+
+        if s_mesh is None:
+            s_mesh = np.linspace(
+                base_solver.domain[0],
+                base_solver.domain[1],
+                SchroedingerEquation.DEFAULT_NUM_PTS)
+
+        assert s_mesh[0] >= base_solver.domain[0] and s_mesh[-1] <= base_solver.domain[1]
+
         bases = []
         for interaction_list in tqdm(interaction_space.interactions):
             basis_list = [
@@ -226,7 +232,6 @@ class ScatteringAmplitudeEmulator:
                     alpha_train,
                     s_mesh,
                     n_basis,
-                    interaction.ell,
                     use_svd,
                     **basis_kwargs,
                 )
@@ -239,7 +244,7 @@ class ScatteringAmplitudeEmulator:
             bases,
             l_max,
             angles=angles,
-            s_0=s_0,
+            s_0=base_solver.s_0,
             Sl_cutoff=Sl_cutoff,
         )
 
@@ -367,7 +372,7 @@ class ScatteringAmplitudeEmulator:
 
         """
         return [
-            [rbe.exact_phase_shift(alpha) for rbe in rbe_list] for rbe_list in self.rbes
+            [rbe.basis.solver.delta(alpha) for rbe in rbe_list] for rbe_list in self.rbes
         ]
 
     def emulate_dsdo(self, alpha: np.array):
@@ -398,7 +403,7 @@ class ScatteringAmplitudeEmulator:
 
     def emulate_total_cross_section(self, alpha: np.array):
         r"""Gives the "total" (angle-integrated) cross section in mb. If the interaction
-            is complex, alsom returns the reaction cross section. See Eq. (63) in Carlson's
+            is complex, also returns the reaction cross section. See Eq. (63) in Carlson's
             notes.
 
         Parameters:
@@ -550,14 +555,14 @@ class ScatteringAmplitudeEmulator:
         """
         Splus = np.array(
             [
-                rbe_list[0].basis.solver.smatrix(alpha, rbe_list[0].s_0)
+                rbe_list[0].basis.solver.smatrix(alpha)
                 for rbe_list in self.rbes[: self.l_max]
             ]
         )
         Sminus = np.array(
             [Splus[0]]
             + [
-                rbe_list[1].basis.solver.smatrix(alpha, rbe_list[1].s_0)
+                rbe_list[1].basis.solver.smatrix(alpha)
                 for rbe_list in self.rbes[1 : self.l_max]
             ]
         )
@@ -570,14 +575,14 @@ class ScatteringAmplitudeEmulator:
         """
         Rplus = np.array(
             [
-                rbe_list[0].basis.solver.rmatrix(alpha, rbe_list[0].s_0)
+                rbe_list[0].basis.solver.rmatrix(alpha)
                 for rbe_list in self.rbes[1 : self.l_max]
             ]
         )
         Rminus = np.array(
             [Rplus[0]]
             + [
-                rbe_list[1].basis.solver.rmatrix(alpha, rbe_list[1].s_0)
+                rbe_list[1].basis.solver.rmatrix(alpha)
                 for rbe_list in self.rbes[1 : self.l_max]
             ]
         )

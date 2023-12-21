@@ -28,7 +28,8 @@ class SchroedingerEquation:
     DEFAULT_R_MIN = 1e-2  # fm
     DEFAULT_R_MAX = 30.0  # fm
     DEFAULT_S_MIN = 1e-2  # dimensionless
-    DEFAULT_S_MAX = 10 * np.pi  # dimensionless
+    DEFAULT_S_MAX = 8 * np.pi  # dimensionless
+    DEFAULT_S_EPSILON = 1.0e-4
     DEFAULT_R_0 = 20.0  # fm
     DEFAULT_NUM_PTS = 2000
     MAX_STEPS = 20000
@@ -37,40 +38,71 @@ class SchroedingerEquation:
     def __init__(
         self,
         interaction: Interaction,
-        RK_tolerances: list = [1e-7, 1e-7],
+        rk_tols: list = [1e-7, 1e-7],
+        s_0=None,
+        domain=None,
     ):
         r"""Solves the Shrödinger equation for local, complex potentials.
 
         Parameters:
             interaction (Interaction): See [Interaction documentation](interaction.md).
-            RK_tolerances (list): 2-element list of numbers specifying tolerances for the
+            rk_tols (list): 2-element list of numbers specifying tolerances for the
                 Runge-Kutta solver: the relative tolerance and the  absolute tolerance
+            s_0 (float) :
+            domain (ndarray) :
 
         Returns:
             solver (SchroedingerEquation): instance of `SchroedingerEquation`
 
         """
+        if s_0 is None:
+            s_0 = self.DEFAULT_S_MAX - self.DEFAULT_S_EPSILON
+
+        if domain is None:
+            domain = np.array([self.DEFAULT_S_MIN, s_0 + self.DEFAULT_S_EPSILON])
+
+        assert domain[1] > s_0
+
+        self.s_0 = s_0
+        self.domain = domain
         self.interaction = interaction
-        self.rk_tols = RK_tolerances
+        self.rk_tols = rk_tols
+
+        if self.interaction is not None:
+            if self.interaction.k_c == 0:
+                self.eta = 0
+            else:
+                # There is Coulomb, but we haven't (yet) worked out how to emulate
+                # across energies, so we can precompute H+ and H- stuff.
+                self.eta = self.interaction.eta(None)
+
+            self.Hm = H_minus(self.s_0, self.interaction.ell, self.eta)
+            self.Hp = H_plus(self.s_0, self.interaction.ell, self.eta)
+            self.Hmp = H_minus_prime(self.s_0, self.interaction.ell, self.eta)
+            self.Hpp = H_plus_prime(self.s_0, self.interaction.ell, self.eta)
+
+            self.rho_0, self.initial_conditions = self.initial_conditions(
+                self.eta, self.PHI_THRESHOLD, self.interaction.ell, None
+            )
 
     def clone_for_new_interaction(self, interaction: Interaction):
-        return SchroedingerEquation(interaction, self.rk_tols)
+        return SchroedingerEquation(interaction, self.rk_tols, self.s_0, self.domain)
 
     def initial_conditions(
-        self, alpha: np.array, phi_threshold: float, l: int, rho_0=None
+        self, eta : float, phi_threshold: float, l: int, rho_0=None
     ):
         r"""
         Returns:
             initial_conditions (tuple) : initial conditions [phi, phi'] at rho_0
 
         Parameters:
-            alpha (ndarray): parameter vector
+            eta (float): sommerfield param
             phi_threshold (float): minimum $\phi$ value; The wave function is
                 considered zero below this value.
             rho_0 (float): starting point for the solver
         """
 
-        C_l = Gamow_factor(l, self.interaction.eta(alpha))
+        C_l = Gamow_factor(l, eta)
 
         if rho_0 is None:
             rho_0 = (phi_threshold / C_l) ** (1 / (l + 1))
@@ -88,10 +120,6 @@ class SchroedingerEquation:
     def solve_se(
         self,
         alpha: np.array,
-        domain: np.array,
-        l: int,
-        rho_0=None,
-        phi_threshold=PHI_THRESHOLD,
         **kwargs,
     ):
         r"""Solves the reduced, radial Schrödinger equation using the builtin in Runge-Kutta
@@ -99,20 +127,12 @@ class SchroedingerEquation:
 
         Parameters:
             alpha (ndarray): parameter vector
-            domain (ndarray): lower and upper bounds of the $s$ mesh.
-            rho_0 (float): initial $\rho$ (or $s$) value; starting point for the
-                solver
-            phi_threshold (float): minimum $\phi$ value; The wave function is
-                considered zero below this value.
             kwargs (dict) : passed to scipy.integrate.solve_ivp
 
         Returns:
             sol  (scipy.integrate.OdeSolution) : the radial wavefunction
             and its first derivative; see https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.OdeSolution.html#scipy.integrate.OdeSolution
         """
-        rho_0, initial_conditions = self.initial_conditions(
-            alpha, phi_threshold, l, rho_0
-        )
 
         args = self.interaction.bundle_gcoeff_args(alpha)
         sol = solve_ivp(
@@ -122,22 +142,19 @@ class SchroedingerEquation:
                     -1 * g_coeff(s, *args) * phi[0],
                 ]
             ),
-            [rho_0, domain[1]],
-            initial_conditions,
+            self.domain,
+            self.initial_conditions,
             rtol=self.rk_tols[0],
             atol=self.rk_tols[1],
             dense_output=True,
             **kwargs,
         )
 
-        return sol.sol, rho_0
+        return sol.sol
 
     def rmatrix(
         self,
         alpha: np.array,
-        s_0: float,
-        l: int = None,
-        domain=[DEFAULT_S_MIN, DEFAULT_S_MAX],
         **kwargs,
     ):
         r"""Calculates the $\ell$-th partial wave R-matrix element at the specified energy.
@@ -146,10 +163,6 @@ class SchroedingerEquation:
 
         Parameters:
             alpha (ndarray): parameter vector
-            l (int): angular momentum
-            s_0 (float): $s$ value where the phase shift is calculated (must be
-                less than the second element in `domain`)
-            domain (ndarray): lower and upper bounds of the $s$ mesh.
             kwargs (dict) : passed to scipy.integrate.solve_ivp
 
         Returns:
@@ -157,22 +170,15 @@ class SchroedingerEquation:
                 radius; s_0
 
         """
-        # Should domain be [s_min, domain[1]]?
-        if l is None:
-            l = self.interaction.ell
-
-        solution, _ = self.solve_se(alpha, domain, l, **kwargs)
-        u = solution(s_0)
-        rl = 1 / s_0 * (u[0] / u[1])
+        solution = self.solve_se(alpha, **kwargs)
+        u = solution(self.s_0)
+        rl = 1 / self.s_0 * (u[0] / u[1])
         return rl
 
     def phi(
         self,
         alpha: np.array,
         s_mesh: np.array,
-        l: int = None,
-        rho_0: float = None,
-        phi_threshold: float = PHI_THRESHOLD,
         **kwargs,
     ):
         r"""Computes the reduced, radial wave function $\phi$ (or $u$) on `s_mesh` using the
@@ -181,75 +187,39 @@ class SchroedingerEquation:
         Parameters:
             alpha (ndarray): parameter vector
             s_mesh (ndarray): values of $s$ at which $\phi$ is calculated
-            rho_0 (float): starting point for the solver
-            phi_threshold (float): minimum $\phi$ value; The wave function is
-                considered zero below this value.
             kwargs (dict) : passed to scipy.integrate.solve_ivp
 
         Returns:
             phi (ndarray): reduced, radial wave function
 
         """
-        if l is None:
-            l = self.interaction.ell
-
-        solution, rho_0 = self.solve_se(
-            alpha,
-            [rho_0, s_mesh[-1]],
-            l,
-            rho_0=rho_0,
-            phi_threshold=phi_threshold,
-            **kwargs,
-        )
-
-        mask = np.where(s_mesh < rho_0)
-        y = solution(s_mesh)[0]
-        y[mask] = 0
-        return y
+        solution = self.solve_se(alpha, **kwargs)
+        return solution(s_mesh)[0]
 
     def smatrix(
         self,
         alpha: np.array,
-        s_0: float,
-        l: int = None,
-        domain=[DEFAULT_S_MIN, DEFAULT_S_MAX],
         **kwargs,
     ):
-        if l is None:
-            l = self.interaction.ell
+        rl = self.rmatrix(alpha, **kwargs)
 
-        rl = self.rmatrix(alpha, s_0, l=l, domain=domain, **kwargs)
-
-        return (
-            H_minus(s_0, l, self.interaction.eta(alpha))
-            - s_0 * rl * H_minus_prime(s_0, l, self.interaction.eta(alpha))
-        ) / (
-            H_plus(s_0, l, self.interaction.eta(alpha))
-            - s_0 * rl * H_plus_prime(s_0, l, self.interaction.eta(alpha))
-        )
+        return (self.Hm - self.s_0 * rl * self.Hmp) / (self.Hp - self.s_0 * rl * self.Hpp)
 
     def delta(
         self,
         alpha: np.array,
-        s_0: float,
-        l: int = None,
-        domain=[DEFAULT_S_MIN, DEFAULT_S_MAX],
         **kwargs,
     ):
         r"""Calculates the $\ell$-th partial wave phase shift
 
         Parameters:
             alpha (ndarray): parameter vector
-            domain (ndarray): lower and upper bounds of the $s$ mesh.
-            l (int): angular momentum
-            s_0 (float): $s$ value where the phase shift is calculated (must be
-                less than the second element in `domain`)
 
         Returns:
             delta (float): phase shift extracted from the reduced, radial
                 wave function
 
         """
-        sl = self.smatrix(alpha, s_0, l=l, domain=domain, **kwargs)
+        sl = self.smatrix(alpha, **kwargs)
 
         return np.log(sl) / 2j

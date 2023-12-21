@@ -27,7 +27,6 @@ class Basis:
         theta_train: np.array,
         rho_mesh: np.array,
         n_basis: int,
-        l: int,
     ):
         r"""Builds a reduced basis.
 
@@ -47,10 +46,10 @@ class Basis:
 
         """
         self.solver = solver
+        self.l = solver.interaction.ell
         self.theta_train = np.copy(theta_train)
         self.rho_mesh = np.copy(rho_mesh)
         self.n_basis = n_basis
-        self.l = l
 
     def phi_hat(self, coefficients):
         r"""Emulated wave function.
@@ -79,7 +78,7 @@ class Basis:
             phi (ndarray): wave function
 
         """
-        return self.solver.phi(theta, self.rho_mesh, self.l)
+        return self.solver.phi(theta, self.rho_mesh)
 
     def save(self, filename):
         """Saves a basis to file.
@@ -99,7 +98,6 @@ class RelativeBasis(Basis):
         theta_train: np.array,
         rho_mesh: np.array,
         n_basis: int,
-        l: int,
         use_svd: bool,
         phi_0_energy: float = None,
         pre_process=False,
@@ -139,7 +137,6 @@ class RelativeBasis(Basis):
             theta_train,
             rho_mesh,
             n_basis,
-            l,
         )
 
         if phi_0_energy:
@@ -238,7 +235,6 @@ class CustomBasis(Basis):
         phi_0: np.array,  # "offset", generates inhomogeneous term
         rho_mesh: np.array,  # rho mesh; MUST BE EQUALLY SPACED POINTS!!!
         n_basis: int,
-        ell: int,  # angular momentum, l
         use_svd: bool,
         solver: SchroedingerEquation = None,
         pre_process=False,
@@ -254,7 +250,6 @@ class CustomBasis(Basis):
             phi_0 (ndarray): free solution (no interaction)
             rho_mesh (ndarray): discrete $s=kr$ mesh points
             n_basis (int): number of states in the expansion
-            ell (int): orbital angular momentum
             use_svd (bool): Use principal components for $\tilde{\phi}$?
 
         Attributes:
@@ -262,7 +257,6 @@ class CustomBasis(Basis):
             theta_train (ndarray): not specified or assumed at construction
             rho_mesh (ndarray): discrete $s=kr$ mesh points
             n_basis (int): number of states in the expansion
-            ell (int): orbital angular momentum
             phi_0 (ndarray): free solution (no interaction)
             solutions (ndarray): HF solutions provided by the user
             pillars (ndarray): $\tilde{\phi}_i$
@@ -273,14 +267,13 @@ class CustomBasis(Basis):
 
         """
 
-        super().__init__(solver, None, rho_mesh, n_basis, ell)
+        super().__init__(solver, None, rho_mesh, n_basis)
 
         # TODO why are we copying here?
         self.solutions = solutions.copy()
         self.pillars = solutions.copy()
         self.rho_mesh = rho_mesh.copy()
         self.n_basis = n_basis
-        self.ell = ell
 
         self.phi_0 = phi_0.copy()
         self.mean = np.zeros_like(self.phi_0)

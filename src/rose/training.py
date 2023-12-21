@@ -177,7 +177,6 @@ def build_sae(
                         basis.phi_0,
                         basis.rho_mesh,
                         n_basis,
-                        interaction.ell,
                         use_svd=False,
                         solver=basis.solver,
                     )
@@ -258,7 +257,6 @@ def build_sae_energized(
                         basis.phi_0,
                         basis.rho_mesh,
                         n_basis,
-                        interaction.ell,
                         use_svd=False,
                         solver=basis.solver,
                     )

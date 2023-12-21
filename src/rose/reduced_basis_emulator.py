@@ -232,18 +232,7 @@ class ReducedBasisEmulator:
             delta (float | complex): emulated phase shift (extracted at $s_0$)
 
         """
-        x = self.coefficients(theta)
-        phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
-        phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])
-
-        rl = 1 / self.s_0 * (phi / phi_prime)
-        return (
-            np.log(
-                (self.Hm - self.s_0 * rl * self.Hmp)
-                / (self.Hp - self.s_0 * rl * self.Hpp)
-            )
-            / 2j
-        )
+        return np.log(self.S_matrix_element(theta)) / 2j
 
     def logarithmic_derivative(self, theta: np.array):
         a = self.s_mesh[self.i_0]
@@ -257,18 +246,6 @@ class ReducedBasisEmulator:
         Rl = self.logarithmic_derivative(theta)
         eta = self.interaction.eta(theta)
         return (self.Hm - a * Rl * self.Hmp) / (self.Hp - a * Rl * self.Hpp)
-
-    def exact_phase_shift(self, theta: np.array):
-        r"""Calculate the high-fidelity phase shift.
-
-        Parameters:
-            theta (ndarray): point in parameters space
-
-        Returns:
-            delta (float | complex): high-fidelity phase shift (extracted at $s_0$)
-
-        """
-        return self.basis.solver.delta(theta, self.s_0)
 
     def save(self, filename):
         r"""Write the current emulator to file.

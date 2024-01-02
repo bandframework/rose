@@ -168,7 +168,7 @@ class ScatteringAmplitudeEmulator:
             bases,
             l_max,
             angles,
-            s_0=s_0,
+            s_0=base_solver.s_0,
             verbose=verbose,
             Sl_cutoff=Sl_cutoff,
             initialize_emulator=False,

@@ -35,10 +35,19 @@ class SchroedingerEquation:
     MAX_STEPS = 20000
     PHI_THRESHOLD = 1e-10
 
+    @classmethod
+    def make_base_solver(
+        cls,
+        rk_tols = [1e-9, 1e-9],
+        s_0 = None,
+        domain = None,
+    ):
+        return SchroedingerEquation(None, rk_tols, s_0, domain)
+
     def __init__(
         self,
         interaction: Interaction,
-        rk_tols: list = [1e-7, 1e-7],
+        rk_tols: list = [1e-9, 1e-9],
         s_0=None,
         domain=None,
     ):

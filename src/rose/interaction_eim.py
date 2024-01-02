@@ -82,6 +82,8 @@ class InteractionEIM(Interaction):
             r_i (ndarray): copy of `match_points` (???)
             Ainv (ndarray): inverse of A matrix (Ax = b)
         """
+        if n_basis is None:
+            n_basis = n_theta
 
         super().__init__(
             coordinate_space_potential,
@@ -126,21 +128,16 @@ class InteractionEIM(Interaction):
             self.r_i = rho_mesh[self.match_indices]
             self.Ainv = np.linalg.inv(self.snapshots[self.match_indices])
         elif match_points is None and method == "collocation":
-            if n_basis is None:
-                n_basis = n_theta
             self.snapshots = np.copy(U[:, :n_basis])
             # random r points between 0 and 2π fm
             i_max = self.snapshots.shape[0] // 4
             di = i_max // (n_basis - 1)
             i_init = np.arange(0, i_max + 1, di)
             self.match_indices = max_vol(self.snapshots, i_init)
-            # np.random.randint(0, self.snapshots.shape[0], size=self.snapshots.shape[1]))
             self.match_points = rho_mesh[self.match_indices]
             self.r_i = np.copy(self.match_points)
             self.Ainv = np.linalg.inv(self.snapshots[self.match_indices])
         elif method == "least-squares":
-            if n_basis is None:
-                n_basis = n_theta
             self.snapshots = np.copy(U[:, :n_basis])
             # random r points between 0 and 2π fm
             if match_points is None:

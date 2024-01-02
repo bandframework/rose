@@ -183,7 +183,12 @@ def build_sae(
                 )
                 new_basis_list[-1].singular_values = basis.singular_values[:n_basis]
             new_bases.append(new_basis_list)
-        emulator = ScatteringAmplitudeEmulator(interactions, new_bases, **SAE_kwargs)
+        emulator = ScatteringAmplitudeEmulator(
+            interactions,
+            new_bases,
+            s_0 = basis.solver.s_0,
+            **SAE_kwargs,
+        )
     else:
         emulator = ScatteringAmplitudeEmulator.from_train(
             interactions,
@@ -281,6 +286,7 @@ class CATPerformance:
         benchmark_inputs: list,
         benchmark_ground_truth: np.array,
         label: str = None,
+        n_timing : int = 1,
     ):
         r"""
         Run benchmark_runner for each of benchmark_inputs, and compare the output
@@ -294,6 +300,7 @@ class CATPerformance:
                 element is an np.array of same shape as output of benchmark_runner, encapsulating
                 the 'exact', or expected, output for a given input
             label : name or identifier for this particular benchmark_runner
+            n_timing : number of times to run benchmark_runner, the average of which is the time
 
         Returns:
             CATPerformance object encapsulating the mean squared error of each output of
@@ -322,9 +329,12 @@ class CATPerformance:
         self.rel_err = np.zeros(all_output_shape, dtype=np.double)
         self.times = np.zeros(self.num_inputs)
         for i in tqdm(range(self.num_inputs)):
-            st = perf_counter()
-            predicted = benchmark_runner(benchmark_inputs[i])
-            et = perf_counter()
+            for j in range(int(n_timing)):
+                st = perf_counter()
+                predicted = benchmark_runner(benchmark_inputs[i])
+                et = perf_counter()
+                self.times[i] += et - st
+            self.times[i] /= n_timing
             self.runner_output[i, ...] = predicted
             self.runner_residuals[i, ...] = benchmark_ground_truth[i] - predicted
             self.rel_err[i, ...] = np.sqrt(
@@ -334,7 +344,6 @@ class CATPerformance:
             ) / np.sqrt(
                 np.real(benchmark_ground_truth[i] * benchmark_ground_truth[i].conj())
             )
-            self.times[i] = et - st
 
         # take median along all axes but 0
         axes = [i + 1 for i in range(len(self.output_shape))]

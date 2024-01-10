@@ -1,5 +1,5 @@
 r"""
-Some helpful utilities for training an emulator
+Some helpful utilities for training an emulator and visualizing performance
 """
 from dataclasses import dataclass
 from collections.abc import Callable
@@ -12,6 +12,7 @@ from matplotlib import ticker
 import seaborn as sns
 from tqdm import tqdm
 
+from .schroedinger import SchroedingerEquation
 from .basis import Basis, CustomBasis
 from .interaction_eim import InteractionEIM, InteractionEIMSpace
 from .energized_interaction_eim import EnergizedInteractionEIMSpace
@@ -72,7 +73,7 @@ def build_sae_config_set(
     **SAE_kwargs,
 ):
     r"""
-    build a list of `ScatteringAmplitudeEmulator`s to the specification of sae_configs
+    build a list of `ScatteringAmplitudeEmulator`s to the specification of `sae_configs`
     """
 
     if isinstance(base_interaction, EnergizedInteractionEIMSpace):
@@ -91,6 +92,9 @@ def build_sae_config_set(
         bounds,
         **SAE_kwargs,
     )
+
+    if "base_solver" in SAE_kwargs:
+        SAE_kwargs.pop("base_solver")
 
     # get the largest set of bases (for each partial wave)
     bases = [[rbe.basis for rbe in rbe_list] for rbe_list in biggest_sae.rbes]
@@ -132,7 +136,8 @@ def build_sae(
             for already, re-use basis.vectors rather than re-calculating them
         theta_train (optional) : if bases is not provided, simply pass in the
             training samples and re-train the emulator
-        SAE_kwargs : passed to ScatteringAmplitudeEmulator
+        SAE_kwargs : passed to ScatteringAmplitudeEmulator. If bases is None, passed to
+            ScatteringAmplitudeEmulator.from_train
     """
 
     (n_basis, n_EIM) = sae_config
@@ -186,7 +191,7 @@ def build_sae(
         emulator = ScatteringAmplitudeEmulator(
             interactions,
             new_bases,
-            s_0 = basis.solver.s_0,
+            s_0=basis.solver.s_0,
             **SAE_kwargs,
         )
     else:
@@ -217,7 +222,8 @@ def build_sae_energized(
             for already, re-use basis.vectors rather than re-calculating them
         theta_train (optional) : if bases is not provided, simply pass in the
             training samples and re-train the emulator
-        SAE_kwargs : passed to ScatteringAmplitudeEmulator
+        SAE_kwargs : passed to ScatteringAmplitudeEmulator. If bases is None, passed to
+            ScatteringAmplitudeEmulator.from_train
     """
 
     (n_basis, n_EIM) = sae_config
@@ -286,7 +292,7 @@ class CATPerformance:
         benchmark_inputs: list,
         benchmark_ground_truth: np.array,
         label: str = None,
-        n_timing : int = 1,
+        n_timing: int = 1,
     ):
         r"""
         Run benchmark_runner for each of benchmark_inputs, and compare the output
@@ -405,8 +411,8 @@ def CAT_plot(data_sets: list, labels=None, border_styles=None):
             levels=[level_sns],
             color=color,
             log_scale=[True, True],
-            linewidths=3,
-            linestyles=border_style,
+            # linewidths=3,
+            # linestyles=border_style,
         )
         ax.scatter(x, y, s=5, color=color)
 
@@ -675,7 +681,26 @@ def plot_wavefunctions(
     """
 
     legend_colors = []
-    lwaves = ["s", "p", "d", "f", "g", "h"]
+    lwaves = [
+        "s",
+        "p",
+        "d",
+        "f",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k",
+        "l",
+        "m",
+        "n",
+        "o",
+        "q",
+        "r",
+        "t",
+        "u",
+        "v",
+    ]
     lwaves_iter = iter(lwaves)
     assert len(wavefunctions) <= 6
 

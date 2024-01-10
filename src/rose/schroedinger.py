@@ -38,9 +38,9 @@ class SchroedingerEquation:
     @classmethod
     def make_base_solver(
         cls,
-        rk_tols = [1e-9, 1e-9],
-        s_0 = None,
-        domain = None,
+        rk_tols=[1e-9, 1e-9],
+        s_0=None,
+        domain=None,
     ):
         return SchroedingerEquation(None, rk_tols, s_0, domain)
 
@@ -90,16 +90,19 @@ class SchroedingerEquation:
             self.Hmp = H_minus_prime(self.s_0, self.interaction.ell, self.eta)
             self.Hpp = H_plus_prime(self.s_0, self.interaction.ell, self.eta)
 
-            self.rho_0, self.initial_conditions = self.initial_conditions(
-                self.eta, self.PHI_THRESHOLD, self.interaction.ell, None
+
+            self.domain[0], self.init_cond = self.initial_conditions(
+                self.eta, self.PHI_THRESHOLD, self.interaction.ell, self.domain[0],
             )
 
-    def clone_for_new_interaction(self, interaction: Interaction):
-        return SchroedingerEquation(interaction, self.rk_tols, self.s_0, self.domain)
+            assert self.domain[0] < self.s_0
 
-    def initial_conditions(
-        self, eta : float, phi_threshold: float, l: int, rho_0=None
-    ):
+    def clone_for_new_interaction(self, interaction: Interaction):
+        return SchroedingerEquation(
+            interaction, self.rk_tols, s_0=self.s_0, domain=self.domain.copy()
+        )
+
+    def initial_conditions(self, eta: float, phi_threshold: float, l: int, rho_0=None):
         r"""
         Returns:
             initial_conditions (tuple) : initial conditions [phi, phi'] at rho_0
@@ -112,9 +115,10 @@ class SchroedingerEquation:
         """
 
         C_l = Gamow_factor(l, eta)
+        min_rho_0 = (phi_threshold / C_l) ** (1 / (l + 1))
 
-        if rho_0 is None:
-            rho_0 = (phi_threshold / C_l) ** (1 / (l + 1))
+        if min_rho_0 > rho_0:
+            rho_0 = min_rho_0
 
         phi_0 = C_l * rho_0 ** (l + 1)
         phi_prime_0 = C_l * (l + 1) * rho_0**l
@@ -152,7 +156,7 @@ class SchroedingerEquation:
                 ]
             ),
             self.domain,
-            self.initial_conditions,
+            self.init_cond,
             rtol=self.rk_tols[0],
             atol=self.rk_tols[1],
             dense_output=True,
@@ -202,8 +206,11 @@ class SchroedingerEquation:
             phi (ndarray): reduced, radial wave function
 
         """
-        solution = self.solve_se(alpha, **kwargs)
-        return solution(s_mesh)[0]
+        solution = np.zeros_like(s_mesh, dtype=np.complex128)
+        mask = s_mesh > self.domain[0]
+        phi = self.solve_se(alpha, **kwargs)
+        solution[mask] = phi(s_mesh)[0][mask]
+        return solution
 
     def smatrix(
         self,
@@ -212,7 +219,9 @@ class SchroedingerEquation:
     ):
         rl = self.rmatrix(alpha, **kwargs)
 
-        return (self.Hm - self.s_0 * rl * self.Hmp) / (self.Hp - self.s_0 * rl * self.Hpp)
+        return (self.Hm - self.s_0 * rl * self.Hmp) / (
+            self.Hp - self.s_0 * rl * self.Hpp
+        )
 
     def delta(
         self,

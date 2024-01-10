@@ -98,9 +98,10 @@ class RelativeBasis(Basis):
         theta_train: np.array,
         rho_mesh: np.array,
         n_basis: int,
-        use_svd: bool,
         phi_0_energy: float = None,
-        pre_process=False,
+        use_svd: bool = True,
+        center: bool = None,
+        scale: bool = None,
     ):
         r"""Builds a "relative" reduced basis. This is the default choice.
 
@@ -124,8 +125,6 @@ class RelativeBasis(Basis):
             n_basis (int): number of states in the expansion
             l (int): orbital angular momentum
             phi_0 (ndarray): free solution (no interaction)
-            all_vectors (ndarray): HF solutions minus the free solution (one for
-                each column)
             pillars (ndarray): $\tilde{\phi}_i$
             singular_values (ndarray): singular values from SVD
             vectors (ndarray): copy of `pillars`
@@ -158,36 +157,12 @@ class RelativeBasis(Basis):
             [coulombf(self.l, eta, rho) for rho in self.rho_mesh], dtype=np.complex128
         )
         self.solutions = np.array([self.phi_exact(theta) for theta in theta_train]).T
-        self.mean = np.zeros_like(self.phi_0)
 
-        if use_svd:
-            s = self.rho_mesh
-            if pre_process:
-                A = self.solutions
-                self.phi_0 /= np.trapz(self.phi_0, s)
-                row_norms = np.array(
-                    [
-                        np.trapz(np.absolute(A[:, i]), self.rho_mesh)
-                        for i in range(A.shape[1])
-                    ]
-                )
-                A /= row_norms
-                self.mean = np.mean(A, axis=1)
-                self.phi_0 += self.mean
-                A -= self.phi_0[:, np.newaxis]
-                self.all_vectors = A
-            else:
-                self.all_vectors = self.solutions - self.phi_0[:, np.newaxis]
+        self.pillars, self.singular_values, self.phi_0 = pre_process_solutions(
+            self.solutions, self.phi_0, self.rho_mesh, center, scale, use_svd
+        )
 
-            U, S, _ = np.linalg.svd(self.all_vectors, full_matrices=False)
-            self.singular_values = S.copy()
-            self.pillars = U.copy()
-        else:
-            self.singular_values = None
-            self.all_vectors = self.solutions - self.phi_0[:, np.newaxis]
-            self.pillars = self.all_vectors
-
-        self.vectors = np.copy(self.pillars[:, : self.n_basis])
+        self.vectors = self.pillars[:, : self.n_basis].copy()
 
     def phi_hat(self, coefficients):
         r"""Emulated wave function.
@@ -199,7 +174,7 @@ class RelativeBasis(Basis):
             phi_hat (ndarray): approximate wave function
 
         """
-        return self.mean + self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
+        return self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
 
     def project(self, x):
         r"""
@@ -221,10 +196,13 @@ class RelativeBasis(Basis):
         if self.singular_values is None:
             return 100
         else:
-            return (
-                100
-                * np.sum(self.singular_values[: self.n_basis] ** 2)
-                / np.sum(self.singular_values**2)
+            return np.array(
+                [
+                    100
+                    * np.sum(self.singular_values[:i] ** 2)
+                    / np.sum(self.singular_values**2)
+                ]
+                for i in range(self.nbasis)
             )
 
 
@@ -235,9 +213,10 @@ class CustomBasis(Basis):
         phi_0: np.array,  # "offset", generates inhomogeneous term
         rho_mesh: np.array,  # rho mesh; MUST BE EQUALLY SPACED POINTS!!!
         n_basis: int,
-        use_svd: bool,
         solver: SchroedingerEquation = None,
-        pre_process=False,
+        use_svd: bool = None,
+        center: bool = None,
+        scale: bool = None,
     ):
         r"""Builds a custom basis. Allows the user to supply their own.
 
@@ -274,32 +253,11 @@ class CustomBasis(Basis):
         self.pillars = solutions.copy()
         self.rho_mesh = rho_mesh.copy()
         self.n_basis = n_basis
-
         self.phi_0 = phi_0.copy()
-        self.mean = np.zeros_like(self.phi_0)
 
-        if use_svd:
-            if pre_process:
-                A = self.solutions
-                self.phi_0 /= np.trapz(self.phi_0, s)
-                row_norms = np.array(
-                    [
-                        np.trapz(np.absolute(A[:, i]), self.rho_mesh)
-                        for i in range(A.shape[1])
-                    ]
-                )
-                A /= row_norms[:, np.newaxis]
-                self.mean = np.mean(A, axis=1)
-                self.phi_0 += self.mean
-                A -= self.phi_0
-            else:
-                A = self.solutions - self.phi_0[:, np.newaxis]
-
-            U, S, _ = np.linalg.svd(A, full_matrices=False)
-            self.singular_values = S.copy()
-            self.pillars = U.copy()
-        else:
-            self.singular_values = None
+        self.pillars, self.singular_value, self.phi_0 = pre_process_solutions(
+            self.solutions, self.phi_0, self.rho_mesh, center, scale
+        )
 
         self.vectors = self.pillars[:, : self.n_basis].copy()
 
@@ -320,7 +278,7 @@ class CustomBasis(Basis):
             phi_hat (ndarray): approximate wave function
 
         """
-        return self.mean + self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
+        return self.phi_0 + np.sum(coefficients * self.vectors, axis=1)
 
     def project(self, x):
         r"""
@@ -330,19 +288,49 @@ class CustomBasis(Basis):
         x /= np.trapz(np.absolute(x), self.rho_mesh)
         return [np.trapz(self.vectors[:, i].conj() * x, s) for i in range(self.n_basis)]
 
-    def percent_explained_variance(self, n=None):
+    def percent_explained_variance(self):
         r"""
         Returns:
             (float) : percent of variance explained in the training set by the first n_basis principal
             components
         """
-        if n is None:
-            n = self.n_basis
         if self.singular_values is None:
             return 100
         else:
-            return (
-                100
-                * np.sum(self.singular_values[: self.n_basis] ** 2)
-                / np.sum(self.singular_values**2)
+            return np.array(
+                [
+                    100
+                    * np.sum(self.singular_values[:i] ** 2)
+                    / np.sum(self.singular_values**2)
+                ]
+                for i in range(self.nbasis)
             )
+
+
+def pre_process_solutions(
+    solutions, phi_0, rho_mesh, center=None, scale=None, svd=None
+):
+    s = rho_mesh
+    A = solutions
+    if scale:
+        phi_0 /= np.trapz(np.absolute(phi_0), s)
+        row_norms = np.array(
+            [np.trapz(np.absolute(A[:, i]), rho_mesh) for i in range(A.shape[1])]
+        )
+        A /= row_norms
+
+    if center:
+        mean = np.mean(A, axis=1)
+        phi_0 += mean
+
+    A -= phi_0[:, np.newaxis]
+
+    if svd:
+        U, S, _ = np.linalg.svd(A, full_matrices=False)
+        singular_values = S
+        pillars = U
+    else:
+        singular_values = None
+        pillars = A
+
+    return pillars, singular_values, phi_0

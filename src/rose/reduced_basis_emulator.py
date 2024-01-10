@@ -7,6 +7,7 @@ emulator computes the $\hat{\phi}$ coefficients.
 """
 import pickle
 import numpy as np
+from scipy.interpolate import splrep, splev
 
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
@@ -50,18 +51,19 @@ class ReducedBasisEmulator:
     def from_train(
         cls,
         interaction: Interaction,
-        theta_train: np.array,  # training points in parameter space
-        n_basis: int = 4,  # How many basis vectors?
-        use_svd: bool = True,  # Use principal components as basis vectors?
-        s_mesh: np.array = DEFAULT_RHO_MESH,  # s = rho = kr; solutions are phi(s)
-        s_0: float = 6 * np.pi,  # phase shift is "extracted" at s_0
+        theta_train: np.array,
+        n_basis: int = 4,
+        use_svd: bool = True,
+        s_mesh: np.array = DEFAULT_RHO_MESH,
+        s_0: float = 6 * np.pi,
         base_solver: SchroedingerEquation = SchroedingerEquation(None),
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and training space.
 
         Parameters:
             interaction (Interaction): local interaction
-            theta_train (ndarray): training points in parameter space; shape = (n_points, n_parameters)
+            theta_train (ndarray): training points in parameter space;
+                shape = (n_points, n_parameters)
             n_basis (int): number of basis vectors for $\hat{\phi}$ expansion
             use_svd (bool): Use principal components of training wave functions?
             s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
@@ -87,7 +89,7 @@ class ReducedBasisEmulator:
         self,
         interaction: Interaction,
         basis: Basis,
-        s_0: float = 6 * np.pi,  # phase shift is "extracted" at s_0
+        s_0: float = 6 * np.pi,
         initialize_emulator=True,
     ):
         r"""Trains a reduced-basis emulator based on the provided interaction and basis.
@@ -114,8 +116,7 @@ class ReducedBasisEmulator:
             self.basis.solver = basis.solver
 
         self.s_mesh = np.copy(basis.rho_mesh)
-        self.i_0 = np.argmin(np.abs(self.s_mesh - s_0))
-        self.s_0 = self.s_mesh[self.i_0]
+        self.s_0 = s_0
 
         if initialize_emulator:
             self.initialize_emulator()
@@ -182,12 +183,32 @@ class ReducedBasisEmulator:
         else:
             self.b_3_coulomb = np.zeros_like(self.b_3)
 
-        # Can we extract the phase shift faster?
+        # store the basis vectors column-wise, including the free solution
         self.phi_components = np.hstack(
             (self.basis.phi_0[:, np.newaxis], self.basis.vectors)
         )
-        d1_operator = finite_difference_first_derivative(self.s_mesh)
-        self.phi_prime_components = d1_operator @ self.phi_components
+
+        # tabulate asymptotic (e.g. at matchihng radius, `s_0`)  wavefunction
+        # values, and their derivatives using splines
+        splines = [
+            (splrep(self.s_mesh, y.real), splrep(self.s_mesh, y.imag))
+            for y in self.phi_components.T
+        ]
+        self.asymptotic_vals = np.array(
+            [
+                splev(self.s_0, spline_real) + 1j * splev(self.s_0, spline_imag)
+                for (spline_real, spline_imag) in splines
+            ],
+            dtype=np.complex128,
+        )
+        self.asymptotic_ders = np.array(
+            [
+                splev(self.s_0, spline_real, der=1)
+                + 1j * splev(self.s_0, spline_imag, der=1)
+                for (spline_real, spline_imag) in splines
+            ],
+            dtype=np.complex128,
+        )
 
     def coefficients(self, theta: np.array):
         r"""Calculated the coefficients in the $\hat{\phi}$ expansion.
@@ -234,18 +255,17 @@ class ReducedBasisEmulator:
         """
         return np.log(self.S_matrix_element(theta)) / 2j
 
-    def logarithmic_derivative(self, theta: np.array):
-        a = self.s_mesh[self.i_0]
-        x = self.coefficients(theta)
-        phi = np.sum(np.hstack((1, x)) * self.phi_components[self.i_0, :])
-        phi_prime = np.sum(np.hstack((1, x)) * self.phi_prime_components[self.i_0, :])
-        return 1 / a * phi / phi_prime
+    def R_matrix_element(self, theta: np.array):
+        x = np.hstack((1, self.coefficients(theta)))
+        phi = np.dot(x, self.asymptotic_vals)
+        phi_prime = np.dot(x, self.asymptotic_ders)
+        return 1 / self.s_0 * phi / phi_prime
 
     def S_matrix_element(self, theta: np.array):
-        a = self.s_mesh[self.i_0]
-        Rl = self.logarithmic_derivative(theta)
-        eta = self.interaction.eta(theta)
-        return (self.Hm - a * Rl * self.Hmp) / (self.Hp - a * Rl * self.Hpp)
+        Rl = self.R_matrix_element(theta)
+        return (self.Hm - self.s_0 * Rl * self.Hmp) / (
+            self.Hp - self.s_0 * Rl * self.Hpp
+        )
 
     def save(self, filename):
         r"""Write the current emulator to file.

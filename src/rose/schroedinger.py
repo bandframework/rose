@@ -64,11 +64,12 @@ class SchroedingerEquation:
             solver (SchroedingerEquation): instance of `SchroedingerEquation`
 
         """
-        if s_0 is None:
-            s_0 = self.DEFAULT_S_MAX - np.pi/3
-
         if domain is None:
-            domain = np.array([self.DEFAULT_S_MIN, self.DEFAULT_S_MAX ])
+            domain = np.array([self.DEFAULT_S_MIN, self.DEFAULT_S_MAX])
+
+        if s_0 is None:
+            s_0 = domain[1] - np.pi
+            assert s_0 > 0
 
         assert domain[1] > s_0
 

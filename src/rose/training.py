@@ -307,7 +307,7 @@ def CAT_plot(data_sets: list, labels=None, border_styles=None):
             )
         )
 
-        level_sns = 0.001
+        level_sns = 0.01
 
         x = data_set.times
         y = data_set.median_rel_err * 100
@@ -330,8 +330,8 @@ def CAT_plot(data_sets: list, labels=None, border_styles=None):
             levels=[level_sns],
             color=color,
             log_scale=[True, True],
-            # linewidths=3,
-            # linestyles=border_style,
+            linewidths=3,
+            linestyles=border_style,
         )
         ax.scatter(x, y, s=5, color=color)
 

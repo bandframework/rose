@@ -90,9 +90,11 @@ class SchroedingerEquation:
             self.Hmp = H_minus_prime(self.s_0, self.interaction.ell, self.eta)
             self.Hpp = H_plus_prime(self.s_0, self.interaction.ell, self.eta)
 
-
             self.domain[0], self.init_cond = self.initial_conditions(
-                self.eta, self.PHI_THRESHOLD, self.interaction.ell, self.domain[0],
+                self.eta,
+                self.PHI_THRESHOLD,
+                self.interaction.ell,
+                self.domain[0],
             )
 
             assert self.domain[0] < self.s_0

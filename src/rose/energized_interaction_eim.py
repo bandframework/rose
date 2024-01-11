@@ -253,99 +253,19 @@ class EnergizedInteractionEIM(InteractionEIM):
 class EnergizedInteractionEIMSpace(InteractionEIMSpace):
     def __init__(
         self,
-        coordinate_space_potential: Callable[[float, np.array], float],  # V(r, theta)
-        n_theta: int,  # How many parameters does the interaction have?
-        mu: float,  # reduced mass (MeV)
-        training_info: np.array,
-        l_max: int = 20,
-        Z_1: int = 0,  # atomic number of particle 1
-        Z_2: int = 0,  # atomic number of particle 2
-        R_C: float = 0.0,  # Coulomb "cutoff"
-        is_complex: bool = False,
-        spin_orbit_potential: Callable[
-            [float, np.array, float], float
-        ] = None,  # V_{SO}(r, theta, l•s)
-        n_basis: int = None,
-        explicit_training: bool = False,
-        n_train: int = 1000,
-        rho_mesh: np.array = DEFAULT_RHO_MESH,
-        match_points: np.array = None,
-        method="collocation",
+        l_max: int = 15,
+        **kwargs,
     ):
-        r"""Generates a list of $\ell$-specific, energy-emulated, EIMed interactions.
+        r"""Generates a list of $\ell$-specific, EIMed interactions.
 
         Parameters:
-            coordinate_space_potential (Callable[[float,ndarray],float]): V(r, theta)
-            n_theta (int): number of parameters
-            mu (float): reduced mass
-            training_info (ndarray): See `InteractionEIM` documentation.
             l_max (int): maximum angular momentum
-            Z_1 (int): charge of particle 1
-            Z_2 (int): charge of particle 2
-            R_C (float): Coulomb "cutoff" radius
-            is_complex (bool): Is the interaction complex?
-            spin_orbit_potential (Callable[[float, np.array, float], float]):
-                used to create a `SpinOrbitTerm`
-            n_basis (int): number of pillars --- basis states in $\hat{U}$ expansion
-            explicit_training (bool): See `InteractionEIM` documentation.
-            n_train (int): number of training samples
-            rho_mesh (ndarray): discrete $\rho$ points
-            match_points (ndarray): $\rho$ points where agreement with the true
-                potential is enforced
+            kwargs (dict): arguments to constructor of `InteractionEIM`
 
         Returns:
             instance (InteractionEIMSpace): instance of InteractionEIMSpace
 
         Attributes:
-            interaction (list): list of `InteractionEIM`s
+            interactions (list): list of `InteractionEIM`s
         """
-        self.l_max = l_max
-        self.interactions = []
-        if spin_orbit_potential is None:
-            for l in range(l_max + 1):
-                self.interactions.append(
-                    [
-                        EnergizedInteractionEIM(
-                            coordinate_space_potential,
-                            n_theta,
-                            mu,
-                            l,
-                            training_info,
-                            Z_1=Z_1,
-                            Z_2=Z_2,
-                            R_C=R_C,
-                            is_complex=is_complex,
-                            n_basis=n_basis,
-                            explicit_training=explicit_training,
-                            n_train=n_train,
-                            rho_mesh=rho_mesh,
-                            match_points=match_points,
-                            method=method,
-                        )
-                    ]
-                )
-        else:
-            for l in range(l_max + 1):
-                self.interactions.append(
-                    [
-                        EnergizedInteractionEIM(
-                            coordinate_space_potential,
-                            n_theta,
-                            mu,
-                            l,
-                            training_info,
-                            Z_1=Z_1,
-                            Z_2=Z_2,
-                            R_C=R_C,
-                            is_complex=is_complex,
-                            spin_orbit_term=SpinOrbitTerm(spin_orbit_potential, lds),
-                            n_basis=n_basis,
-                            explicit_training=explicit_training,
-                            n_train=n_train,
-                            rho_mesh=rho_mesh,
-                            match_points=match_points,
-                            method=method,
-                        )
-                        for lds in couplings(l)
-                    ]
-                )
+        super().__init__(**kwargs, l_max=l_max, interaction_type=EnergizedInteractionEIM)

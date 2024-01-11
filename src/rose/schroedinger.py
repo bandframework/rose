@@ -65,10 +65,10 @@ class SchroedingerEquation:
 
         """
         if s_0 is None:
-            s_0 = self.DEFAULT_S_MAX - self.DEFAULT_S_EPSILON
+            s_0 = self.DEFAULT_S_MAX - np.pi/3
 
         if domain is None:
-            domain = np.array([self.DEFAULT_S_MIN, s_0 + self.DEFAULT_S_EPSILON])
+            domain = np.array([self.DEFAULT_S_MIN, self.DEFAULT_S_MAX ])
 
         assert domain[1] > s_0
 

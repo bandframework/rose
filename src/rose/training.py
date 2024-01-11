@@ -68,7 +68,7 @@ def sample_params_LHC(
 
 def build_sae_config_set(
     sae_configs: list,
-    base_interaction : InteractionSpace,
+    base_interaction: InteractionSpace,
     theta_train: np.array,
     bounds=None,
     **SAE_kwargs,
@@ -151,10 +151,10 @@ def build_sae(
 
     interactions = InteractionSpace(
         interaction_type=base_interaction.type,
-        coordinate_space_potential = base.v_r,
-        n_theta = base.n_theta,
-        mu = base.mu,
-        energy = base.energy,
+        coordinate_space_potential=base.v_r,
+        n_theta=base.n_theta,
+        mu=base.mu,
+        energy=base.energy,
         training_info=eim_training_info,
         l_max=base_interaction.l_max,
         Z_1=base.Z_1,
@@ -202,8 +202,6 @@ def build_sae(
         )
 
     return interactions, emulator
-
-
 
 
 class CATPerformance:
@@ -594,7 +592,14 @@ def compare_phase_shifts_err(
 
 
 def plot_wavefunctions(
-    s_mesh, wavefunctions, fig, ax1, ax2, linestyle="-", col_iter=iter(colors)
+    s_mesh,
+    wavefunctions,
+    fig,
+    ax1,
+    ax2,
+    linestyle="-",
+    col_iter=iter(colors),
+    partial_wave_offset: int = 0,
 ):
     r"""
     Plots the spin1/2-spin0 coupled reduced radial wavefunctions, the imaginary parts
@@ -622,8 +627,7 @@ def plot_wavefunctions(
         "u",
         "v",
     ]
-    lwaves_iter = iter(lwaves)
-    assert len(wavefunctions) <= 6
+    lwaves_iter = iter(lwaves[partial_wave_offset:])
 
     for l, u_list in enumerate(wavefunctions):
         lsf = next(lwaves_iter)
@@ -671,15 +675,25 @@ def plot_wavefunctions(
     return fig, ax1, ax2
 
 
-def compare_partial_waves(s_mesh, data_sets, labels, fig, ax1, ax2):
+def compare_partial_waves(s_mesh, data_sets, labels, fig, ax1, ax2, l_start=None):
     linestyles = ["solid", "dotted", "dashed", "dotdashed"]
     assert len(data_sets) <= 4
     style_legend = []
 
+    if l_start is None:
+        l_start = 0
+
     for i, (data_set, label) in enumerate(zip(data_sets, labels)):
         col_iter = iter(colors)
         fig, ax1, ax2 = plot_wavefunctions(
-            s_mesh, data_set, fig, ax1, ax2, linestyle=linestyles[i], col_iter=col_iter
+            s_mesh,
+            data_set,
+            fig,
+            ax1,
+            ax2,
+            linestyle=linestyles[i],
+            col_iter=col_iter,
+            partial_wave_offset=l_start,
         )
         style_legend.append(
             Line2D([0], [0], color="k", linestyle=linestyles[i], label=label),

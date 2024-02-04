@@ -242,7 +242,7 @@ class ScatteringAmplitudeEmulator:
                         alpha_train,
                         s_mesh,
                         n_basis,
-                        use_svd,
+                        use_svd=use_svd,
                         **basis_kwargs,
                     )
                 )

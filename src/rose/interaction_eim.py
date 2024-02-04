@@ -13,35 +13,26 @@ from .spin_orbit import SpinOrbitTerm
 from .utility import latin_hypercube_sample, max_vol
 
 
+def find_nearest_idx(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return idx
+
+
 class InteractionEIM(Interaction):
     def __init__(
         self,
-        coordinate_space_potential: Callable[[float, np.array], float],  # V(r, theta)
-        n_theta: int,  # How many parameters does the interaction have?
-        mu: float,  # reduced mass (MeV)
-        energy: float,  # E_{c.m.}
-        ell: int,
-        training_info: np.array,
-        Z_1: int = 0,  # atomic number of particle 1
-        Z_2: int = 0,  # atomic number of particle 2
-        R_C: float = 0.0,  # Coulomb "cutoff"
-        is_complex: bool = False,
-        spin_orbit_term: SpinOrbitTerm = None,
+        training_info: np.array = None,
         n_basis: int = None,
         explicit_training: bool = False,
         n_train: int = 1000,
         rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None,
         method="collocation",
+        **kwargs,
     ):
         r"""
         Parameters:
-            coordinate_space_potential (Callable[[float,ndarray],float]): V(r,
-                theta) where theta are the interaction parameters
-            n_theta (int): number of interaction parameters
-            mu (float): reduced mass (MeV); converted to 1/fm
-            energy (float): center-of-mass scattering energy
-            ell (int): angular momentum
             training_info (ndarray): Either (1) parameters bounds or (2)
                 explicit training points
 
@@ -53,12 +44,6 @@ class InteractionEIM(Interaction):
                 If (2):
                     This is an MxN matrix. N is the number of parameters. M is
                     the number of samples.
-            Z_1 (int): charge of particle 1
-            Z_2 (int): charge of particle 2
-            R_C (float): Coulomb "cutoff" radius
-            is_complex (bool): Is the interaction complex (e.g. optical
-                potentials)?
-            spin_orbit_term (SpinOrbitTerm): spin-orbit part of the interaction
             n_basis (int): number of basis states, or "pillars" in $\hat{U}$ approximation
             explicit_training (bool): Is training_info (1) or (2)? (1) is
                 default
@@ -68,8 +53,10 @@ class InteractionEIM(Interaction):
                 is generated (used for training)
             match_points (ndarray): $\rho$ points where agreement with the true
                 potential is enforced
-            method (str) : 'collocation' or 'least-squares'. If 'collocation', match_points must be the
-                same length as n_basis; otherwise match_points can be any size.
+            method (str) : 'collocation' or 'least-squares'. If 'collocation',
+                match_points must be the same length as n_basis; otherwise match_points
+                can be any size.
+            kwargs (dict): kwargs to `Interaction.__init__`
 
         Attributes:
             s_mesh (ndarray): $s$ points
@@ -82,21 +69,12 @@ class InteractionEIM(Interaction):
             r_i (ndarray): copy of `match_points` (???)
             Ainv (ndarray): inverse of A matrix (Ax = b)
         """
-        if n_basis is None:
-            n_basis = n_theta
+        assert training_info is not None
 
-        super().__init__(
-            coordinate_space_potential,
-            n_theta,
-            mu,
-            energy,
-            ell,
-            Z_1=Z_1,
-            Z_2=Z_2,
-            R_C=R_C,
-            is_complex=is_complex,
-            spin_orbit_term=spin_orbit_term,
-        )
+        if n_basis is None:
+            n_basis = kwargs["n_theta"]
+
+        super().__init__(**kwargs)
 
         self.method = method
         self.n_train = n_train
@@ -115,12 +93,12 @@ class InteractionEIM(Interaction):
             snapshots = np.array([self.tilde(rho_mesh, theta) for theta in train]).T
 
         U, S, _ = np.linalg.svd(snapshots, full_matrices=False)
+        self.snapshots = np.copy(U[:, :n_basis])
         self.singular_values = np.copy(S)
         self.match_points = np.copy(match_points)
 
         if match_points is not None and method == "collocation":
             n_basis = match_points.size
-            self.snapshots = np.copy(U[:, :n_basis])
             self.match_points = np.copy(match_points)
             self.match_indices = np.array(
                 [np.argmin(np.abs(rho_mesh - ri)) for ri in self.match_points]
@@ -128,7 +106,6 @@ class InteractionEIM(Interaction):
             self.r_i = rho_mesh[self.match_indices]
             self.Ainv = np.linalg.inv(self.snapshots[self.match_indices])
         elif match_points is None and method == "collocation":
-            self.snapshots = np.copy(U[:, :n_basis])
             # random r points between 0 and 2π fm
             i_max = self.snapshots.shape[0] // 4
             di = i_max // (n_basis - 1)
@@ -138,14 +115,16 @@ class InteractionEIM(Interaction):
             self.r_i = np.copy(self.match_points)
             self.Ainv = np.linalg.inv(self.snapshots[self.match_indices])
         elif method == "least-squares":
-            self.snapshots = np.copy(U[:, :n_basis])
-            # random r points between 0 and 2π fm
             if match_points is None:
                 self.match_points = rho_mesh
             else:
                 self.match_points = match_points
+            self.match_indices = np.array(
+                [find_nearest_idx(self.s_mesh, x) for x in self.match_points]
+            )
+            self.match_points = self.s_mesh[self.match_indices]
             self.r_i = np.copy(self.match_points)
-            self.Ainv = np.linalg.pinv(self.snapshots)
+            self.Ainv = np.linalg.pinv(self.snapshots[self.match_indices])
         else:
             raise ValueError(
                 "argument 'method' should be one of `collocation` or `least-squares`"
@@ -209,21 +188,26 @@ class InteractionEIMSpace(InteractionSpace):
     def __init__(
         self,
         l_max: int = 15,
+        interaction_type=InteractionEIM,
         **kwargs,
     ):
         r"""Generates a list of $\ell$-specific, EIMed interactions.
 
         Parameters:
+            interaction_args (list): positional arguments for constructor of `interaction_type`
+            interaction_kwargs (dict): arguments to constructor of `interaction_type`
             l_max (int): maximum angular momentum
-            kwargs (dict): arguments to constructor of `InteractionEIM`
+            interaction_type (Type): type of `Interaction` to construct
 
         Returns:
             instance (InteractionEIMSpace): instance of InteractionEIMSpace
 
         Attributes:
-            interactions (list): list of `InteractionEIM`s
+            interaction (list): list of `Interaction`s
+            l_max (int): partial wave cutoff
+            type (Type): interaction type
         """
-        super().__init__(interaction_type=InteractionEIM,  l_max=l_max, **kwargs)
+        super().__init__(interaction_type=interaction_type, l_max=l_max, **kwargs)
 
     def percent_explained_variance(self, n=None):
         return [

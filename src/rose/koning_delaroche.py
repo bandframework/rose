@@ -203,22 +203,22 @@ class KoningDelaroche(InteractionEIMSpace):
 
         """
         super().__init__(
-            KD_simple,
-            NUM_PARAMS,
-            mu,
-            energy,
+            coordinate_space_potential=KD_simple,
+            n_theta=NUM_PARAMS,
+            mu=mu,
+            energy=energy,
             training_info=training_info,
             Z_1=0,
             Z_2=0,
-            l_max=l_max,
             is_complex=True,
-            spin_orbit_potential=KD_simple_so,
+            spin_orbit_term=KD_simple_so,
             n_basis=n_basis,
             explicit_training=explicit_training,
             n_train=n_train,
             rho_mesh=rho_mesh,
             match_points=match_points,
             method=method,
+            l_max=l_max,
         )
 
 
@@ -266,17 +266,18 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIMSpace):
         """
         n_params = NUM_PARAMS + 1  # include energy
         if mu is None:
-            n_params = 17  # include mu
+            n_params = NUM_PARAMS + 2  # include mu and energy
+
         super().__init__(
-            KD_simple,
-            n_params,
-            mu,
+            l_max=l_max,
+            coordinate_space_potential=KD_simple,
+            n_theta=n_params,
+            mu=mu,
             training_info=training_info,
             Z_1=0,
             Z_2=0,
-            l_max=l_max,
             is_complex=True,
-            spin_orbit_potential=KD_simple_so,
+            spin_orbit_term=KD_simple_so,
             n_basis=n_basis,
             explicit_training=explicit_training,
             n_train=n_train,

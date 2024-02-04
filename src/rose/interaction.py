@@ -15,16 +15,16 @@ class Interaction:
 
     def __init__(
         self,
-        coordinate_space_potential: Callable[[float, np.array], float],  # V(r, theta)
-        n_theta: int,  # How many parameters does the interaction have?
-        mu: float,  # reduced mass (MeV)
-        energy: float,  # E_{c.m.}
-        ell: int,
-        Z_1: int = 0,  # atomic number of particle 1
-        Z_2: int = 0,  # atomic number of particle 2
-        R_C: float = 0.0,  # Coulomb "cutoff"
-        is_complex: bool = False,
+        ell: int = 0,
         spin_orbit_term: SpinOrbitTerm = None,
+        coordinate_space_potential: Callable[[float, np.array], float] = None,
+        n_theta: int = None,
+        mu: float = None,
+        energy: float = None,
+        Z_1: int = 0,
+        Z_2: int = 0,
+        R_C: float = 0.0,
+        is_complex: bool = False,
     ):
         r"""Creates a local, (possibly) complex, affine, fixed-energy interaction.
 
@@ -53,6 +53,10 @@ class Interaction:
             spin_orbit_term (SpinOrbitTerm): See [Spin-Orbit section](#spin-orbit)
 
         """
+        assert coordinate_space_potential is not None
+        assert n_theta > 0
+
+        assert ell >= 0
         self.Z_1 = Z_1
         self.Z_2 = Z_2
         self.v_r = coordinate_space_potential
@@ -221,8 +225,8 @@ class Interaction:
 class InteractionSpace:
     def __init__(
         self,
-        interaction_type = Interaction,
-        l_max : int = 15,
+        l_max: int = 15,
+        interaction_type=Interaction,
         **kwargs,
     ):
         r"""Generates a list of $\ell$-specific interactions.
@@ -246,7 +250,7 @@ class InteractionSpace:
 
         if "spin_orbit_term" not in kwargs:
             for l in range(self.l_max + 1):
-                self.interactions.append([ interaction_type(**kwargs, ell=l) ])
+                self.interactions.append([self.type(ell=l, **kwargs)])
         else:
             spin_orbit_potential = kwargs["spin_orbit_term"]
             kwargs.pop("spin_orbit_term")
@@ -254,10 +258,10 @@ class InteractionSpace:
             for l in range(self.l_max + 1):
                 self.interactions.append(
                     [
-                        interaction_type(
-                            **kwargs,
+                        self.type(
                             ell=l,
                             spin_orbit_term=SpinOrbitTerm(spin_orbit_potential, lds),
+                            **kwargs,
                         )
                         for lds in couplings(l)
                     ]

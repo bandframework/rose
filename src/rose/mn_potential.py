@@ -18,7 +18,13 @@ def mn_potential(r, args):
 
 # Stored instances of the Minnesota interaction for testing.
 # Fixed at E_{c.m.} = 50 MeV.
-MN_Potential = Interaction(mn_potential, 2, MU_NN, 50, 0)
+MN_Potential = Interaction(
+    coordinate_space_potential=mn_potential,
+    n_theta=2,
+    mu=MU_NN,
+    energy=50,
+    ell=0,
+)
 
 
 def complex_mn_potential(r, args):
@@ -27,5 +33,10 @@ def complex_mn_potential(r, args):
 
 
 Complex_MN_Potential = Interaction(
-    complex_mn_potential, 2, MU_NN, 50, 0, is_complex=True
+    coordinate_space_potential=complex_mn_potential,
+    n_theta=2,
+    mu=MU_NN,
+    energy=50,
+    ell=0,
+    is_complex=True,
 )

@@ -150,13 +150,11 @@ def build_sae(
         eim_training_info = theta_train
 
     interactions = InteractionSpace(
-        interaction_type=base_interaction.type,
         coordinate_space_potential=base.v_r,
         n_theta=base.n_theta,
         mu=base.mu,
         energy=base.energy,
         training_info=eim_training_info,
-        l_max=base_interaction.l_max,
         Z_1=base.Z_1,
         Z_2=base.Z_2,
         R_C=base.R_C,
@@ -167,6 +165,8 @@ def build_sae(
         n_basis=n_EIM,
         n_train=base.n_train,
         method=base.method,
+        l_max=base_interaction.l_max,
+        interaction_type=base_interaction.type,
     )
 
     if bases is not None:

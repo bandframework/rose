@@ -21,63 +21,13 @@ class EnergizedInteractionEIM(InteractionEIM):
 
     def __init__(
         self,
-        coordinate_space_potential: Callable[[float, np.array], float],  # V(r, theta)
-        n_theta: int,  # How many parameters does the interaction have?
-        mu: float,  # reduced mass (MeV)
-        ell: int,
-        training_info: np.array,
-        Z_1: int = 0,  # atomic number of particle 1
-        Z_2: int = 0,  # atomic number of particle 2
-        R_C: float = 0.0,  # Coulomb "cutoff"
-        is_complex: bool = False,
-        spin_orbit_term: SpinOrbitTerm = None,
-        n_basis: int = None,
-        explicit_training: bool = False,
-        n_train: int = 1000,
-        rho_mesh: np.array = DEFAULT_RHO_MESH,
-        match_points: np.array = None,
-        method="collocation",
+        **kwargs,
     ):
         r"""
         Parameters:
-            coordinate_space_potential (Callable[[float,ndarray],float]): V(r,
-                theta) where theta are the interaction parameters
-            n_theta (int): number of interaction parameters
-            mu (float): reduced mass (MeV); By default, energy (in Mev) is expected to be in position 0
-                of the param array; alpha. If a value of mu i
-                n MeV is provided, then the rest of alpha (positons 1:), are expected to the parameters
-                passed to `coordinate_space_potential`; otherwise, is the value of mu passed
-                is None, mu in MeV is expected to be in position 1 of alpha, and alpha[2:] will be
-                passed to `coordinate_space_potential`.
-            ell (int): angular momentum
-            training_info (ndarray): Either (1) parameters bounds or (2)
-                explicit training points
-
-                If (1):
-                    This is a 2-column matrix. The first column are the lower
-                    bounds. The second are the upper bounds. Each row maps to a
-                    single parameter.
-
-                If (2):
-                    This is an MxN matrix. N is the number of parameters. M is
-                    the number of samples.
-            Z_1 (int): charge of particle 1
-            Z_2 (int): charge of particle 2
-            R_C (float): Coulomb "cutoff" radius
-            is_complex (bool): Is the interaction complex (e.g. optical
-                potentials)?
-            spin_orbit_term (SpinOrbitTerm): spin-orbit part of the interaction
-            n_basis (int): number of basis states, or "pillars" in $\hat{U}$ approximation
-            explicit_training (bool): Is training_info (1) or (2)? (1) is
-                default
-            n_train (int): How many snapshots to generate? Ignored if
-                explicit_training is True.
-            rho_mesh (ndarray): coordinate-space points at which the interaction
-                is generated (used for training)
-            match_points (ndarray): $\rho$ points where agreement with the true
-                potential is enforced
-            method (str) : 'collocation' or 'least-squares'. If 'collocation', match_points must be the
-                same length as n_basis; otherwise match_points can be any size.
+            kwargs (dict): arguments to InteractionEIM. Note; the `energy` argument should not
+            be given, it will be ignored. Energy is the first element of alpha. If `mu is None`,
+            the reduced mass will expected to be the second element of alpha.
 
         Attributes:
             singular_values (ndarray): `S` in `U, S, Vt = numpy.linalg.svd(...)`
@@ -89,6 +39,9 @@ class EnergizedInteractionEIM(InteractionEIM):
             r_i (ndarray): copy of `match_points` (???)
             Ainv (ndarray): inverse of A matrix (Ax = b)
         """
+        n_theta = kwargs["n_theta"]
+        mu = kwargs.get("mu", None)
+
         self.param_mask = np.ones((n_theta), dtype=bool)
         if mu is None:
             self.param_mask[:2] = False
@@ -96,25 +49,7 @@ class EnergizedInteractionEIM(InteractionEIM):
             self.param_mask[:1] = False
             self.reduced_mass = lambda alpha: self.mu
 
-        super().__init__(
-            coordinate_space_potential,
-            n_theta,
-            mu,
-            None,
-            ell,
-            training_info,
-            Z_1=Z_1,
-            Z_2=Z_2,
-            R_C=R_C,
-            is_complex=is_complex,
-            spin_orbit_term=spin_orbit_term,
-            n_basis=n_basis,
-            explicit_training=explicit_training,
-            n_train=n_train,
-            rho_mesh=rho_mesh,
-            match_points=match_points,
-            method=method,
-        )
+        super().__init__(**kwargs)
 
     def tilde(self, s: float, alpha: np.array):
         r"""Computes the energy-scaled interaction.
@@ -254,18 +189,28 @@ class EnergizedInteractionEIMSpace(InteractionEIMSpace):
     def __init__(
         self,
         l_max: int = 15,
+        interaction_type=EnergizedInteractionEIM,
         **kwargs,
     ):
-        r"""Generates a list of $\ell$-specific, EIMed interactions.
+        r"""Generates a list of $\ell$-specific interactions.
 
         Parameters:
+            interaction_args (list): positional arguments for constructor of `interaction_type`
+            interaction_kwargs (dict): arguments to constructor of `interaction_type`
             l_max (int): maximum angular momentum
-            kwargs (dict): arguments to constructor of `InteractionEIM`
+            interaction_type (Type): type of `Interaction` to construct
 
         Returns:
-            instance (InteractionEIMSpace): instance of InteractionEIMSpace
+            instance (EnergizedInteractionEIMSpaceInteractionSpace):
+                instance of EnergizedInteractionEIMSpace
 
         Attributes:
-            interactions (list): list of `InteractionEIM`s
+            interaction (list): list of `Interaction`s
+            l_max (int): partial wave cutoff
+            type (Type): interaction type
         """
-        super().__init__(**kwargs, l_max=l_max, interaction_type=EnergizedInteractionEIM)
+        super().__init__(
+            interaction_type=interaction_type,
+            l_max=l_max,
+            **kwargs,
+        )

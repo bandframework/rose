@@ -138,7 +138,7 @@ class RelativeBasis(Basis):
             n_basis,
         )
 
-        if phi_0_energy:
+        if phi_0_energy is not None:
             k = np.sqrt(2 * self.solver.interaction.mu * phi_0_energy / HBARC**2)
             eta = self.solver.interaction.k_c / k
         else:
@@ -249,24 +249,17 @@ class CustomBasis(Basis):
         super().__init__(solver, None, rho_mesh, n_basis)
 
         # TODO why are we copying here?
-        self.solutions = solutions.copy()
-        self.pillars = solutions.copy()
-        self.rho_mesh = rho_mesh.copy()
+        self.solutions = solutions
+        self.pillars = solutions
+        self.rho_mesh = rho_mesh
         self.n_basis = n_basis
-        self.phi_0 = phi_0.copy()
+        self.phi_0 = phi_0
 
         self.pillars, self.singular_value, self.phi_0 = pre_process_solutions(
             self.solutions, self.phi_0, self.rho_mesh, center, scale
         )
 
-        self.vectors = self.pillars[:, : self.n_basis].copy()
-
-        # interpolating functions
-        # To extrapolate or not to extrapolate?
-        self.phi_0_interp = interp1d(self.rho_mesh, self.phi_0, kind="cubic")
-        self.vectors_interp = [
-            interp1d(self.rho_mesh, row, kind="cubic") for row in self.vectors.T
-        ]
+        self.vectors = self.pillars[:, : self.n_basis]
 
     def phi_hat(self, coefficients):
         r"""Emulated wave function.

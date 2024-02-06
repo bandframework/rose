@@ -305,3 +305,49 @@ def kinematics(
     mu = k**2 * Ep / (Ep**2 - m_p * m_p) * HBARC**2
 
     return mu, E_com, k
+
+
+@njit
+def woods_saxon(r, R, a):
+    """Woods-Saxon potential"""
+    return 1 / (1 + np.exp((r - R) / a))
+
+
+@njit
+def woods_saxon_safe(r, R, a):
+    """Woods-Saxon potential
+
+    * avoids `exp` overflows
+
+    """
+    x = (r - R) / a
+    if isinstance(x, float):
+        return 1 / (1 + np.exp(x)) if x < MAX_ARG else 0
+    else:
+        ii = np.where(x <= MAX_ARG)[0]
+        jj = np.where(x > MAX_ARG)[0]
+        return np.hstack((1 / (1 + np.exp(x[ii])), np.zeros(jj.size)))
+
+
+@njit
+def woods_saxon_prime(r, R, a):
+    """derivative of the Woods-Saxon potential w.r.t. $r$"""
+    return -1 / a * np.exp((r - R) / a) / (1 + np.exp((r - R) / a)) ** 2
+
+
+@njit
+def woods_saxon_prime_safe(r, R, a):
+    """derivative of the Woods-Saxon potential w.r.t. $r$
+
+    * avoids `exp` overflows
+
+    """
+    x = (r - R) / a
+    if isinstance(x, float):
+        return -1 / a * np.exp(x) / (1 + np.exp(x)) ** 2 if x < MAX_ARG else 0
+    else:
+        ii = np.where(x <= MAX_ARG)[0]
+        jj = np.where(x > MAX_ARG)[0]
+        return np.hstack(
+            (-1 / a * np.exp(x[ii]) / (1 + np.exp(x[ii])) ** 2, np.zeros(jj.size))
+        )

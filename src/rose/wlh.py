@@ -13,7 +13,14 @@ from numba import njit
 from .interaction_eim import InteractionEIMSpace
 from .energized_interaction_eim import EnergizedInteractionEIMSpace
 from .constants import DEFAULT_RHO_MESH, MASS_PION, HBARC, ALPHA
-from .utility import kinematics, Projectile
+from .utility import (
+    kinematics,
+    Projectile,
+    woods_saxon,
+    woods_saxon_safe,
+    woods_saxon_prime,
+    woods_saxon_prime_safe,
+)
 
 MAX_ARG = np.log(1 / 1e-16)
 NUM_PARAMS = 12
@@ -37,7 +44,7 @@ def decompose_alpha(alpha):
 
 
 @njit
-def WLH_simple_so(r, alpha, lds):
+def WLH_so(r, alpha, lds):
     r"""simplified Koning-Delaroche spin-orbit terms
 
     Take Eq. (1) and remove the energy dependence of the coefficients.
@@ -49,7 +56,7 @@ def WLH_simple_so(r, alpha, lds):
 
 
 @njit
-def WLH_simple(r, alpha):
+def WLH(r, alpha):
     """WLH without the spin-orbit term - Eq. (2)."""
 
     uv, rv, av, uw, rw, aw, ud, rd, ad = decompose_alpha(alpha)[0]
@@ -73,7 +80,7 @@ class EnergizedWLH(EnergizedInteractionEIMSpace):
         match_points: np.array = None,
         method="collocation",
     ):
-        r"""Wraps the Koning-Delaroche potential into a `rose`-friendly class.
+        r"""Wraps the WLH potential into a `rose`-friendly class.
         Saves system-specific information. Allows the user to emulate across
         energies.
 
@@ -100,7 +107,7 @@ class EnergizedWLH(EnergizedInteractionEIMSpace):
                 potential match the true potential
 
         Returns:
-            instance (EnergizedKoningDelaroche): instance of the class
+            instance (EnergizedWLH): instance of the class
         """
         n_params = NUM_PARAMS + 1  # include energy
         if mu is None:
@@ -108,14 +115,14 @@ class EnergizedWLH(EnergizedInteractionEIMSpace):
 
         super().__init__(
             l_max=l_max,
-            coordinate_space_potential=KD_simple,
+            coordinate_space_potential=WLH,
             n_theta=n_params,
             mu=mu,
             training_info=training_info,
             Z_1=0,
             Z_2=0,
             is_complex=True,
-            spin_orbit_term=KD_simple_so,
+            spin_orbit_term=WLH_so,
             n_basis=n_basis,
             explicit_training=explicit_training,
             n_train=n_train,
@@ -169,7 +176,7 @@ class WLHGlobal:
             self.av1 = data["WLHReal_a1" + tag]
             self.av2 = data["WLHReal_a2" + tag]
             self.av3 = data["WLHReal_a3" + tag]
-            self.a4 = data["WLHReal_a4" + tag]
+            self.av4 = data["WLHReal_a4" + tag]
             self.uw0 = data["WLHImagVolume_W0" + tag]
             self.uw1 = data["WLHImagVolume_W1" + tag]
             self.uw2 = data["WLHImagVolume_W2" + tag]
@@ -188,8 +195,8 @@ class WLHGlobal:
             self.aw4 = data["WLHImagVolume_a4" + tag]
             self.ud0 = data["WLHImagSurface_W0" + tag]
             self.ud1 = data["WLHImagSurface_W1" + tag]
-            self.ud2 = data["WLHImagSurface_W2" + tag]
-            self.ud3 = data["WLHImagSurface_W3" + tag]
+            self.ud3 = data["WLHImagSurface_W2" + tag]
+            self.ud4 = data["WLHImagSurface_W3" + tag]
             self.rd0 = data["WLHImagSurface_r0" + tag]
             self.rd1 = data["WLHImagSurface_r1" + tag]
             self.rd2 = data["WLHImagSurface_r2" + tag]
@@ -225,7 +232,10 @@ class WLHGlobal:
             factor *= -1.0
 
         uv = (
-            self.uv0 - self.uv1 * E_com + self.uv2 * E_com**2 + self.uv3 * E_com**3
+            self.uv0
+            - self.uv1 * E_com
+            + self.uv2 * E_com**2
+            + self.uv3 * E_com**3
             + factor * (self.uv4 - self.uv5 * E_com + self.uv6 * E_com**2) * delta
         )
         rv = (
@@ -242,7 +252,9 @@ class WLHGlobal:
         )
 
         uw = (
-            self.uw0 + self.uw1 * E_com - self.uw2 * E_com**2
+            self.uw0
+            + self.uw1 * E_com
+            - self.uw2 * E_com**2
             + (factor * self.uw3 - self.uw4 * E_com) * delta
         )
         rw = (
@@ -256,16 +268,31 @@ class WLHGlobal:
             + (self.aw3 - self.aw4 * E_com) * delta
         )
 
-
         ud = self.ud0 - self.ud1 * E_com - (self.ud3 - self.ud4 * E_com) * delta
-        rd = self.rs0 - self.rs1 * E_com - self.rs2 * A ** (-1.0 / 3)
-        ad = self.as0
+        rd = self.rd0 - self.rd1 * E_com - self.rd2 * A ** (-1.0 / 3)
+        ad = self.ad0
 
         uso = self.uso0 - self.uso1 * A
-        rso = self.rs0 - self.rs1 * A ** (-1./3.)
-        aso = self.as0 - self.aso1 * A
+        rso = self.rso0 - self.rso1 * A ** (-1.0 / 3.0)
+        aso = self.aso0 - self.aso1 * A
 
-        params = (uv, rv, av, uw, rw, aw, ud, rd, ad, uso, rso, aso)
+        params = np.array(
+            [
+                uv,
+                rv * A ** (1.0 / 3.0),
+                av,
+                uw,
+                rw * A ** (1.0 / 3.0),
+                aw,
+                ud,
+                rd * A ** (1.0 / 3.0),
+                ad,
+                uso,
+                rso * A ** (1.0 / 3.0),
+                aso,
+            ]
+        )
+        R_C = rv
         return (
             (mu, E_com, k, eta, R_C),
             params,

@@ -15,7 +15,14 @@ from numba import njit
 from .interaction_eim import InteractionEIMSpace
 from .energized_interaction_eim import EnergizedInteractionEIMSpace
 from .constants import DEFAULT_RHO_MESH, MASS_PION, HBARC, ALPHA
-from .utility import kinematics, Projectile
+from .utility import (
+    kinematics,
+    Projectile,
+    woods_saxon,
+    woods_saxon_safe,
+    woods_saxon_prime,
+    woods_saxon_prime_safe,
+)
 
 MAX_ARG = np.log(1 / 1e-16)
 NUM_PARAMS = 15
@@ -51,52 +58,6 @@ def Vso(E, vso1, vso2, E_f):
 def Wso(E, wso1, wso2, E_f):
     """energy-dependent, spin-orbit strength --- imaginary term, Eq. (7)"""
     return wso1 * (E - E_f) ** 2 / ((E - E_f) ** 2 + wso2**2)
-
-
-@njit
-def woods_saxon(r, R, a):
-    """Woods-Saxon potential"""
-    return 1 / (1 + np.exp((r - R) / a))
-
-
-@njit
-def woods_saxon_safe(r, R, a):
-    """Woods-Saxon potential
-
-    * avoids `exp` overflows
-
-    """
-    x = (r - R) / a
-    if isinstance(x, float):
-        return 1 / (1 + np.exp(x)) if x < MAX_ARG else 0
-    else:
-        ii = np.where(x <= MAX_ARG)[0]
-        jj = np.where(x > MAX_ARG)[0]
-        return np.hstack((1 / (1 + np.exp(x[ii])), np.zeros(jj.size)))
-
-
-@njit
-def woods_saxon_prime(r, R, a):
-    """derivative of the Woods-Saxon potential w.r.t. $r$"""
-    return -1 / a * np.exp((r - R) / a) / (1 + np.exp((r - R) / a)) ** 2
-
-
-@njit
-def woods_saxon_prime_safe(r, R, a):
-    """derivative of the Woods-Saxon potential w.r.t. $r$
-
-    * avoids `exp` overflows
-
-    """
-    x = (r - R) / a
-    if isinstance(x, float):
-        return -1 / a * np.exp(x) / (1 + np.exp(x)) ** 2 if x < MAX_ARG else 0
-    else:
-        ii = np.where(x <= MAX_ARG)[0]
-        jj = np.where(x > MAX_ARG)[0]
-        return np.hstack(
-            (-1 / a * np.exp(x[ii]) / (1 + np.exp(x[ii])) ** 2, np.zeros(jj.size))
-        )
 
 
 @njit

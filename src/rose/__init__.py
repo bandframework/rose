@@ -13,6 +13,7 @@ from .scattering_amplitude_emulator import ScatteringAmplitudeEmulator
 from .free_solutions import phase_shift
 from .basis import CustomBasis, RelativeBasis
 from .koning_delaroche import KoningDelaroche, EnergizedKoningDelaroche
+from . import wlh
 from . import koning_delaroche
 from . import training
 from .spin_orbit import SpinOrbitTerm

@@ -256,7 +256,12 @@ class CustomBasis(Basis):
         self.phi_0 = phi_0
 
         self.pillars, self.singular_value, self.phi_0 = pre_process_solutions(
-            self.solutions, self.phi_0, self.rho_mesh, center, scale
+            self.solutions,
+            self.phi_0,
+            self.rho_mesh,
+            center,
+            scale,
+            use_svd,
         )
 
         self.vectors = self.pillars[:, : self.n_basis]

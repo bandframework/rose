@@ -80,7 +80,7 @@ class InteractionEIM(Interaction):
         self.n_train = n_train
         self.n_basis = n_basis
         self.training_info = training_info
-        self.s_mesh = rho_mesh.copy()
+        self.s_mesh = rho_mesh
 
         # Generate a basis used to approximate the potential.
         # Did the user specify the training points?
@@ -93,13 +93,13 @@ class InteractionEIM(Interaction):
             snapshots = np.array([self.tilde(rho_mesh, theta) for theta in train]).T
 
         U, S, _ = np.linalg.svd(snapshots, full_matrices=False)
-        self.snapshots = np.copy(U[:, :n_basis])
-        self.singular_values = np.copy(S)
-        self.match_points = np.copy(match_points)
+        self.snapshots = U[:, :n_basis]
+        self.singular_values = S
+        self.match_points = match_points
 
         if match_points is not None and method == "collocation":
             n_basis = match_points.size
-            self.match_points = np.copy(match_points)
+            self.match_points = match_points
             self.match_indices = np.array(
                 [np.argmin(np.abs(rho_mesh - ri)) for ri in self.match_points]
             )
@@ -112,7 +112,7 @@ class InteractionEIM(Interaction):
             i_init = np.arange(0, i_max + 1, di)
             self.match_indices = max_vol(self.snapshots, i_init)
             self.match_points = rho_mesh[self.match_indices]
-            self.r_i = np.copy(self.match_points)
+            self.r_i = self.match_points
             self.Ainv = np.linalg.inv(self.snapshots[self.match_indices])
         elif method == "least-squares":
             if match_points is None:
@@ -123,7 +123,7 @@ class InteractionEIM(Interaction):
                 [find_nearest_idx(self.s_mesh, x) for x in self.match_points]
             )
             self.match_points = self.s_mesh[self.match_indices]
-            self.r_i = np.copy(self.match_points)
+            self.r_i = self.match_points
             self.Ainv = np.linalg.pinv(self.snapshots[self.match_indices])
         else:
             raise ValueError(

@@ -18,13 +18,11 @@ from .constants import DEFAULT_RHO_MESH, MASS_PION, HBARC, ALPHA
 from .utility import (
     kinematics,
     Projectile,
-    woods_saxon,
     woods_saxon_safe,
-    woods_saxon_prime,
     woods_saxon_prime_safe,
+    thomas_safe,
 )
 
-MAX_ARG = np.log(1 / 1e-16)
 NUM_PARAMS = 15
 
 
@@ -64,9 +62,9 @@ def Wso(E, wso1, wso2, E_f):
 def KD(r, E, v1, v2, v3, v4, w1, w2, d1, d2, d3, Ef, Rv, av, Rd, ad):
     """Koning-Delaroche without the spin-orbit terms - Eq. (1)"""
     return (
-        -Vv(E, v1, v2, v3, v4, Ef) * woods_saxon(r, Rv, av)
-        - 1j * Wv(E, w1, w2, Ef) * woods_saxon(r, Rv, av)
-        - 1j * (-4 * ad) * Wd(E, d1, d2, d3, Ef) * woods_saxon_prime(r, Rd, ad)
+        -Vv(E, v1, v2, v3, v4, Ef) * woods_saxon_safe(r, Rv, av)
+        - 1j * Wv(E, w1, w2, Ef) * woods_saxon_safe(r, Rv, av)
+        - 1j * (-4 * ad) * Wd(E, d1, d2, d3, Ef) * woods_saxon_prime_safe(r, Rd, ad)
     )
 
 
@@ -111,8 +109,8 @@ def KD_simple_so(r, alpha, lds):
     """
     vso, rso, aso, wso, rwso, awso = decompose_alpha(alpha)[1]
     return lds * (
-        vso / MASS_PION**2 / r * woods_saxon_prime_safe(r, rso, aso)
-        + 1j * wso / MASS_PION**2 / r * woods_saxon_prime_safe(r, rwso, awso)
+        vso / MASS_PION**2 * thomas_safe(r, rso, aso)
+        + 1j * wso / MASS_PION**2  * thomas_safe(r, rwso, awso)
     )
 
 
@@ -255,7 +253,8 @@ class KDGlobal:
         r"""
         Parameters:
             projectile : neutron or proton?
-            param_fpath : path to json file encoding parameter values. Defaults to data/KD_default.json
+            param_fpath : path to json file encoding parameter values.
+            Defaults to data/KD_default.json
         """
         if param_fpath is None:
             param_fpath = Path(__file__).parent.resolve() / Path(

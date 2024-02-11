@@ -174,14 +174,16 @@ def build_sae(
         for interaction_list, basis_list in zip(interactions.interactions, bases):
             new_basis_list = []
             for interaction, basis in zip(interaction_list, basis_list):
-                solutions = basis.solutions[:, :n_basis] - basis.phi_0[:, np.newaxis]
                 new_basis_list.append(
                     CustomBasis(
-                        solutions,
+                        basis.pillars,
                         basis.phi_0,
                         basis.rho_mesh,
                         n_basis,
                         use_svd=False,
+                        scale=False,
+                        center=False,
+                        subtract_phi0=False,
                         solver=basis.solver,
                     )
                 )
@@ -403,7 +405,7 @@ def multiple_formatter(denominator=2, number=np.pi, latex="\pi"):
             if num == 1:
                 return r"$\frac{%s}{%s}$" % (latex, den)
             elif num == -1:
-                return r"$\frac{-%s}{%s}$" % (latex, den)
+                return r"$-\frac{%s}{%s}$" % (latex, den)
             else:
                 return r"$\frac{%s%s}{%s}$" % (num, latex, den)
 
@@ -520,9 +522,9 @@ def compare_phase_shifts(data_sets: list, labels: list, fig, ax1, ax2):
         color_legend.append(
             Line2D([0], [0], color=c, linestyle="-", label=label),
         )
-    leg1 = ax1.legend(handles=color_legend, loc="lower right")
-    ax1.legend(handles=styles, loc="upper right")
-    ax1.add_artist(leg1)
+    leg1 = ax2.legend(handles=color_legend,)
+    ax1.legend(handles=styles,)
+    ax2.add_artist(leg1)
 
     return fig, ax1, ax2
 

@@ -47,8 +47,8 @@ class Basis:
         """
         self.solver = solver
         self.l = solver.interaction.ell
-        self.theta_train = np.copy(theta_train)
-        self.rho_mesh = np.copy(rho_mesh)
+        self.theta_train = theta_train
+        self.rho_mesh = rho_mesh
         self.n_basis = n_basis
 
     def phi_hat(self, coefficients):
@@ -214,6 +214,7 @@ class CustomBasis(Basis):
         rho_mesh: np.array,  # rho mesh; MUST BE EQUALLY SPACED POINTS!!!
         n_basis: int,
         solver: SchroedingerEquation = None,
+        subtract_phi0 = True,
         use_svd: bool = None,
         center: bool = None,
         scale: bool = None,
@@ -248,20 +249,18 @@ class CustomBasis(Basis):
 
         super().__init__(solver, None, rho_mesh, n_basis)
 
-        # TODO why are we copying here?
-        self.solutions = solutions
-        self.pillars = solutions
         self.rho_mesh = rho_mesh
         self.n_basis = n_basis
         self.phi_0 = phi_0
 
         self.pillars, self.singular_value, self.phi_0 = pre_process_solutions(
-            self.solutions,
+            solutions,
             self.phi_0,
             self.rho_mesh,
             center,
             scale,
             use_svd,
+            subtract_phi0
         )
 
         self.vectors = self.pillars[:, : self.n_basis]
@@ -306,10 +305,15 @@ class CustomBasis(Basis):
 
 
 def pre_process_solutions(
-    solutions, phi_0, rho_mesh, center=None, scale=None, svd=None
+    solutions, phi_0, rho_mesh, center=None, scale=None, svd=None, subtract_phi0=True,
 ):
     s = rho_mesh
-    A = solutions
+    if center or scale or subtract_phi0:
+        A = solutions.copy()
+        phi_0 = phi_0.copy()
+    else:
+        A = solutions
+
     if scale:
         phi_0 /= np.trapz(np.absolute(phi_0), s)
         row_norms = np.array(
@@ -321,7 +325,8 @@ def pre_process_solutions(
         mean = np.mean(A, axis=1)
         phi_0 += mean
 
-    A -= phi_0[:, np.newaxis]
+    if subtract_phi0:
+        A -= phi_0[:, np.newaxis]
 
     if svd:
         U, S, _ = np.linalg.svd(A, full_matrices=False)

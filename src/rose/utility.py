@@ -17,6 +17,7 @@ from scipy.stats import qmc
 
 from .constants import MASS_N, MASS_P, HBARC, AMU
 
+MAX_ARG = np.log(1 / 1e-16)
 
 class Projectile(Enum):
     neutron = 0
@@ -350,4 +351,23 @@ def woods_saxon_prime_safe(r, R, a):
         jj = np.where(x > MAX_ARG)[0]
         return np.hstack(
             (-1 / a * np.exp(x[ii]) / (1 + np.exp(x[ii])) ** 2, np.zeros(jj.size))
+        )
+
+
+@njit
+def thomas_safe(r, R, a):
+    """1/r * derivative of the Woods-Saxon potential w.r.t. $r$
+
+    * avoids `exp` overflows, while correctly handeling 1/r term
+
+    """
+    x = (r - R) / a
+    y = 1.0 / r
+    if isinstance(x, float):
+        return y *  -1 / a * np.exp(x) / (1 + np.exp(x)) ** 2 if x < MAX_ARG else 0
+    else:
+        ii = np.where(x <= MAX_ARG)[0]
+        jj = np.where(x > MAX_ARG)[0]
+        return np.hstack(
+            (y[ii] *-1 / a * np.exp(x[ii]) / (1 + np.exp(x[ii])) ** 2, np.zeros(jj.size))
         )

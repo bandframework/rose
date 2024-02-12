@@ -1,5 +1,6 @@
 from .schroedinger import SchroedingerEquation
 from .interaction import Interaction
+from .constants import HBARC
 
 import jitr
 
@@ -35,6 +36,11 @@ class LagrangeRmatrix(SchroedingerEquation):
 
         self.domain = [0, self.sys.channel_radii[0]]
         self.s_0 = self.domain[1]
+        self.param_mask = np.ones(self.interaction.n_theta, dtype=bool)
+        if self.interaction.energy is None:
+            self.param_mask[0] = False
+        if self.interaction.mu is None:
+            self.param_mask[1] = False
 
     def clone_for_new_interaction(self, interaction: Interaction):
         return LagrangeRmatrix1ch(interaction, self.sys, self.solver.kernel.nbasis)
@@ -45,6 +51,25 @@ class LagrangeRmatrix(SchroedingerEquation):
         s_mesh: np.array,
         **kwargs,
     ):
+        if not self.param_mask[1]:
+            mu = alpha[1]
+        else:
+            mu = sys.reduced_mass[0]
+        if not self.param_mask[0]:
+            energy = alpha[0]
+        else:
+            energy = self.ch.E
+
+        ch = jitr.ChannelData(
+            self.interaction.ell,
+            mu,
+            self.s_0,
+            energy,
+            np.sqrt(2 * energy * mu) / HBARC,
+            0.0,
+            self.domain,
+        )
+
         im = jitr.InteractionMatrix(1)
         im.set_local_interaction(potential)
         im.local_args[0, 0] = (
@@ -56,7 +81,7 @@ class LagrangeRmatrix(SchroedingerEquation):
         )
         R, S, x, uext_prime_boundary = self.solver.solve(
             im,
-            self.ch,
+            [ch],
             wavefunction=True,
         )
         return jitr.Wavefunctions(
@@ -78,6 +103,24 @@ class LagrangeRmatrix(SchroedingerEquation):
         r"""
         Ignores s_0
         """
+        if not self.param_mask[1]:
+            mu = alpha[1]
+        else:
+            mu = sys.reduced_mass[0]
+        if not self.param_mask[0]:
+            energy = alpha[0]
+        else:
+            energy = self.ch.E
+
+        ch = jitr.ChannelData(
+            self.interaction.ell,
+            mu,
+            self.s_0,
+            energy,
+            np.sqrt(2 * energy * mu) / HBARC,
+            0.0,
+            self.domain,
+        )
         im = jitr.InteractionMatrix(1)
         im.set_local_interaction(potential)
         im.local_args[0, 0] = (
@@ -87,7 +130,7 @@ class LagrangeRmatrix(SchroedingerEquation):
             self.interaction.v_r,
             self.interaction.spin_orbit_term.v_so,
         )
-        R, S, uext_prime_boundary = self.solver.solve(im, self.ch)
+        R, S, uext_prime_boundary = self.solver.solve(im, [ch])
         return S[0, 0]
 
     def rmatrix(
@@ -99,6 +142,24 @@ class LagrangeRmatrix(SchroedingerEquation):
         r"""
         Ignores s_0
         """
+        if not self.param_mask[1]:
+            mu = alpha[1]
+        else:
+            mu = sys.reduced_mass[0]
+        if not self.param_mask[0]:
+            energy = alpha[0]
+        else:
+            energy = self.ch.E
+
+        ch = jitr.ChannelData(
+            self.interaction.ell,
+            mu,
+            self.s_0,
+            energy,
+            np.sqrt(2 * energy * mu) / HBARC,
+            0.0,
+            self.domain,
+        )
         im = jitr.InteractionMatrix(1)
         im.set_local_interaction(potential)
         im.local_args[0, 0] = (
@@ -108,5 +169,5 @@ class LagrangeRmatrix(SchroedingerEquation):
             self.interaction.v_r,
             self.interaction.spin_orbit_term.v_so,
         )
-        R, S, uext_prime_boundary = self.solver.solve(im, self.ch)
+        R, S, uext_prime_boundary = self.solver.solve(im, [ch])
         return R[0, 0]

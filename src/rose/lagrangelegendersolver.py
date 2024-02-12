@@ -2,6 +2,7 @@ from .schroedinger import SchroedingerEquation
 from .interaction import Interaction
 from .constants import HBARC
 
+import numpy as np
 import jitr
 
 class LagrangeRmatrix(SchroedingerEquation):

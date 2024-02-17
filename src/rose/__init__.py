@@ -17,6 +17,7 @@ from . import wlh
 from . import koning_delaroche
 from . import training
 from .lagrangelegendersolver import LagrangeRmatrix
+from .active_subspace import ActiveSubspaceQuilt
 from .spin_orbit import SpinOrbitTerm
 from .utility import kinematics, Projectile
 

@@ -5,11 +5,20 @@ from tqdm import tqdm
 from numba import njit
 from scipy.spatial import kdtree
 from mpmath import coulombf
+import multiprocessing as mp
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from .training import latin_hypercube_sample
+from .schroedinger import SchroedingerEquation
+from .basis import CustomBasis
+from .koning_delaroche import EnergizedKoningDelaroche
 from .interaction import InteractionSpace
 from .scattering_amplitude_emulator import ScatteringAmplitudeEmulator
 
-#TODO multithreaded training
+
+def identity(sample):
+    return sample
+
 
 class ActiveSubspaceQuilt:
     """Each patch on the quilt approximates a tangent space to the full operator via a Reduced Basis emulator built from training points in the neighborhood. These neighborhoods are constructed not on the parameter space, but the active subspace as approxximated by the training data"""
@@ -20,13 +29,16 @@ class ActiveSubspaceQuilt:
         solver: ScatteringAmplitudeEmulator,
         s_mesh: np.array,
         s_0: float,
-        bounds,
-        train,
+        bounds: np.array,
+        train: np.array,
         forward_pspace_transform,
         backward_pspace_transform,
-        frozen_mask,
+        frozen_mask: np.array,
         neighborhood_size=100,
         tangent_fraction=0.1,
+        threads=None,
+        verbose=True,
+        hf_soln_files=None,
     ):
         self.interactions = interactions
         self.solver = solver
@@ -37,8 +49,19 @@ class ActiveSubspaceQuilt:
         self.neighborhood_size = neighborhood_size
         self.frozen_mask = frozen_mask.copy()
         self.unfrozen_mask = np.logical_not(self.frozen_mask)
+        self.verbose = verbose
+        self.tangent_fraction = tangent_fraction
+
+        if forward_pspace_transform is None:
+            forward_pspace_transform = identity
+            backward_pspace_transform = identity
+
         self.forward_pspace_transform = forward_pspace_transform
         self.backward_pspace_transform = backward_pspace_transform
+
+        if threads is None:
+            threads = mp.cpu_count()
+        self.threads = threads
 
         self.bounds = np.vstack(
             [
@@ -54,68 +77,90 @@ class ActiveSubspaceQuilt:
         self.free_solns = np.zeros((self.l_max + 1, s_mesh.size), dtype=np.complex128)
         for l in range(0, self.l_max + 1):
             self.free_solns[l, :] = np.array(
-                [coulombf(l, 0, s) for s in s_mesh], dtype=np.complex128
+                [coulombf(l, 0, s) for s in self.s_mesh], dtype=np.complex128
             )
-            self.free_solns[l, :] /= np.trapz(np.absolute(free_solns[l, :]), s_mesh)
+            self.free_solns[l, :] /= np.trapz(
+                np.absolute(self.free_solns[l, :]), self.s_mesh
+            )
 
-        self.update_train(train)
+        self.hf_solns = np.array([])
+        self.interaction_terms = np.array([])
+        self.train = np.array([])
+        self.update_train(train, hf_soln_files)
         self.update_tangents()
 
     def get_tangent_space(self, sample):
         dist, idx = self.tangent_tree.query(self.to_AS(sample))
         tangent_idx = self.tangent_idxs[idx]
-        tangent_point = self.train[tangent_idx, :]
         dists, neighborhood = self.active_subspace_kdtree.query(
-            self.train_as[tangent_idx, :]
+            self.train_as[tangent_idx, :], k=self.neighborhood_size
         )
         return dist, idx, (dists, neighborhood)
 
     def get_local_emulator(self, sample):
         dist, idx = self.tangent_tree.query(self.to_AS(sample))
-        return self.emulators[idx]
+        return self.emulators[self.tangent_idxs[idx]]
 
-    def update_tangents(self):
+    def update_tangents(self, neim=15, nbasis=10):
         ntangents = int(np.ceil(self.tangent_fraction * self.train.shape[0]))
         ntangents += 1
-        self.tangent_idxs = np.random.choice(
-            np.arange(0, self.train.shape[0], 1, dtype=int), ntangents, replace=False
-        )
-        self.tangent_tree = kdtree.KDTree(self.train_as[self.tangent_idxs, :])
-        self.emulators = []
-        for t in tangent_idxs:
-            ds, neighbors = self.active_subspace_kdtree.query(
-                self.train_as[t, :], k=self.neighborhood_size
+        if self.verbose:
+            print(
+                f"Constructing RBMs from the neighborhood around {ntangents}"
+                " sampled tangent points..."
             )
-            interactions = rose.koning_delaroche.EnergizedKoningDelaroche(
+        self.ntangents = ntangents
+        self.tangent_idxs = np.random.choice(
+            np.arange(0, self.train.shape[0], 1, dtype=int),
+            ntangents,
+            replace=False,
+        )
+        self.tangent_points = self.train[self.tangent_idxs, :]
+        self.tangent_tree = kdtree.KDTree(self.train_as[self.tangent_idxs, :])
+        self.emulators = {}
+
+        def make_emulator(idx):
+            ds, neighbors = self.active_subspace_kdtree.query(
+                self.train_as[idx, :], k=self.neighborhood_size
+            )
+            interactions = EnergizedKoningDelaroche(
                 training_info=self.train[neighbors, :],
                 explicit_training=True,
-                n_basis=15,
+                n_basis=neim,
                 l_max=self.l_max,
                 rho_mesh=self.s_mesh,
             )
-            bases = self.make_bases(neighbors, interactions)
-            self.emulators.append(
-                (
-                    interactions,
-                    rose.ScatteringAmplitudeEmulator(
-                        interaction_space=interactions,
-                        bases=bases,
-                        angles=self.angles,
-                        s_0=self.s_0,
-                        l_max=self.l_max,
-                    ),
-                )
+            bases = self.make_bases(neighbors, interactions, nbasis=nbasis)
+            emulator = ScatteringAmplitudeEmulator(
+                interaction_space=interactions,
+                bases=bases,
+                angles=self.solver.angles,
+                s_0=self.s_0,
+                l_max=self.l_max,
             )
+            return idx, emulator
+
+        if False:
+            with ThreadPoolExecutor(max_workers=self.threads) as executor:
+                results = executor.map(make_emulator, self.tangent_idxs)
+
+            for result in results:
+                idx, emulator = result
+                self.emulators[idx] = emulator
+        else:
+            for idx in tqdm(self.tangent_idxs, disable=(not self.verbose)):
+                idx, emulator = make_emulator(idx)
+                self.emulators[idx] = emulator
 
     def make_bases(self, neighbors, interactions, nbasis=10):
         bases = []
-        for l in range(l_max + 1):
-            bup = rose.CustomBasis(
+        for l in range(self.l_max + 1):
+            bup = CustomBasis(
                 self.hf_solns[neighbors, l, :].T,
                 self.free_solns[l, :],
                 self.s_mesh,
                 nbasis,
-                solver=rose.SchroedingerEquation(
+                solver=SchroedingerEquation(
                     self.interactions.interactions[l][0],
                     s_0=self.s_0,
                     domain=self.domain,
@@ -127,15 +172,15 @@ class ActiveSubspaceQuilt:
             if l == 0:
                 bases.append([bup])
             else:
-                bdown = rose.CustomBasis(
+                bdown = CustomBasis(
                     self.hf_solns[neighbors, self.l_max + l, :].T,
                     self.free_solns[l, :],
                     self.s_mesh,
                     nbasis,
-                    solver=rose.SchroedingerEquation(
+                    solver=SchroedingerEquation(
                         interactions.interactions[l][1],
-                        s_0=s_0,
-                        domain=domain,
+                        s_0=self.s_0,
+                        domain=self.domain,
                     ),
                     use_svd=True,
                     scale=False,
@@ -144,9 +189,9 @@ class ActiveSubspaceQuilt:
                 bases.append([bup, bdown])
         return bases
 
-    def update_train(self, new_train):
+    def update_train(self, new_train, hf_soln_files):
         # update train
-        if self.train.empty():
+        if self.train.size == 0:
             self.train = new_train
         else:
             self.train = np.hstack([self.train, new_train])
@@ -154,32 +199,35 @@ class ActiveSubspaceQuilt:
         # update bounds
         new_bounds = np.vstack(
             [
-                np.min(train, axis=0),
-                np.max(train, axis=0),
+                np.min(self.train, axis=0),
+                np.max(self.train, axis=0),
             ]
         ).T
-        self.bounds[self.bounds[:, 0] > new_bounds[:, 0], 0] = new_bounds[:, 0]
-        self.bounds[self.bounds[:, 1] < new_bounds[:, 1], 1] = new_bounds[:, 1]
+        mask = self.bounds[:, 0] > new_bounds[:, 0]
+        self.bounds[mask, 0] = new_bounds[mask, 0]
+        mask = self.bounds[:, 1] < new_bounds[:, 1]
+        self.bounds[mask, 1] = new_bounds[mask, 1]
         self.bounds_transformed = np.vstack(
             [
-                self.forward_pspace_transform(bounds[:, 0]),
-                self.forward_pspace_transform(bounds[:, 1]),
+                self.forward_pspace_transform(self.bounds[:, 0]),
+                self.forward_pspace_transform(self.bounds[:, 1]),
             ]
         ).T
 
         # update pre-processing to use new mean and bounds
-        self.train_mean = self.forward_pspace_transform(np.mean(train, axis=0))
-        self.train_pp = np.array([self.pre_process(sample) for sample in train])
+        self.train_mean = self.forward_pspace_transform(np.mean(new_train, axis=0))
+        self.train_pp = np.array([self.pre_process(sample) for sample in new_train])
         self.tree = kdtree.KDTree(self.train_pp)
         self.prepro_bounds = np.vstack(
             [self.pre_process(self.bounds[:, 0]), self.pre_process(self.bounds[:, 1])]
         ).T
 
         # calculate and store interaction terms
+        if self.verbose:
+            print(f"Calculating interaction terms at {new_train.shape[0]} samples...")
+
         new_interaction_terms = np.zeros(
-            new_train.shape[0],
-            2 * self.l_max + 1,
-            self.s_mesh.shape[0],
+            (new_train.shape[0], 2 * self.l_max + 1, self.s_mesh.shape[0]),
             dtype=np.complex128,
         )
         for i, sample in enumerate(new_train):
@@ -192,7 +240,7 @@ class ActiveSubspaceQuilt:
                     i, self.l_max + l, :
                 ] = self.interactions.interactions[l][1].tilde(self.s_mesh, sample)
 
-        if self.train.empty():
+        if self.interaction_terms.size == 0:
             self.interaction_terms = new_interaction_terms
         else:
             self.interaction_terms = np.hstack(
@@ -200,35 +248,64 @@ class ActiveSubspaceQuilt:
             )
 
         # calculate and store HF solutions
-        new_hf_solns = np.zeros(
-            new_train.shape[0],
-            2 * self.l_max + 1,
-            self.s_mesh.shape[0],
-            dtype=np.complex128,
-        )
-        for i, sample in enumerate(new_train):
-            solns = self.solver.exact_wave_functions(sample)
-            for l in range(0, self.l_max + 1):
-                new_hf_solns[i, l, :] = (
-                    solns[l][0] / np.trapz(np.absolute(solns[l][0]), s_mesh)
-                    - self.free_solns[l, :]
-                )
-            for l in range(1, self.l_max + 1):
-                new_hf_solns[i, self.l_max + l, :] = (
-                    solns[l][1] / np.trapz(np.absolute(solns[l][1]), s_mesh)
-                    - self.free_solns[l, :]
+        if hf_soln_files is None:
+            new_hf_solns = np.zeros(
+                (new_train.shape[0], 2 * self.l_max + 1, self.s_mesh.shape[0]),
+                dtype=np.complex128,
+            )
+
+            def run_chunk(start, stop):
+                for i in range(start, stop):
+                    sample = new_train[i, :]
+                    solns = self.solver.exact_wave_functions(sample)
+                    for l in range(0, self.l_max + 1):
+                        new_hf_solns[i, l, :] = (
+                            solns[l][0]
+                            / np.trapz(np.absolute(solns[l][0]), self.s_mesh)
+                            - self.free_solns[l, :]
+                        )
+                    for l in range(1, self.l_max + 1):
+                        new_hf_solns[i, self.l_max + l, :] = (
+                            solns[l][1]
+                            / np.trapz(np.absolute(solns[l][1]), self.s_mesh)
+                            - self.free_solns[l, :]
+                        )
+
+            step = new_train.shape[0] // self.threads
+            starts = list(range(0, new_train.shape[0] - self.threads, step))
+            stops = [s + self.threads for s in starts]
+            stops[-1] = new_train.shape[0]
+
+            if self.verbose:
+                print(
+                    f"Calculating training wavefunctions at {new_train.shape[0]} samples..."
                 )
 
-        if self.train.empty():
+            with ThreadPoolExecutor(max_workers=self.threads) as executor:
+                for _ in tqdm(
+                    executor.map(run_chunk, starts, stops),
+                    total=self.threads,
+                    disable=(not self.verbose),
+                ):
+                    pass
+        else:
+            if self.verbose:
+                print(
+                    f"Reading training wavefunctions from {hf_soln_files[0]}, {hf_soln_files[1]}..."
+                )
+            [hf_solns_up, hf_solns_down] = [np.load(f) for f in hf_soln_files]
+            new_hf_solns = np.concatenate([hf_solns_up, hf_solns_down], axis=1)
+
+        if self.hf_solns.size == 0:
             self.hf_solns = new_hf_solns
         else:
             self.hf_solns = np.hstack([self.hf_solns, new_hf_solns])
 
-        # rediscover subspace
+        # rediscover active subspace
         self.U, self.S = self.discover()
         self.Utrans = self.U @ np.diag(self.S)
         self.Uinv = np.linalg.inv(self.Utrans)
-        self.train_as = np.array([self.to_AS(sample) for sample in train])
+        self.train_as = np.array([self.to_AS(sample) for sample in self.train])
         self.active_subspace_kdtree = kdtree.KDTree(self.train_as)
 
     def discover(self):
@@ -236,30 +313,33 @@ class ActiveSubspaceQuilt:
         k = self.neighborhood_size
         gradient_vector_samples = np.zeros(
             (
-                self.train.shape[0] * (lcut * 4 - 1),
+                self.train.shape[0] * (lcut * 4 + 2),
                 self.train[:, self.unfrozen_mask].shape[1],
             ),
             dtype=np.double,
         )
 
+        if self.verbose:
+            print(f"Discovering active subspace from {self.train.shape[0]} samples...")
+
         for i in range(self.train.shape[0]):
             sample = self.train[i, :]
             ds, idxs = self.tree.query(self.pre_process(sample), k=k)
 
-            max_delta_idxs = np.zeros((lcut * 4 - 2), dtype=np.int32)
-            max_func_deriv = np.zeros((lcut * 4 - 2), dtype=np.complex128)
+            max_delta_idxs = np.zeros((lcut * 4 + 2), dtype=np.int32)
+            max_func_deriv = np.zeros((lcut * 4 + 2), dtype=np.float64)
 
             for d, j in zip(ds, idxs):
                 # numerator is \int ds phi_i^dagger (U_j(s) - U_i(s)) \phi_j
-                phi_j_up = self.hf_solns[j, : lcut + 1, 0, :]
-                phi_j_down = self.hf_solns[j, lcut + 1 : 2 * lcut, 1, :]
+                phi_j_up = self.hf_solns[j, : lcut + 1, :]
+                phi_j_down = self.hf_solns[j, lcut + 1 :, :]
 
                 func_deriv_up = (
                     np.trapz(
                         phi_j_up
                         * (
-                            self.interaction_terms[j, : lcut + 1, 0, :]
-                            - self.interaction_terms[j, : lcut + 1, 0, :]
+                            self.interaction_terms[i, : lcut + 1, :]
+                            - self.interaction_terms[j, : lcut + 1, :]
                         )
                         * phi_j_up,
                         self.s_mesh,
@@ -271,8 +351,8 @@ class ActiveSubspaceQuilt:
                     np.trapz(
                         phi_j_down
                         * (
-                            self.interaction_terms[j, lcut + 1 : 2 * lcut, 1, :]
-                            - self.interaction_terms[j, lcut + 1 : 2 * lcut, 1, :]
+                            self.interaction_terms[i, lcut + 1 :, :]
+                            - self.interaction_terms[j, lcut + 1 :, :]
                         )
                         * phi_j_down,
                         self.s_mesh,
@@ -280,27 +360,32 @@ class ActiveSubspaceQuilt:
                     )
                     / d
                 )
-                func_deriv = np.hstack(
+
+                func_deriv = np.concatenate(
                     [
                         func_deriv_down.real,
-                        func_deriv_up.real,
                         func_deriv_down.imag,
+                        func_deriv_up.real,
                         func_deriv_up.imag,
-                    ]
+                    ],
+                    axis=0,
                 )
                 mask = np.absolute(max_func_deriv) < np.absolute(func_deriv)
                 max_func_deriv[mask] = func_deriv[mask]
                 max_delta_idxs[mask] = j
 
-            gradient_vector_samples[i : i + (lcut * 4 - 2), :] = [
-                (self.train_pp[x, unfrozen_mask] - self.train_pp[i, unfrozen_mask])
+            gradient_vector_samples[i : i + (lcut * 4 + 2), :] = [
+                (
+                    self.train_pp[x, self.unfrozen_mask]
+                    - self.train_pp[i, self.unfrozen_mask]
+                )
                 * np.sign(y)
                 / np.sqrt(
                     np.dot(
-                        self.train_pp[x, unfrozen_mask]
-                        - self.train_pp[i, unfrozen_mask],
-                        self.train_pp[x, unfrozen_mask]
-                        - self.train_pp[i, unfrozen_mask],
+                        self.train_pp[x, self.unfrozen_mask]
+                        - self.train_pp[i, self.unfrozen_mask],
+                        self.train_pp[x, self.unfrozen_mask]
+                        - self.train_pp[i, self.unfrozen_mask],
                     )
                 )
                 for x, y in zip(max_delta_idxs, max_func_deriv)
@@ -396,7 +481,7 @@ class ActiveSubspaceQuilt:
         return np.array(
             [
                 self.from_AS(sample)
-                for sample in rose.training.latin_hypercube_sample(nsamples, bbox, seed)
+                for sample in latin_hypercube_sample(nsamples, bbox, seed)
             ]
         )
 
@@ -412,7 +497,7 @@ class ActiveSubspaceQuilt:
         return np.array(
             [
                 self.post_process(sample)
-                for sample in rose.training.latin_hypercube_sample(nsamples, bbox, seed)
+                for sample in latin_hypercube_sample(nsamples, bbox, seed)
             ]
         )
 
@@ -452,9 +537,7 @@ class ActiveSubspaceQuilt:
         return np.array(
             [
                 self.post_process(sample)
-                for sample in rose.training.latin_hypercube_sample(
-                    nsamples, self.prepro_bounds, seed
-                )
+                for sample in latin_hypercube_sample(nsamples, self.prepro_bounds, seed)
             ]
         )
 

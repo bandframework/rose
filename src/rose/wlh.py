@@ -229,7 +229,7 @@ class WLHGlobal:
         delta = (N - Z) / A
         factor = 1.0
         if self.projectile == Projectile.neutron:
-            factor *= -1.0
+            factor = -1.0
 
         uv = (
             self.uv0
@@ -269,7 +269,7 @@ class WLHGlobal:
         )
 
         ud = self.ud0 - self.ud1 * E_com - (self.ud3 - self.ud4 * E_com) * delta
-        rd = self.rd0 - self.rd1 * E_com - self.rd2 * A ** (-1.0 / 3)
+        rd = self.rd0 - self.rd2 * E_com - self.rd1 * A ** (-1.0 / 3)
         ad = self.ad0
 
         uso = self.uso0 - self.uso1 * A

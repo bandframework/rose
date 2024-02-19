@@ -217,7 +217,7 @@ def get_AME_binding_energy(A, Z):
     if mask.any():
         # use AME if data exists
         # format is Eb/A [keV/nucleon]
-        return float(df[mask]["BINDING_ENERGY/A"]) * A / 1e3
+        return float(df[mask]["BINDING_ENERGY/A"].iloc[0]) * A / 1e3
     return None
 
 

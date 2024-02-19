@@ -427,7 +427,7 @@ class Multiple:
         )
 
 
-def plot_phase_shifts(fig, ax1, ax2, deltas, shift=0, color=None):
+def plot_phase_shifts(fig, ax1, ax2, deltas, shift=0, color=None, xlabel=True):
     r"""
     Plots the spin1/2-spin0 coupled phase shifts, the imaginary parts
     on ax2 and the real parts on ax1
@@ -480,17 +480,19 @@ def plot_phase_shifts(fig, ax1, ax2, deltas, shift=0, color=None):
     )
 
     ax1.set_ylabel(r"$\mathfrak{Re}\,\delta$ [radians]")
-    ax1.set_xlabel(r"$\ell$ [$\hbar$]")
     ax1.yaxis.set_major_locator(plt.MultipleLocator(np.pi / 6))
     ax1.yaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter(denominator=6)))
-    ax1.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     ax2.set_xlim(ax1.get_xlim())
     ax2.set_ylim(ax1.get_ylim())
     ax2.set_ylabel(r"$\mathfrak{Im}\,\delta$ [radians]")
-    ax2.set_xlabel(r"$\ell$ [$\hbar$]")
     ax2.yaxis.set_major_locator(plt.MultipleLocator(np.pi / 6))
     ax2.yaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter(denominator=6)))
-    ax2.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+
+    if xlabel:
+        ax1.set_xlabel(r"$\ell$ [$\hbar$]")
+        ax1.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+        ax2.set_xlabel(r"$\ell$ [$\hbar$]")
+        ax2.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 
     styles = [
         Line2D(
@@ -558,7 +560,7 @@ def compare_phase_shifts_err(
             diff.append(np.fabs(residual.real) + 1j * np.fabs(residual.imag))
         diffs.append(diff)
 
-    plot_phase_shifts(fig, ax3, ax4, diffs, color="k")
+    plot_phase_shifts(fig, ax3, ax4, diffs, color="k", xlabel=None)
     if small_label1 is None:
         small_label1 = label1
     if small_label2 is None:
@@ -568,14 +570,9 @@ def compare_phase_shifts_err(
         % (small_label1, small_label2)
     )
     ax4.set_ylabel(
-        r"$\mathfrak{Im|}\,\left| \delta_{%s} - \delta_{%s} \right|$ "
+        r"$\mathfrak{Im}\,\left| \delta_{%s} - \delta_{%s} \right|$ "
         % (small_label1, small_label2)
     )
-
-    ax3.yaxis.set_major_locator(ticker.AutoLocator())
-    ax3.yaxis.set_major_formatter(ticker.ScalarFormatter())
-    ax4.yaxis.set_major_locator(ticker.AutoLocator())
-    ax4.yaxis.set_major_formatter(ticker.ScalarFormatter())
 
     ax3.set_yscale("log")
     ax4.set_yscale("log")

@@ -38,7 +38,7 @@ class ActiveSubspaceQuilt:
         tangent_fraction=0.1,
         threads=None,
         verbose=True,
-        hf_soln_files=None,
+        hf_soln_file=None,
     ):
         self.interactions = interactions
         self.solver = solver
@@ -86,7 +86,7 @@ class ActiveSubspaceQuilt:
         self.hf_solns = np.array([])
         self.interaction_terms = np.array([])
         self.train = np.array([])
-        self.update_train(train, hf_soln_files)
+        self.update_train(train, hf_soln_file)
         self.update_tangents()
 
     def get_tangent_space(self, sample):
@@ -101,12 +101,12 @@ class ActiveSubspaceQuilt:
         dist, idx = self.tangent_tree.query(self.to_AS(sample))
         return self.emulators[self.tangent_idxs[idx]]
 
-    def update_tangents(self, neim=15, nbasis=10):
+    def update_tangents(self, neim=20):
         ntangents = int(np.ceil(self.tangent_fraction * self.train.shape[0]))
         ntangents += 1
         if self.verbose:
             print(
-                f"Constructing RBMs from the neighborhood around {ntangents}"
+                f"Constructing RBMs from neighborhoods around {ntangents}"
                 " sampled tangent points..."
             )
         self.ntangents = ntangents
@@ -130,7 +130,7 @@ class ActiveSubspaceQuilt:
                 l_max=self.l_max,
                 rho_mesh=self.s_mesh,
             )
-            bases = self.make_bases(neighbors, interactions, nbasis=nbasis)
+            bases = self.make_bases(neighbors, interactions)
             emulator = ScatteringAmplitudeEmulator(
                 interaction_space=interactions,
                 bases=bases,
@@ -140,26 +140,21 @@ class ActiveSubspaceQuilt:
             )
             return idx, emulator
 
-        if False:
-            with ThreadPoolExecutor(max_workers=self.threads) as executor:
-                results = executor.map(make_emulator, self.tangent_idxs)
+        for idx in tqdm(self.tangent_idxs, disable=(not self.verbose)):
+            idx, emulator = make_emulator(idx)
+            self.emulators[idx] = emulator
 
-            for result in results:
-                idx, emulator = result
-                self.emulators[idx] = emulator
-        else:
-            for idx in tqdm(self.tangent_idxs, disable=(not self.verbose)):
-                idx, emulator = make_emulator(idx)
-                self.emulators[idx] = emulator
-
-    def make_bases(self, neighbors, interactions, nbasis=10):
+    def make_bases(self, neighbors, interactions):
+        min_nbasis = 4
+        expl_var_ratio_cutoff = 1.0e-8
         bases = []
         for l in range(self.l_max + 1):
             bup = CustomBasis(
                 self.hf_solns[neighbors, l, :].T,
                 self.free_solns[l, :],
                 self.s_mesh,
-                nbasis,
+                min_nbasis,
+                expl_var_ratio_cutoff,
                 solver=SchroedingerEquation(
                     self.interactions.interactions[l][0],
                     s_0=self.s_0,
@@ -176,7 +171,8 @@ class ActiveSubspaceQuilt:
                     self.hf_solns[neighbors, self.l_max + l, :].T,
                     self.free_solns[l, :],
                     self.s_mesh,
-                    nbasis,
+                    min_nbasis,
+                    expl_var_ratio_cutoff,
                     solver=SchroedingerEquation(
                         interactions.interactions[l][1],
                         s_0=self.s_0,
@@ -189,7 +185,7 @@ class ActiveSubspaceQuilt:
                 bases.append([bup, bdown])
         return bases
 
-    def update_train(self, new_train, hf_soln_files):
+    def update_train(self, new_train, hf_soln_file):
         # update train
         if self.train.size == 0:
             self.train = new_train
@@ -248,14 +244,55 @@ class ActiveSubspaceQuilt:
             )
 
         # calculate and store HF solutions
-        if hf_soln_files is None:
+        if hf_soln_file is None:
             new_hf_solns = np.zeros(
                 (new_train.shape[0], 2 * self.l_max + 1, self.s_mesh.shape[0]),
                 dtype=np.complex128,
             )
 
-            def run_chunk(start, stop):
-                for i in range(start, stop):
+            if False:
+                def run_chunk(start, stop):
+                    for i in range(start, stop):
+                        sample = new_train[i, :]
+                        solns = self.solver.exact_wave_functions(sample)
+                        for l in range(0, self.l_max + 1):
+                            new_hf_solns[i, l, :] = (
+                                solns[l][0]
+                                / np.trapz(np.absolute(solns[l][0]), self.s_mesh)
+                                - self.free_solns[l, :]
+                            )
+                        for l in range(1, self.l_max + 1):
+                            new_hf_solns[i, self.l_max + l, :] = (
+                                solns[l][1]
+                                / np.trapz(np.absolute(solns[l][1]), self.s_mesh)
+                                - self.free_solns[l, :]
+                            )
+
+                step = new_train.shape[0] // self.threads
+                starts = list(range(0, new_train.shape[0] - self.threads, step))
+                stops = [s + self.threads for s in starts]
+                stops[-1] = new_train.shape[0]
+
+                if self.verbose:
+                    print(
+                        f"Calculating training wavefunctions at {new_train.shape[0]} samples..."
+                    )
+
+
+                with ThreadPoolExecutor(max_workers=self.threads) as executor:
+                    for _ in tqdm(
+                        executor.map(run_chunk, starts, stops),
+                        total=self.threads,
+                        disable=(not self.verbose),
+                    ):
+                        pass
+            else:
+                if self.verbose:
+                    print(
+                        f"Calculating training wavefunctions at {new_train.shape[0]} samples..."
+                    )
+
+                for i in tqdm(range(0, new_train.shape[0])):
                     sample = new_train[i, :]
                     solns = self.solver.exact_wave_functions(sample)
                     for l in range(0, self.l_max + 1):
@@ -270,31 +307,12 @@ class ActiveSubspaceQuilt:
                             / np.trapz(np.absolute(solns[l][1]), self.s_mesh)
                             - self.free_solns[l, :]
                         )
-
-            step = new_train.shape[0] // self.threads
-            starts = list(range(0, new_train.shape[0] - self.threads, step))
-            stops = [s + self.threads for s in starts]
-            stops[-1] = new_train.shape[0]
-
-            if self.verbose:
-                print(
-                    f"Calculating training wavefunctions at {new_train.shape[0]} samples..."
-                )
-
-            with ThreadPoolExecutor(max_workers=self.threads) as executor:
-                for _ in tqdm(
-                    executor.map(run_chunk, starts, stops),
-                    total=self.threads,
-                    disable=(not self.verbose),
-                ):
-                    pass
         else:
             if self.verbose:
                 print(
-                    f"Reading training wavefunctions from {hf_soln_files[0]}, {hf_soln_files[1]}..."
+                    f"Reading training wavefunctions from {hf_soln_file} ..."
                 )
-            [hf_solns_up, hf_solns_down] = [np.load(f) for f in hf_soln_files]
-            new_hf_solns = np.concatenate([hf_solns_up, hf_solns_down], axis=1)
+            new_hf_solns = np.load(hf_soln_file)
 
         if self.hf_solns.size == 0:
             self.hf_solns = new_hf_solns

@@ -213,7 +213,7 @@ class CustomBasis(Basis):
         phi_0: np.array,  # "offset", generates inhomogeneous term
         rho_mesh: np.array,  # rho mesh; MUST BE EQUALLY SPACED POINTS!!!
         n_basis: int,
-        expl_var_ratio_cutoff : float = None,
+        expl_var_ratio_cutoff : float = 0.0,
         solver: SchroedingerEquation = None,
         subtract_phi0 = True,
         use_svd: bool = None,
@@ -251,9 +251,6 @@ class CustomBasis(Basis):
         """
 
         super().__init__(solver, None, rho_mesh, n_basis)
-
-        if expl_var_ratio_cutoff is not None:
-            assert use_svd
 
         self.rho_mesh = rho_mesh
         self.n_basis = n_basis

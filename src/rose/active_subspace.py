@@ -146,7 +146,7 @@ class ActiveSubspaceQuilt:
 
     def make_bases(self, neighbors, interactions):
         min_nbasis = 4
-        expl_var_ratio_cutoff = 1.0e-8
+        expl_var_ratio_cutoff = 5.0e-9
         bases = []
         for l in range(self.l_max + 1):
             bup = CustomBasis(
@@ -190,7 +190,7 @@ class ActiveSubspaceQuilt:
         if self.train.size == 0:
             self.train = new_train
         else:
-            self.train = np.hstack([self.train, new_train])
+            self.train = np.concatenate([self.train, new_train], axis=0)
 
         # update bounds
         new_bounds = np.vstack(
@@ -211,8 +211,8 @@ class ActiveSubspaceQuilt:
         ).T
 
         # update pre-processing to use new mean and bounds
-        self.train_mean = self.forward_pspace_transform(np.mean(new_train, axis=0))
-        self.train_pp = np.array([self.pre_process(sample) for sample in new_train])
+        self.train_mean = self.forward_pspace_transform(np.mean(self.train, axis=0))
+        self.train_pp = np.array([self.pre_process(sample) for sample in self.train])
         self.tree = kdtree.KDTree(self.train_pp)
         self.prepro_bounds = np.vstack(
             [self.pre_process(self.bounds[:, 0]), self.pre_process(self.bounds[:, 1])]
@@ -239,8 +239,9 @@ class ActiveSubspaceQuilt:
         if self.interaction_terms.size == 0:
             self.interaction_terms = new_interaction_terms
         else:
-            self.interaction_terms = np.hstack(
-                [self.interaction_terms, new_interaction_terms]
+            self.interaction_terms = np.concatenate(
+                [self.interaction_terms, new_interaction_terms],
+                axis=0
             )
 
         # calculate and store HF solutions
@@ -317,7 +318,7 @@ class ActiveSubspaceQuilt:
         if self.hf_solns.size == 0:
             self.hf_solns = new_hf_solns
         else:
-            self.hf_solns = np.hstack([self.hf_solns, new_hf_solns])
+            self.hf_solns = np.concatenate([self.hf_solns, new_hf_solns], axis=0)
 
         # rediscover active subspace
         self.U, self.S = self.discover()

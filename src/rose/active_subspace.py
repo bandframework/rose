@@ -327,6 +327,13 @@ class ActiveSubspaceQuilt:
         self.train_as = np.array([self.to_AS(sample) for sample in self.train])
         self.active_subspace_kdtree = kdtree.KDTree(self.train_as)
 
+        self.as_bounds = np.vstack(
+            [
+                np.min(self.train_as, axis=0),
+                np.max(self.train_as, axis=0),
+            ]
+        ).T
+
     def discover(self):
         lcut = self.l_max
         k = self.neighborhood_size
@@ -548,6 +555,19 @@ class ActiveSubspaceQuilt:
                 for sample in np.random.multivariate_normal(mean, cov, size=nsamples)
             ]
         )
+
+
+    def sample_active(self, nsamples, seed=None):
+        """
+        Sample points in parameters space
+        """
+        return np.array(
+            [
+                self.from_AS(sample)
+                for sample in latin_hypercube_sample(nsamples, self.as_bounds, seed)
+            ]
+        )
+
 
     def sample(self, nsamples, seed=None):
         """

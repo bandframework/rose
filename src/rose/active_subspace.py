@@ -101,7 +101,7 @@ class ActiveSubspaceQuilt:
         dist, idx = self.tangent_tree.query(self.to_AS(sample))
         return self.emulators[self.tangent_idxs[idx]]
 
-    def update_tangents(self, neim=5, method="random"):
+    def update_tangents(self, neim=5, method="random choice"):
         ntangents = int(np.ceil(self.tangent_fraction * self.train.shape[0]))
         ntangents += 1
         if self.verbose:
@@ -110,7 +110,7 @@ class ActiveSubspaceQuilt:
                 " sampled tangent points..."
             )
         self.ntangents = ntangents
-        if method == "random":
+        if method == "random choice":
             self.tangent_idxs = np.random.choice(
                 np.arange(0, self.train.shape[0], 1, dtype=int),
                 ntangents,

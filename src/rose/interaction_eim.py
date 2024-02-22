@@ -45,7 +45,9 @@ class InteractionEIM(Interaction):
                 If (2):
                     This is an MxN matrix. N is the number of parameters. M is
                     the number of samples.
-            n_basis (int): number of basis states, or "pillars" in $\hat{U}$ approximation
+            n_basis (int): min number of states in the expansion
+            expl_var_ratio_cutoff (float) : the cutoff in sv**2/sum(sv**2), sv
+                being the singular values, at which the number of kept bases is chosen
             explicit_training (bool): Is training_info (1) or (2)? (1) is
                 default
             n_train (int): How many snapshots to generate? Ignored if
@@ -97,19 +99,20 @@ class InteractionEIM(Interaction):
             snapshots = np.array([self.tilde(rho_mesh, theta) for theta in train]).T
 
         U, S, _ = np.linalg.svd(snapshots, full_matrices=False)
-        self.snapshots = U[:, :n_basis]
-        self.singular_values = S
-        self.match_points = match_points
 
         # keeping at min n_basis PC's, find cutoff
         # avoids singular matrix in MAXVOL when we find a region of param
         # space w/ very similar potentials
+        self.singular_values = S
         expl_var = self.singular_values**2/np.sum(self.singular_values**2)
         n_basis_svs = np.sum(expl_var > expl_var_ratio_cutoff)
         self.n_basis = max(n_basis_svs, self.n_basis)
 
+        self.snapshots = U[:, :self.n_basis]
+        self.match_points = match_points
+
         if match_points is not None and method == "collocation":
-            n_basis = match_points.size
+            self.n_basis = match_points.size
             self.match_points = match_points
             self.match_indices = np.array(
                 [np.argmin(np.abs(rho_mesh - ri)) for ri in self.match_points]
@@ -119,7 +122,7 @@ class InteractionEIM(Interaction):
         elif match_points is None and method == "collocation":
             # random r points between 0 and 2π fm
             i_max = self.snapshots.shape[0] // 4
-            di = i_max // (n_basis - 1)
+            di = i_max // (self.n_basis - 1)
             i_init = np.arange(0, i_max + 1, di)
             self.match_indices = max_vol(self.snapshots, i_init)
             self.match_points = rho_mesh[self.match_indices]

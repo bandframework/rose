@@ -102,7 +102,7 @@ class ActiveSubspaceQuilt:
         dist, idx = self.tangent_tree.query(self.to_AS(sample))
         return self.emulators[self.tangent_idxs[idx]]
 
-    def update_tangents(self, method="random choice" ** kwargs):
+    def update_tangents(self, method="maxvol", ** kwargs):
         ntangents = int(np.ceil(self.tangent_fraction * self.train.shape[0]))
         ntangents += 1
         if self.verbose:
@@ -120,7 +120,7 @@ class ActiveSubspaceQuilt:
         elif method == "maxvol":
             # just use s-wave for now
             basis = self.hf_solns[:, 0, :]
-            total_ids = bases.shape[0]
+            total_ids = basis.shape[0]
             step = int(total_ids // self.ntangents)
             tan_idx_guess = np.arange(0, total_ids, step, dtype=int)
             self.tangent_idxs = max_vol(basis, tan_idx_guess)

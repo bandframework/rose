@@ -14,7 +14,7 @@ from .basis import CustomBasis
 from .koning_delaroche import EnergizedKoningDelaroche
 from .interaction import InteractionSpace
 from .scattering_amplitude_emulator import ScatteringAmplitudeEmulator
-
+from .utility import max_vol
 
 def identity(sample):
     return sample
@@ -101,7 +101,7 @@ class ActiveSubspaceQuilt:
         dist, idx = self.tangent_tree.query(self.to_AS(sample))
         return self.emulators[self.tangent_idxs[idx]]
 
-    def update_tangents(self, neim=5):
+    def update_tangents(self, neim=5, method="random"):
         ntangents = int(np.ceil(self.tangent_fraction * self.train.shape[0]))
         ntangents += 1
         if self.verbose:
@@ -110,23 +110,33 @@ class ActiveSubspaceQuilt:
                 " sampled tangent points..."
             )
         self.ntangents = ntangents
-        self.tangent_idxs = np.random.choice(
-            np.arange(0, self.train.shape[0], 1, dtype=int),
-            ntangents,
-            replace=False,
-        )
+        if method == "random":
+            self.tangent_idxs = np.random.choice(
+                np.arange(0, self.train.shape[0], 1, dtype=int),
+                ntangents,
+                replace=False,
+            )
+        elif method == "maxvol":
+            # just use s-wave for now
+            basis = self.hf_solns[:,0,:]
+            total_ids = bases.shape[0]
+            step  = int(total_ids // self.ntangents)
+            tan_idx_guess = np.arange(0,total_ids, step, dtype=int)
+            self.tangent_idxs = max_vol(basis, tan_idx_guess)
         self.tangent_points = self.train[self.tangent_idxs, :]
         self.tangent_tree = kdtree.KDTree(self.train_as[self.tangent_idxs, :])
         self.emulators = {}
 
+        if self.verbose:
+            print(f"{ntangents} tangent points chosen using {method}. Building neighborhoods...")
 
         for idx in tqdm(self.tangent_idxs, disable=(not self.verbose)):
-            idx, emulator = make_emulator(idx)
+            idx, emulator = self.make_emulator(idx)
             self.emulators[idx] = emulator
 
     def make_emulator(self, idx, k=None, min_bases_eim=10, min_bases_rbm=4, expl_var_ratio_cutoff_eim = 5.0e-9):
-        if k is None
-        k = self.neighborhood_size
+        if k is None:
+            k = self.neighborhood_size
         ds, neighbors = self.active_subspace_kdtree.query(
             self.train_as[idx, :], k=k
         )

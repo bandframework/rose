@@ -5,6 +5,7 @@ from .constants import HBARC
 import numpy as np
 import jitr
 
+
 class LagrangeRmatrix(SchroedingerEquation):
     r"""Implements a ROSE HF solver for an interaction with defined energy and l using jitr."""
 

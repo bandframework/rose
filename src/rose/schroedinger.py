@@ -210,7 +210,7 @@ class SchroedingerEquation:
 
         """
         solution = np.zeros_like(s_mesh, dtype=np.complex128)
-        mask = np.logical_and(s_mesh >= self.domain[0] , s_mesh <= self.domain[1])
+        mask = np.logical_and(s_mesh >= self.domain[0], s_mesh <= self.domain[1])
         phi = self.solve_se(alpha, **kwargs)
         solution[mask] = phi(s_mesh)[0][mask]
         return solution

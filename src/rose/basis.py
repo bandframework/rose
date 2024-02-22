@@ -213,9 +213,9 @@ class CustomBasis(Basis):
         phi_0: np.array,  # "offset", generates inhomogeneous term
         rho_mesh: np.array,  # rho mesh; MUST BE EQUALLY SPACED POINTS!!!
         n_basis: int,
-        expl_var_ratio_cutoff : float = 0.0,
+        expl_var_ratio_cutoff: float = 0.0,
         solver: SchroedingerEquation = None,
-        subtract_phi0 = True,
+        subtract_phi0=True,
         use_svd: bool = None,
         center: bool = None,
         scale: bool = None,
@@ -257,17 +257,11 @@ class CustomBasis(Basis):
         self.phi_0 = phi_0
 
         self.pillars, self.singular_value, self.phi_0 = pre_process_solutions(
-            solutions,
-            self.phi_0,
-            self.rho_mesh,
-            center,
-            scale,
-            use_svd,
-            subtract_phi0
+            solutions, self.phi_0, self.rho_mesh, center, scale, use_svd, subtract_phi0
         )
 
         # keeping at min n_basis PC's, find cutoff
-        expl_var = self.singular_value**2/np.sum(self.singular_value**2)
+        expl_var = self.singular_value**2 / np.sum(self.singular_value**2)
         n_basis_svs = np.sum(expl_var > expl_var_ratio_cutoff)
         self.n_basis = max(n_basis_svs, self.n_basis)
 
@@ -313,7 +307,13 @@ class CustomBasis(Basis):
 
 
 def pre_process_solutions(
-    solutions, phi_0, rho_mesh, center=None, scale=None, svd=None, subtract_phi0=True,
+    solutions,
+    phi_0,
+    rho_mesh,
+    center=None,
+    scale=None,
+    svd=None,
+    subtract_phi0=True,
 ):
     s = rho_mesh
     if center or scale or subtract_phi0:

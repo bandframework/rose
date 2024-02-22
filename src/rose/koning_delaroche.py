@@ -110,7 +110,7 @@ def KD_simple_so(r, alpha, lds):
     vso, rso, aso, wso, rwso, awso = decompose_alpha(alpha)[1]
     return lds * (
         vso / MASS_PION**2 * thomas_safe(r, rso, aso)
-        + 1j * wso / MASS_PION**2  * thomas_safe(r, rwso, awso)
+        + 1j * wso / MASS_PION**2 * thomas_safe(r, rwso, awso)
     )
 
 

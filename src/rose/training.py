@@ -524,8 +524,12 @@ def compare_phase_shifts(data_sets: list, labels: list, fig, ax1, ax2):
         color_legend.append(
             Line2D([0], [0], color=c, linestyle="-", label=label),
         )
-    leg1 = ax2.legend(handles=color_legend,)
-    ax1.legend(handles=styles,)
+    leg1 = ax2.legend(
+        handles=color_legend,
+    )
+    ax1.legend(
+        handles=styles,
+    )
     ax2.add_artist(leg1)
 
     return fig, ax1, ax2

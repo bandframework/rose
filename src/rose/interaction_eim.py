@@ -24,6 +24,7 @@ class InteractionEIM(Interaction):
         self,
         training_info: np.array = None,
         n_basis: int = None,
+        expl_var_ratio_cutoff : float = 0.0,
         explicit_training: bool = False,
         n_train: int = 1000,
         rho_mesh: np.array = DEFAULT_RHO_MESH,
@@ -72,7 +73,10 @@ class InteractionEIM(Interaction):
         assert training_info is not None
 
         if n_basis is None:
-            n_basis = kwargs["n_theta"]
+            if "n_theta" in kwargs:
+                n_basis = kwargs["n_theta"]
+            else:
+                n_basis = 8
 
         super().__init__(**kwargs)
 
@@ -96,6 +100,13 @@ class InteractionEIM(Interaction):
         self.snapshots = U[:, :n_basis]
         self.singular_values = S
         self.match_points = match_points
+
+        # keeping at min n_basis PC's, find cutoff
+        # avoids singular matrix in MAXVOL when we find a region of param
+        # space w/ very similar potentials
+        expl_var = self.singular_values**2/np.sum(self.singular_values**2)
+        n_basis_svs = np.sum(expl_var > expl_var_ratio_cutoff)
+        self.n_basis = max(n_basis_svs, self.n_basis)
 
         if match_points is not None and method == "collocation":
             n_basis = match_points.size

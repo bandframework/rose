@@ -101,7 +101,7 @@ class ActiveSubspaceQuilt:
         dist, idx = self.tangent_tree.query(self.to_AS(sample))
         return self.emulators[self.tangent_idxs[idx]]
 
-    def update_tangents(self, neim=20):
+    def update_tangents(self, neim=5):
         ntangents = int(np.ceil(self.tangent_fraction * self.train.shape[0]))
         ntangents += 1
         if self.verbose:
@@ -119,41 +119,44 @@ class ActiveSubspaceQuilt:
         self.tangent_tree = kdtree.KDTree(self.train_as[self.tangent_idxs, :])
         self.emulators = {}
 
-        def make_emulator(idx):
-            ds, neighbors = self.active_subspace_kdtree.query(
-                self.train_as[idx, :], k=self.neighborhood_size
-            )
-            interactions = EnergizedKoningDelaroche(
-                training_info=self.train[neighbors, :],
-                explicit_training=True,
-                n_basis=neim,
-                l_max=self.l_max,
-                rho_mesh=self.s_mesh,
-            )
-            bases = self.make_bases(neighbors, interactions)
-            emulator = ScatteringAmplitudeEmulator(
-                interaction_space=interactions,
-                bases=bases,
-                angles=self.solver.angles,
-                s_0=self.s_0,
-                l_max=self.l_max,
-            )
-            return idx, emulator
 
         for idx in tqdm(self.tangent_idxs, disable=(not self.verbose)):
             idx, emulator = make_emulator(idx)
             self.emulators[idx] = emulator
 
-    def make_bases(self, neighbors, interactions):
-        min_nbasis = 4
-        expl_var_ratio_cutoff = 5.0e-9
+    def make_emulator(self, idx, k=None, min_bases_eim=10, min_bases_rbm=4, expl_var_ratio_cutoff_eim = 5.0e-9):
+        if k is None
+        k = self.neighborhood_size
+        ds, neighbors = self.active_subspace_kdtree.query(
+            self.train_as[idx, :], k=k
+        )
+        assert(neighbors.shape[0] == k)
+        interactions = EnergizedKoningDelaroche(
+            training_info=self.train[neighbors, :],
+            explicit_training=True,
+            n_basis=min_bases_eim,
+            l_max=self.l_max,
+            rho_mesh=self.s_mesh,
+            expl_var_ratio_cutoff=expl_var_ratio_cutoff_eim,
+        )
+        bases = self.make_bases(neighbors, interactions, min_bases_rbm)
+        emulator = ScatteringAmplitudeEmulator(
+            interaction_space=interactions,
+            bases=bases,
+            angles=self.solver.angles,
+            s_0=self.s_0,
+            l_max=self.l_max,
+        )
+        return idx, emulator
+
+    def make_bases(self, neighbors, interactions, min_bases, expl_var_ratio_cutoff = 5.0e-9):
         bases = []
         for l in range(self.l_max + 1):
             bup = CustomBasis(
                 self.hf_solns[neighbors, l, :].T,
                 self.free_solns[l, :],
                 self.s_mesh,
-                min_nbasis,
+                min_bases,
                 expl_var_ratio_cutoff,
                 solver=SchroedingerEquation(
                     self.interactions.interactions[l][0],
@@ -171,7 +174,7 @@ class ActiveSubspaceQuilt:
                     self.hf_solns[neighbors, self.l_max + l, :].T,
                     self.free_solns[l, :],
                     self.s_mesh,
-                    min_nbasis,
+                    min_bases,
                     expl_var_ratio_cutoff,
                     solver=SchroedingerEquation(
                         interactions.interactions[l][1],

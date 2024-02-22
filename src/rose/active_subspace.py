@@ -16,6 +16,7 @@ from .interaction import InteractionSpace
 from .scattering_amplitude_emulator import ScatteringAmplitudeEmulator
 from .utility import max_vol
 
+
 def identity(sample):
     return sample
 
@@ -101,7 +102,7 @@ class ActiveSubspaceQuilt:
         dist, idx = self.tangent_tree.query(self.to_AS(sample))
         return self.emulators[self.tangent_idxs[idx]]
 
-    def update_tangents(self, neim=5, method="random choice"):
+    def update_tangents(self, method="random choice" ** kwargs):
         ntangents = int(np.ceil(self.tangent_fraction * self.train.shape[0]))
         ntangents += 1
         if self.verbose:
@@ -118,29 +119,37 @@ class ActiveSubspaceQuilt:
             )
         elif method == "maxvol":
             # just use s-wave for now
-            basis = self.hf_solns[:,0,:]
+            basis = self.hf_solns[:, 0, :]
             total_ids = bases.shape[0]
-            step  = int(total_ids // self.ntangents)
-            tan_idx_guess = np.arange(0,total_ids, step, dtype=int)
+            step = int(total_ids // self.ntangents)
+            tan_idx_guess = np.arange(0, total_ids, step, dtype=int)
             self.tangent_idxs = max_vol(basis, tan_idx_guess)
         self.tangent_points = self.train[self.tangent_idxs, :]
         self.tangent_tree = kdtree.KDTree(self.train_as[self.tangent_idxs, :])
         self.emulators = {}
 
         if self.verbose:
-            print(f"{ntangents} tangent points chosen using {method}. Building neighborhoods...")
+            print(
+                f"{ntangents} tangent points chosen using {method}. Building neighborhoods..."
+            )
 
         for idx in tqdm(self.tangent_idxs, disable=(not self.verbose)):
-            idx, emulator = self.make_emulator(idx)
+            idx, emulator = self.make_emulator(idx, **kwargs)
             self.emulators[idx] = emulator
 
-    def make_emulator(self, idx, k=None, min_bases_eim=10, min_bases_rbm=4, expl_var_ratio_cutoff_eim = 5.0e-9):
+    def make_emulator(
+        self,
+        idx,
+        k=None,
+        min_bases_eim=10,
+        min_bases_rbm=4,
+        expl_var_ratio_cutoff_eim=1.0e-9,
+        expl_var_ratio_cutoff=5.0e-9,
+    ):
         if k is None:
             k = self.neighborhood_size
-        ds, neighbors = self.active_subspace_kdtree.query(
-            self.train_as[idx, :], k=k
-        )
-        assert(neighbors.shape[0] == k)
+        ds, neighbors = self.active_subspace_kdtree.query(self.train_as[idx, :], k=k)
+        assert neighbors.shape[0] == k
         interactions = EnergizedKoningDelaroche(
             training_info=self.train[neighbors, :],
             explicit_training=True,
@@ -149,7 +158,9 @@ class ActiveSubspaceQuilt:
             rho_mesh=self.s_mesh,
             expl_var_ratio_cutoff=expl_var_ratio_cutoff_eim,
         )
-        bases = self.make_bases(neighbors, interactions, min_bases_rbm)
+        bases = self.make_bases(
+            neighbors, interactions, min_bases_rbm, expl_var_ratio_cutoff
+        )
         emulator = ScatteringAmplitudeEmulator(
             interaction_space=interactions,
             bases=bases,
@@ -159,7 +170,7 @@ class ActiveSubspaceQuilt:
         )
         return idx, emulator
 
-    def make_bases(self, neighbors, interactions, min_bases, expl_var_ratio_cutoff = 5.0e-9):
+    def make_bases(self, neighbors, interactions, min_bases, expl_var_ratio_cutoff):
         bases = []
         for l in range(self.l_max + 1):
             bup = CustomBasis(
@@ -253,8 +264,7 @@ class ActiveSubspaceQuilt:
             self.interaction_terms = new_interaction_terms
         else:
             self.interaction_terms = np.concatenate(
-                [self.interaction_terms, new_interaction_terms],
-                axis=0
+                [self.interaction_terms, new_interaction_terms], axis=0
             )
 
         # calculate and store HF solutions
@@ -265,6 +275,7 @@ class ActiveSubspaceQuilt:
             )
 
             if False:
+
                 def run_chunk(start, stop):
                     for i in range(start, stop):
                         sample = new_train[i, :]
@@ -291,7 +302,6 @@ class ActiveSubspaceQuilt:
                     print(
                         f"Calculating training wavefunctions at {new_train.shape[0]} samples..."
                     )
-
 
                 with ThreadPoolExecutor(max_workers=self.threads) as executor:
                     for _ in tqdm(
@@ -323,9 +333,7 @@ class ActiveSubspaceQuilt:
                         )
         else:
             if self.verbose:
-                print(
-                    f"Reading training wavefunctions from {hf_soln_file} ..."
-                )
+                print(f"Reading training wavefunctions from {hf_soln_file} ...")
             new_hf_solns = np.load(hf_soln_file)
 
         if self.hf_solns.size == 0:
@@ -569,7 +577,6 @@ class ActiveSubspaceQuilt:
             ]
         )
 
-
     def sample_active(self, nsamples, seed=None):
         """
         Sample points in parameters space
@@ -580,7 +587,6 @@ class ActiveSubspaceQuilt:
                 for sample in latin_hypercube_sample(nsamples, self.as_bounds, seed)
             ]
         )
-
 
     def sample(self, nsamples, seed=None):
         """

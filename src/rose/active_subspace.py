@@ -102,7 +102,7 @@ class ActiveSubspaceQuilt:
         dist, idx = self.tangent_tree.query(self.to_AS(sample))
         return self.emulators[self.tangent_idxs[idx]]
 
-    def update_tangents(self, method="maxvol", ** kwargs):
+    def update_tangents(self, ** kwargs):
         ntangents = int(np.ceil(self.tangent_fraction * self.train.shape[0]))
         ntangents += 1
         if self.verbose:
@@ -111,26 +111,30 @@ class ActiveSubspaceQuilt:
                 " sampled tangent points..."
             )
         self.ntangents = ntangents
+        method = kwargs.get("method", "weighted")
+        if "method" in kwargs:
+            kwargs.pop("method")
+
         if method == "random choice":
             self.tangent_idxs = np.random.choice(
                 np.arange(0, self.train.shape[0], 1, dtype=int),
                 ntangents,
                 replace=False,
             )
-        elif method == "maxvol":
-            # just use s-wave for now
-            basis = self.hf_solns[:, 0, :]
-            total_ids = basis.shape[0]
-            step = int(total_ids // self.ntangents)
-            tan_idx_guess = np.arange(0, total_ids, step, dtype=int)
-            self.tangent_idxs = max_vol(basis, tan_idx_guess)
+        elif method == "weighted":
+            self.tangent_idxs = np.random.choice(
+                np.arange(0, self.train.shape[0], 1, dtype=int),
+                ntangents,
+                replace=False,
+                p = self.func_der / np.sum(self.func_der)
+            )
         self.tangent_points = self.train[self.tangent_idxs, :]
         self.tangent_tree = kdtree.KDTree(self.train_as[self.tangent_idxs, :])
         self.emulators = {}
 
         if self.verbose:
             print(
-                f"{ntangents} tangent points chosen using {method}. Building neighborhoods..."
+                f"{ntangents} tangent points chosen using {method} method. Building neighborhoods..."
             )
 
         for idx in tqdm(self.tangent_idxs, disable=(not self.verbose)):
@@ -165,7 +169,7 @@ class ActiveSubspaceQuilt:
             interaction_space=interactions,
             bases=bases,
             angles=self.solver.angles,
-            s_0=self.s_0,
+           s_0=self.s_0,
             l_max=self.l_max,
         )
         return idx, emulator
@@ -358,6 +362,7 @@ class ActiveSubspaceQuilt:
     def discover(self):
         lcut = self.l_max
         k = self.neighborhood_size
+        self.func_der = np.zeros((self.train.shape[0]), dtype=np.float32)
         gradient_vector_samples = np.zeros(
             (
                 self.train.shape[0] * (lcut * 4 + 2),
@@ -410,10 +415,10 @@ class ActiveSubspaceQuilt:
 
                 func_deriv = np.concatenate(
                     [
-                        func_deriv_down.real,
-                        func_deriv_down.imag,
                         func_deriv_up.real,
                         func_deriv_up.imag,
+                        func_deriv_down.real,
+                        func_deriv_down.imag,
                     ],
                     axis=0,
                 )
@@ -437,6 +442,8 @@ class ActiveSubspaceQuilt:
                 )
                 for x, y in zip(max_delta_idxs, max_func_deriv)
             ]
+
+            self.func_der[i] = max_func_deriv[0]**2 + max_func_deriv[1]**2
 
         U, S, Vh = np.linalg.svd(gradient_vector_samples.T, full_matrices=False)
         return U, S

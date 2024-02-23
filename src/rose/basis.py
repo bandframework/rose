@@ -213,7 +213,7 @@ class CustomBasis(Basis):
         phi_0: np.array,  # "offset", generates inhomogeneous term
         rho_mesh: np.array,  # rho mesh; MUST BE EQUALLY SPACED POINTS!!!
         n_basis: int,
-        expl_var_ratio_cutoff: float = 0.0,
+        expl_var_ratio_cutoff: float = None,
         solver: SchroedingerEquation = None,
         subtract_phi0=True,
         use_svd: bool = None,
@@ -261,9 +261,12 @@ class CustomBasis(Basis):
         )
 
         # keeping at min n_basis PC's, find cutoff
-        expl_var = self.singular_value**2 / np.sum(self.singular_value**2)
-        n_basis_svs = np.sum(expl_var > expl_var_ratio_cutoff)
-        self.n_basis = max(n_basis_svs, self.n_basis)
+        if expl_var_ratio_cutoff is not None:
+            expl_var = self.singular_value**2 / np.sum(self.singular_value**2)
+            n_basis_svs = np.sum(expl_var > expl_var_ratio_cutoff)
+            self.n_basis = max(n_basis_svs, self.n_basis)
+        else:
+            self.n_basis = n_basis
 
         self.vectors = self.pillars[:, : self.n_basis]
 

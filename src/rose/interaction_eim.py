@@ -24,7 +24,7 @@ class InteractionEIM(Interaction):
         self,
         training_info: np.array = None,
         n_basis: int = None,
-        expl_var_ratio_cutoff: float = 0.0,
+        expl_var_ratio_cutoff: float = None,
         explicit_training: bool = False,
         n_train: int = 1000,
         rho_mesh: np.array = DEFAULT_RHO_MESH,
@@ -104,9 +104,12 @@ class InteractionEIM(Interaction):
         # avoids singular matrix in MAXVOL when we find a region of param
         # space w/ very similar potentials
         self.singular_values = S
-        expl_var = self.singular_values**2 / np.sum(self.singular_values**2)
-        n_basis_svs = np.sum(expl_var > expl_var_ratio_cutoff)
-        self.n_basis = max(n_basis_svs, self.n_basis)
+        if expl_var_ratio_cutoff is not None:
+            expl_var = self.singular_values**2 / np.sum(self.singular_values**2)
+            n_basis_svs = np.sum(expl_var > expl_var_ratio_cutoff)
+            self.n_basis = max(n_basis_svs, self.n_basis)
+        else:
+            self.n_basis = n_basis
 
         self.snapshots = U[:, : self.n_basis]
         self.match_points = match_points

@@ -256,13 +256,13 @@ class CustomBasis(Basis):
         self.n_basis = n_basis
         self.phi_0 = phi_0
 
-        self.pillars, self.singular_value, self.phi_0 = pre_process_solutions(
+        self.pillars, self.singular_values, self.phi_0 = pre_process_solutions(
             solutions, self.phi_0, self.rho_mesh, center, scale, use_svd, subtract_phi0
         )
 
         # keeping at min n_basis PC's, find cutoff
         if expl_var_ratio_cutoff is not None:
-            expl_var = self.singular_value**2 / np.sum(self.singular_value**2)
+            expl_var = self.singular_values**2 / np.sum(self.singular_values**2)
             n_basis_svs = np.sum(expl_var > expl_var_ratio_cutoff)
             self.n_basis = max(n_basis_svs, self.n_basis)
         else:

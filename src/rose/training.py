@@ -515,12 +515,12 @@ def plot_phase_shifts(fig, ax1, ax2, deltas, shift=0, color=None, xlabel=True):
     return styles, p.get_color()
 
 
-def compare_phase_shifts(data_sets: list, labels: list, fig, ax1, ax2):
+def compare_phase_shifts(data_sets: list, labels: list, fig, ax1, ax2, xlabel=True):
     color_legend = []
 
     for i, (deltas, label) in enumerate(zip(data_sets, labels)):
         # plot each one with small shift for overlap
-        styles, c = plot_phase_shifts(fig, ax1, ax2, deltas, shift=i * 0.03)
+        styles, c = plot_phase_shifts(fig, ax1, ax2, deltas, shift=i * 0.03, xlabel=xlabel)
         color_legend.append(
             Line2D([0], [0], color=c, linestyle="-", label=label),
         )
@@ -554,6 +554,7 @@ def compare_phase_shifts_err(
         fig,
         ax1,
         ax2,
+        xlabel=None,
     )
 
     diffs = []
@@ -564,7 +565,7 @@ def compare_phase_shifts_err(
             diff.append(np.fabs(residual.real) + 1j * np.fabs(residual.imag))
         diffs.append(diff)
 
-    plot_phase_shifts(fig, ax3, ax4, diffs, color="k", xlabel=None)
+    plot_phase_shifts(fig, ax3, ax4, diffs, color="k", xlabel=True)
     if small_label1 is None:
         small_label1 = label1
     if small_label2 is None:

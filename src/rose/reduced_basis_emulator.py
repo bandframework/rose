@@ -158,6 +158,7 @@ class ReducedBasisEmulator:
         )
         self.A_3 = np.einsum("ij,j,jk", phi_basis.T, ang_mom - 1, phi_basis)
         self.A_13 = self.A_1 + self.A_3
+
         if self.interaction.k is not None:
             S_C = self.interaction.R_C * self.interaction.k
             k_c = 2 * self.interaction.k_c * regular_inverse_s(self.s_mesh, S_C)

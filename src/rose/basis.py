@@ -213,8 +213,9 @@ class CustomBasis(Basis):
         phi_0: np.array,  # "offset", generates inhomogeneous term
         rho_mesh: np.array,  # rho mesh; MUST BE EQUALLY SPACED POINTS!!!
         n_basis: int,
+        expl_var_ratio_cutoff: float = None,
         solver: SchroedingerEquation = None,
-        subtract_phi0 = True,
+        subtract_phi0=True,
         use_svd: bool = None,
         center: bool = None,
         scale: bool = None,
@@ -229,7 +230,9 @@ class CustomBasis(Basis):
             solutions (ndarray): HF solutions
             phi_0 (ndarray): free solution (no interaction)
             rho_mesh (ndarray): discrete $s=kr$ mesh points
-            n_basis (int): number of states in the expansion
+            n_basis (int): min number of states in the expansion
+            expl_var_ratio_cutoff (float) : the cutoff in sv**2/sum(sv**2), sv
+                being the singular values, at which the number of kept bases is chosen
             use_svd (bool): Use principal components for $\tilde{\phi}$?
 
         Attributes:
@@ -253,15 +256,17 @@ class CustomBasis(Basis):
         self.n_basis = n_basis
         self.phi_0 = phi_0
 
-        self.pillars, self.singular_value, self.phi_0 = pre_process_solutions(
-            solutions,
-            self.phi_0,
-            self.rho_mesh,
-            center,
-            scale,
-            use_svd,
-            subtract_phi0
+        self.pillars, self.singular_values, self.phi_0 = pre_process_solutions(
+            solutions, self.phi_0, self.rho_mesh, center, scale, use_svd, subtract_phi0
         )
+
+        # keeping at min n_basis PC's, find cutoff
+        if expl_var_ratio_cutoff is not None:
+            expl_var = self.singular_values**2 / np.sum(self.singular_values**2)
+            n_basis_svs = np.sum(expl_var > expl_var_ratio_cutoff)
+            self.n_basis = max(n_basis_svs, self.n_basis)
+        else:
+            self.n_basis = n_basis
 
         self.vectors = self.pillars[:, : self.n_basis]
 
@@ -305,7 +310,13 @@ class CustomBasis(Basis):
 
 
 def pre_process_solutions(
-    solutions, phi_0, rho_mesh, center=None, scale=None, svd=None, subtract_phi0=True,
+    solutions,
+    phi_0,
+    rho_mesh,
+    center=None,
+    scale=None,
+    svd=None,
+    subtract_phi0=True,
 ):
     s = rho_mesh
     if center or scale or subtract_phi0:

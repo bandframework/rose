@@ -110,7 +110,7 @@ def KD_simple_so(r, alpha, lds):
     vso, rso, aso, wso, rwso, awso = decompose_alpha(alpha)[1]
     return lds * (
         vso / MASS_PION**2 * thomas_safe(r, rso, aso)
-        + 1j * wso / MASS_PION**2  * thomas_safe(r, rwso, awso)
+        + 1j * wso / MASS_PION**2 * thomas_safe(r, rwso, awso)
     )
 
 
@@ -132,6 +132,7 @@ class KoningDelaroche(InteractionEIMSpace):
         rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None,
         method="collocation",
+        **kwargs,
     ):
         r"""Wraps the Koning-Delaroche potential into a `rose`-friendly class.
         Saves system-specific information.
@@ -178,6 +179,7 @@ class KoningDelaroche(InteractionEIMSpace):
             match_points=match_points,
             method=method,
             l_max=l_max,
+            **kwargs,
         )
 
 
@@ -193,6 +195,7 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIMSpace):
         rho_mesh: np.array = DEFAULT_RHO_MESH,
         match_points: np.array = None,
         method="collocation",
+        **kwargs,
     ):
         r"""Wraps the Koning-Delaroche potential into a `rose`-friendly class.
         Saves system-specific information. Allows the user to emulate across
@@ -243,6 +246,7 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIMSpace):
             rho_mesh=rho_mesh,
             match_points=match_points,
             method=method,
+            **kwargs,
         )
 
 

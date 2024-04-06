@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose,11,4
+/bandframework/rose/pull/49,4,1
+/bandframework/rose/actions/workflows/python-package.yml,3,1
+/bandframework/rose/tree/feature-kd-global,3,1
+/bandframework/rose/tree/feature-kd-global/.github/workflows,3,1
+/bandframework/rose/tree/main/src/rose,3,1
+/bandframework/rose/commit/79f0ddb031cd2573d931b9a563a8ce8762c7b43b,2,2
+/bandframework/rose/blob/feature-kd-global/.github/workflows/python-package.yml,2,1
+/bandframework/rose/blob/main/.github/workflows/pypi-publish.yml,2,1
+/bandframework/rose/blob/main/src/rose/reduced_basis_emulator.py,2,1

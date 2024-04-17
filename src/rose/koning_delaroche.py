@@ -281,55 +281,55 @@ class KDGlobal:
             data = json.load(f)
 
             # real central depth
-            self.v1_0 = data["KDHartreeFock_V1_0"]
-            self.v1_asymm = data["KDHartreeFock_V1_asymm"]
-            self.v1_A = data["KDHartreeFock_V1_A"]
-            self.v2_0 = data["KDHartreeFock_V2_0" + tag]
-            self.v2_A = data["KDHartreeFock_V2_A" + tag]
-            self.v3_0 = data["KDHartreeFock_V3_0" + tag]
-            self.v3_A = data["KDHartreeFock_V3_A" + tag]
-            self.v4_0 = data["KDHartreeFock_V4_0"]
+            self.v1_0 = data["KDHartreeFock"]["V1_0"]
+            self.v1_asymm = data["KDHartreeFock"]["V1_asymm"]
+            self.v1_A = data["KDHartreeFock"]["V1_A"]
+            self.v2_0 = data["KDHartreeFock"]["V2_0" + tag]
+            self.v2_A = data["KDHartreeFock"]["V2_A" + tag]
+            self.v3_0 = data["KDHartreeFock"]["V3_0" + tag]
+            self.v3_A = data["KDHartreeFock"]["V3_A" + tag]
+            self.v4_0 = data["KDHartreeFock"]["V4_0"]
 
             # real central form
-            self.rv_0 = data["KDHartreeFock_r_0"]
-            self.rv_A = data["KDHartreeFock_r_A"]
-            self.av_0 = data["KDHartreeFock_a_0"]
-            self.av_A = data["KDHartreeFock_a_A"]
+            self.rv_0 = data["KDHartreeFock"]["r_0"]
+            self.rv_A = data["KDHartreeFock"]["r_A"]
+            self.av_0 = data["KDHartreeFock"]["a_0"]
+            self.av_A = data["KDHartreeFock"]["a_A"]
 
             # imag volume depth
-            self.w1_0 = data["KDImagVolume_W1_0" + tag]
-            self.w1_A = data["KDImagVolume_W1_A" + tag]
-            self.w2_0 = data["KDImagVolume_W2_0"]
-            self.w2_A = data["KDImagVolume_W2_A"]
+            self.w1_0 = data["KDImagVolume"]["W1_0" + tag]
+            self.w1_A = data["KDImagVolume"]["W1_A" + tag]
+            self.w2_0 = data["KDImagVolume"]["W2_0"]
+            self.w2_A = data["KDImagVolume"]["W2_A"]
 
             # imag surface depth
-            self.d1_0 = data["KDImagSurface_D1_0"]
-            self.d1_asymm = data["KDImagSurface_D1_asymm"]
-            self.d2_0 = data["KDImagSurface_D2_0"]
-            self.d2_A = data["KDImagSurface_D2_A"]
-            self.d2_A2 = data["KDImagSurface_D2_A2"]
-            self.d2_A3 = data["KDImagSurface_D2_A3"]
-            self.d3_0 = data["KDImagSurface_D3_0"]
+            self.d1_0 = data["KDImagSurface"]["D1_0"]
+            self.d1_asymm = data["KDImagSurface"]["D1_asymm"]
+            self.d2_0 = data["KDImagSurface"]["D2_0"]
+            self.d2_A = data["KDImagSurface"]["D2_A"]
+            self.d2_A2 = data["KDImagSurface"]["D2_A2"]
+            self.d2_A3 = data["KDImagSurface"]["D2_A3"]
+            self.d3_0 = data["KDImagSurface"]["D3_0"]
 
             # imag surface form
-            self.rd_0 = data["KDImagSurface_r_0"]
-            self.rd_A = data["KDImagSurface_r_A"]
-            self.ad_0 = data["KDImagSurface_a_0" + tag]
-            self.ad_A = data["KDImagSurface_a_A" + tag]
+            self.rd_0 = data["KDImagSurface"]["r_0"]
+            self.rd_A = data["KDImagSurface"]["r_A"]
+            self.ad_0 = data["KDImagSurface"]["a_0" + tag]
+            self.ad_A = data["KDImagSurface"]["a_A" + tag]
 
             # real spin orbit depth
-            self.Vso1_0 = data["KDRealSpinOrbit_V1_0"]
-            self.Vso1_A = data["KDRealSpinOrbit_V1_A"]
-            self.Vso2_0 = data["KDRealSpinOrbit_V2_0"]
+            self.Vso1_0 = data["KDRealSpinOrbit"]["V1_0"]
+            self.Vso1_A = data["KDRealSpinOrbit"]["V1_A"]
+            self.Vso2_0 = data["KDRealSpinOrbit"]["V2_0"]
 
             # imag spin orbit form
-            self.Wso1_0 = data["KDImagSpinOrbit_W1_0"]
-            self.Wso2_0 = data["KDImagSpinOrbit_W2_0"]
+            self.Wso1_0 = data["KDImagSpinOrbit"]["W1_0"]
+            self.Wso2_0 = data["KDImagSpinOrbit"]["W2_0"]
 
             # spin orbit form
-            self.rso_0 = data["KDRealSpinOrbit_r_0"]
-            self.rso_A = data["KDRealSpinOrbit_r_A"]
-            self.aso_0 = data["KDRealSpinOrbit_a_0"]
+            self.rso_0 = data["KDRealSpinOrbit"]["r_0"]
+            self.rso_A = data["KDRealSpinOrbit"]["r_A"]
+            self.aso_0 = data["KDRealSpinOrbit"]["a_0"]
 
             # fermi energy
             if self.projectile == Projectile.neutron:
@@ -341,9 +341,9 @@ class KDGlobal:
 
             # Coulomb
             if self.projectile == Projectile.proton:
-                self.rc_0 = data["KDCoulomb_r_C_0"]
-                self.rc_A = data["KDCoulomb_r_C_A"]
-                self.rc_A2 = data["KDCoulomb_r_C_A2"]
+                self.rc_0 = data["KDCoulomb"]["r_C_0"]
+                self.rc_A = data["KDCoulomb"]["r_C_A"]
+                self.rc_A2 = data["KDCoulomb"]["r_C_A2"]
 
     def get_params(self, A, Z, E_lab=None, E_com=None):
         """

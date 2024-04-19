@@ -212,12 +212,12 @@ def get_AME_binding_energy(A, Z):
         "../../data/mass_1.mas20.txt"
     )
     assert ame_table_fpath.is_file()
-    df = pd.read_csv(ame_table_fpath, delim_whitespace=True)
+    df = pd.read_csv(ame_table_fpath, sep='\s+')
     mask = (df["A"] == A) & (df["Z"] == Z)
     if mask.any():
         # use AME if data exists
         # format is Eb/A [keV/nucleon]
-        return float(df[mask]["BINDING_ENERGY/A"]) * A / 1e3
+        return float(df[mask]["BINDING_ENERGY/A"].iloc[0]) * A / 1e3
     return None
 
 

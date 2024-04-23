@@ -289,9 +289,11 @@ def kinematics(
 
     if E_lab is None:
         assert E_com is not None
+        E_com = np.fabs(E_com)
         E_lab = (m_t + m_p) / m_t * E_com
     else:
         assert E_com is None
+        E_lab - np.fabs(E_lab)
         E_com = m_t / (m_t + m_p) * E_lab
 
     Ep = E_com + m_p

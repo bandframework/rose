@@ -19,6 +19,7 @@ from .constants import MASS_N, MASS_P, HBARC, AMU
 
 MAX_ARG = np.log(1 / 1e-16)
 
+
 class Projectile(Enum):
     neutron = 0
     proton = 1
@@ -364,10 +365,13 @@ def thomas_safe(r, R, a):
     x = (r - R) / a
     y = 1.0 / r
     if isinstance(x, float):
-        return y *  -1 / a * np.exp(x) / (1 + np.exp(x)) ** 2 if x < MAX_ARG else 0
+        return y * -1 / a * np.exp(x) / (1 + np.exp(x)) ** 2 if x < MAX_ARG else 0
     else:
         ii = np.where(x <= MAX_ARG)[0]
         jj = np.where(x > MAX_ARG)[0]
         return np.hstack(
-            (y[ii] *-1 / a * np.exp(x[ii]) / (1 + np.exp(x[ii])) ** 2, np.zeros(jj.size))
+            (
+                y[ii] * -1 / a * np.exp(x[ii]) / (1 + np.exp(x[ii])) ** 2,
+                np.zeros(jj.size),
+            )
         )

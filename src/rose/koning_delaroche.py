@@ -406,7 +406,6 @@ class KDGlobal:
                 self.Ef_0 = -8.4075
                 self.Ef_A = 1.01378
 
-
     def get_params(self, A, Z, E_lab=None, E_com=None):
         """
         Calculates Koning-Delaroche global neutron-nucleus OMP parameters for given A, Z,

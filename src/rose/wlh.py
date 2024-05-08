@@ -209,7 +209,7 @@ class WLHGlobal:
                 self.rso1 = data["WLHRealSpinOrbit"]["r1" + tag]
                 self.aso0 = data["WLHRealSpinOrbit"]["a0" + tag]
                 self.aso1 = data["WLHRealSpinOrbit"]["a1" + tag]
-            elif ["WLHRealSpinOrbit_a1"] in data:
+            elif "WLHRealSpinOrbit_a1" in data:
                 self.uv0 = data["WLHReal_V0" + tag]
                 self.uv1 = data["WLHReal_V1" + tag]
                 self.uv2 = data["WLHReal_V2" + tag]

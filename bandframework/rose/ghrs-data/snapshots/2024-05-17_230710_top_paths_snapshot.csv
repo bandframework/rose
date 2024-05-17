@@ -1,0 +1,10 @@
+url_path,views_total,views_unique
+/bandframework/rose,6,5
+/bandframework/rose/tree/main/src/rose,4,1
+/bandframework/rose/blob/main/src/rose/reduced_basis_emulator.py,3,1
+/bandframework/rose/tree/bc9e9caac25506944c9b5888e88882ca54809f66,2,2
+/bandframework/rose/blob/main/src/rose/__init__.py,2,1
+/bandframework/rose/blob/main/src/rose/metrics.py,2,1
+/bandframework/rose/blob/main/src/rose/schroedinger.py,2,1
+/bandframework/rose/blob/main/src/rose/utility.py,2,1
+/bandframework/rose/blob/v1.0.0/docs/tutorials/ROSE_tutorial_2_optical_potential_surmise_UQ.ipynb,2,1

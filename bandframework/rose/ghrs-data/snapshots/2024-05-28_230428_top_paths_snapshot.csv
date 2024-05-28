@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose/tree/main/src/rose,16,2
+/bandframework/rose/blob/main/src/rose/reduced_basis_emulator.py,7,2
+/bandframework/rose,6,5
+/bandframework/rose/blob/main/src/rose/basis.py,6,1
+/bandframework/rose/blob/main/src/rose/schroedinger.py,4,2
+/bandframework/rose/blob/main/src/rose/__init__.py,2,1
+/bandframework/rose/blob/main/src/rose/metrics.py,2,1
+/bandframework/rose/blob/main/src/rose/utility.py,2,1
+/bandframework/rose/branches,2,1
+/bandframework/rose/issues,1,1

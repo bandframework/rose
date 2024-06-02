@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose/tree/main/src/rose,19,3
+/bandframework/rose,11,7
+/bandframework/rose/blob/main/src/rose/basis.py,6,1
+/bandframework/rose/tree/feature-kd-global/src/rose,6,1
+/bandframework/rose/blob/main/src/rose/schroedinger.py,4,2
+/bandframework/rose/blob/feature-kd-global/src/rose/schroedinger.py,4,1
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_1_building_an_emulator.ipynb,4,1
+/bandframework/rose/blob/main/src/rose/reduced_basis_emulator.py,4,1
+/bandframework/rose/tree/main/docs,3,1
+/bandframework/rose/blob/feature-kd-global/src/rose/lagrangelegendersolver.py,2,1

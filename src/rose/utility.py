@@ -15,7 +15,7 @@ from scipy.misc import derivative
 from scipy.special import eval_legendre
 from scipy.stats import qmc
 
-from .constants import MASS_N, MASS_P, HBARC, AMU
+from .constants import MASS_N, MASS_P, HBARC, ALPHA
 
 MAX_ARG = np.log(1 / 1e-16)
 
@@ -323,8 +323,10 @@ def kinematics(
         / HBARC
     )
     mu = k**2 * Ep / (Ep**2 - m_p * m_p) * HBARC**2
+    k_C = ALPHA * projectile[1] * target[1] * mu
+    eta = k_C / k
 
-    return mu, E_com, k
+    return mu, E_com, k, eta
 
 
 @njit

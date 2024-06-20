@@ -259,22 +259,11 @@ class WLHGlobal:
             else:
                 raise ValueError("Unrecognized parameter file format for WLH!")
 
-    def get_params(self, A, Z, E_lab=None, E_com=None):
+    def get_params(self, A, Z, mu, E_com, k):
         """
         Calculates Koning-Delaroche global neutron-nucleus OMP parameters for given A, Z,
         and COM-frame energy, returns params in form useable by EnergizedKoningDelaroche
         """
-
-        if self.projectile == Projectile.neutron:
-            projectile = (1, 0)
-        elif self.projectile == Projectile.proton:
-            projectile = (1, 1)
-
-        mu, E_com, k = kinematics((A, Z), projectile, E_lab=E_lab, E_com=E_com)
-        eta = 0
-        if self.projectile == Projectile.proton:
-            k_c = ALPHA * Z * mu
-            eta = k_c / k
 
         N = A - Z
         delta = (N - Z) / A
@@ -344,7 +333,4 @@ class WLHGlobal:
             ]
         )
         R_C = rv
-        return (
-            (mu, E_com, k, eta, R_C),
-            params,
-        )
+        return R_C, params

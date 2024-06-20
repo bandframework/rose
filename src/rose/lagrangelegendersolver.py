@@ -45,7 +45,7 @@ class LagrangeRmatrix(SchroedingerEquation):
             self.param_mask[1] = False
 
     def clone_for_new_interaction(self, interaction: Interaction):
-        return LagrangeRmatrix1ch(interaction, self.sys, self.solver.kernel.nbasis)
+        return LagrangeRmatrix(interaction, self.sys, self.solver.kernel.nbasis)
 
     def phi(
         self,

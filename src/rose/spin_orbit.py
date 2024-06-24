@@ -27,14 +27,7 @@ class SpinOrbitTerm:
         self.l_dot_s = l_dot_s
         self.v_so = spin_orbit_potential
 
-        if spin_orbit_potential is None:
-            self.l_dot_s = 0
-            self.v_so = null
-
     def spin_orbit_potential(self, r, alpha):
         return self.v_so(r, alpha, self.l_dot_s)
 
 
-@njit
-def null(r, alpha, l_dot_s):
-    return 0.0

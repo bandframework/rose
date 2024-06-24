@@ -15,8 +15,8 @@ from .spin_orbit import SpinOrbitTerm, null
 
 class EnergizedInteractionEIM(InteractionEIM):
     r"""
-    Extension of InteractionEIM that supports energy and, optionally, mu as parameters. Expected format
-    for alpha depends on optional parameters passed in during initialization.
+    Extension of InteractionEIM that supports energy, mu and k as parameters. Expected format
+    for alpha is [energy, mu, k, *rest_of_params]
     """
 
     def __init__(
@@ -36,19 +36,8 @@ class EnergizedInteractionEIM(InteractionEIM):
                 matched to the true potential
             match_points (ndarray): points in $\rho$ mesh that are matched to
                 the true potential
-            r_i (ndarray): copy of `match_points` (???)
             Ainv (ndarray): inverse of A matrix (Ax = b)
         """
-        n_theta = kwargs["n_theta"]
-        mu = kwargs.get("mu", None)
-
-        self.param_mask = np.ones((n_theta), dtype=bool)
-        if mu is None:
-            self.param_mask[:2] = False
-        else:
-            self.param_mask[:1] = False
-            self.reduced_mass = lambda alpha: self.mu
-
         super().__init__(**kwargs)
 
     def tilde(self, s: float, alpha: np.array):
@@ -64,7 +53,7 @@ class EnergizedInteractionEIM(InteractionEIM):
         """
         energy = self.E(alpha)
         k = self.momentum(alpha)
-        alpha_truncated = alpha[self.param_mask]
+        alpha_truncated = alpha[3:]
         vr = self.v_r(
             s / k, alpha_truncated
         ) + self.spin_orbit_term.spin_orbit_potential(s / k, alpha_truncated)
@@ -123,7 +112,8 @@ class EnergizedInteractionEIM(InteractionEIM):
         return np.copy(self.snapshots)
 
     def momentum(self, alpha: np.array):
-        r"""Center-of-mass, scattering momentum
+        r"""Center-of-mass, scattering momentum. Implemented as a function to support energy
+        emulation (where k could be a part of the parameter vector, `alpha`).
 
         Parameters:
             alpha (ndarray): interaction parameters
@@ -131,12 +121,11 @@ class EnergizedInteractionEIM(InteractionEIM):
         Returns:
             k (float): momentum
         """
-        return np.sqrt(2 * self.reduced_mass(alpha) * self.E(alpha)) / HBARC
+        return alpha[2]
 
     def E(self, alpha: np.array):
-        r"""Energy. Implemented as a function to support energy
-        emulation (where the energy could be a part of the parameter vector,
-        `alpha`).
+        r"""Energy. Implemented as a function to support energy emulation (where the energy
+        could be a part of the parameter vector, `alpha`).
 
         Parameters:
             alpha (ndarray): parameter vector
@@ -147,9 +136,8 @@ class EnergizedInteractionEIM(InteractionEIM):
         return alpha[0]
 
     def reduced_mass(self, alpha: np.array):
-        r"""Mu. Implemented as a function to support energy
-        emulation (where the mu could be a part of the parameter vector,
-        `alpha`).
+        r"""Mu. Implemented as a function to support energy emulation (where mu could be a
+        part of the parameter vector, `alpha`).
 
         Parameters:
             alpha (ndarray): parameter vector
@@ -182,7 +170,7 @@ class EnergizedInteractionEIM(InteractionEIM):
             v_so = null
 
         # remove the energy term for alpha, so we return just the parameters that plug into v_r
-        return (alpha[self.param_mask], k, S_C, E, eta, l, v_r, v_so, l_dot_s)
+        return (alpha[3:], k, S_C, E, eta, l, v_r, v_so, l_dot_s)
 
 
 class EnergizedInteractionEIMSpace(InteractionEIMSpace):

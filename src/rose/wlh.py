@@ -71,7 +71,6 @@ class EnergizedWLH(EnergizedInteractionEIMSpace):
     def __init__(
         self,
         training_info: np.array,
-        mu: float = None,
         l_max=20,
         n_basis: int = 8,
         explicit_training: bool = False,
@@ -109,15 +108,12 @@ class EnergizedWLH(EnergizedInteractionEIMSpace):
         Returns:
             instance (EnergizedWLH): instance of the class
         """
-        n_params = NUM_PARAMS + 1  # include energy
-        if mu is None:
-            n_params = NUM_PARAMS + 2  # include mu and energy
+        n_params = NUM_PARAMS + 3  # include mu, k and energy
 
         super().__init__(
             l_max=l_max,
             coordinate_space_potential=WLH,
             n_theta=n_params,
-            mu=mu,
             training_info=training_info,
             Z_1=0,
             Z_2=0,

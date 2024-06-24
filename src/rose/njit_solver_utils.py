@@ -42,9 +42,13 @@ def g_coeff(
         v_so (callable)
         l_dot_s (int)
     """
+    if v_so is None:
+        vso = 0
+    else:
+        vso = v_so(s / k, alpha, l_dot_s)
 
     return -1 * (
-        (v_r(s / k, alpha) + v_so(s / k, alpha, l_dot_s)) / E
+        (v_r(s / k, alpha) + vso) / E
         + 2 * eta * regular_inverse_s(s, S_C)
         + l * (l + 1) / s**2
         - 1.0

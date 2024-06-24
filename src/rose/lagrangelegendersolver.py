@@ -12,17 +12,16 @@ class LagrangeRmatrix(SchroedingerEquation):
     def __init__(
         self,
         interaction: Interaction,
-        sys: jitr.ProjectileTargetSystem,
         Nbasis: int,
     ):
         assert sys.nchannels == 1
         self.interaction = interaction
         self.sys = jitr.ProjectileTargetSystem(
-            sys.reduced_mass,
-            sys.channel_radii,
+            np.array([interaction.mu]),
+            np.array([interaction.s_0]),
             np.array([interaction.ell]),
-            sys.Ztarget,
-            sys.Zproj,
+            interaction.Z_1,
+            interaction.Z_2,
             1,
         )
 
@@ -53,23 +52,13 @@ class LagrangeRmatrix(SchroedingerEquation):
         s_mesh: np.array,
         **kwargs,
     ):
-        if not self.param_mask[1]:
-            mu = alpha[1]
-        else:
-            mu = sys.reduced_mass[0]
-        if not self.param_mask[0]:
-            energy = alpha[0]
-        else:
-            energy = self.ch.E
 
         ch = jitr.ChannelData(
             self.interaction.ell,
-            mu,
             self.s_0,
-            energy,
-            np.sqrt(2 * energy * mu) / HBARC,
-            0.0,
-            self.domain,
+            self.interaction.E(alpha),
+            self.interaction.momentum(alpha),
+            self.interaction.eta(alpha),
         )
 
         im = jitr.InteractionMatrix(1)
@@ -92,7 +81,7 @@ class LagrangeRmatrix(SchroedingerEquation):
             S,
             uext_prime_boundary,
             self.sys.incoming_weights,
-            self.ch,
+            [ch],
             self.solver.asym,
         ).uint()[0](s_mesh)
 
@@ -108,9 +97,10 @@ class LagrangeRmatrix(SchroedingerEquation):
         if not self.param_mask[1]:
             mu = alpha[1]
         else:
-            mu = sys.reduced_mass[0]
+            mu = self.sys.reduced_mass[0]
         if not self.param_mask[0]:
             energy = alpha[0]
+            self.solver.set_energy(energy)
         else:
             energy = self.ch.E
 
@@ -124,7 +114,7 @@ class LagrangeRmatrix(SchroedingerEquation):
             self.domain,
         )
         im = jitr.InteractionMatrix(1)
-        im.set_local_interaction(potential)
+        im.set_local_interaction(self.potential)
         im.local_args[0, 0] = (
             self.interaction.ell,
             self.interaction.spin_orbit_term.l_dot_s,

@@ -21,6 +21,7 @@ class Interaction:
         n_theta: int = None,
         mu: float = None,
         energy: float = None,
+        k: float = None,
         Z_1: int = 0,
         Z_2: int = 0,
         R_C: float = 0.0,
@@ -68,11 +69,14 @@ class Interaction:
 
         if spin_orbit_term is None:
             self.include_spin_orbit = False
-            self.spin_orbit_term = SpinOrbitTerm()
         else:
             self.include_spin_orbit = True
 
+        self.k = k
         self.mu = mu
+        self.energy = energy
+        self.sommerfeld = 0.0
+
         if mu is not None:
             self.k_c = ALPHA * Z_1 * Z_2 * self.mu / HBARC
         else:
@@ -82,16 +86,9 @@ class Interaction:
         if energy is not None:
             # If the energy is specified (not None as it is when subclass
             # EnergizedInteraction instantiates), set up associated attributes.
-            self.energy = energy
-            if mu is not None:
+            if mu is not None and k is None:
                 self.k = np.sqrt(2 * self.mu * self.energy) / HBARC
-                self.sommerfeld = self.k_c / self.k
-        else:
-            # If the energy is not specified, these will be set up when the
-            # methods are called.
-            self.energy = None
-            self.k = None
-            self.sommerfeld = 0.0
+            self.sommerfeld = self.k_c / self.k
 
     def tilde(self, s: float, alpha: np.array):
         r"""Scaled potential, $\tilde{U}(s, \alpha, E)$.
@@ -217,7 +214,7 @@ class Interaction:
             v_so = self.spin_orbit_term.v_so
         else:
             l_dot_s = 0
-            v_so = null
+            v_so = None
 
         return (alpha, k, S_C, E, eta, l, v_r, v_so, l_dot_s)
 

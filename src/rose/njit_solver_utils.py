@@ -8,7 +8,7 @@ from numba import njit
 
 from .constants import ALPHA, HBARC
 from .interaction import Interaction
-from .utility import regular_inverse_s
+from .utility import regular_inverse_s, regular_inverse_r
 
 
 @njit
@@ -67,9 +67,9 @@ def potential_scaled(
         v_so (callable)
         l_dot_s (int)
     """
-    return (v_r(s / k, alpha) + v_so(s / k, alpha)) / E + 2 * eta * regular_inverse_s(
-        s, S_C
-    )
+    return (
+        v_r(s / k, alpha) + v_so(s / k, alpha, l_dot_s)
+    ) / E + 2 * eta * regular_inverse_s(s, S_C)
 
 
 @njit

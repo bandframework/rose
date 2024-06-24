@@ -10,7 +10,7 @@ from scipy.stats import qmc
 from .interaction import couplings
 from .interaction_eim import InteractionEIM, InteractionEIMSpace
 from .constants import HBARC, DEFAULT_RHO_MESH
-from .spin_orbit import SpinOrbitTerm, null
+from .spin_orbit import SpinOrbitTerm
 
 
 class EnergizedInteractionEIM(InteractionEIM):

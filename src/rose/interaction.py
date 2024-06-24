@@ -7,7 +7,7 @@ import numpy as np
 from numba import njit
 
 from .constants import HBARC, ALPHA
-from .spin_orbit import SpinOrbitTerm, null
+from .spin_orbit import SpinOrbitTerm
 
 
 class Interaction:

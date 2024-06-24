@@ -497,4 +497,4 @@ class KDGlobal:
             ]
         )
 
-        return R_C, params,
+        return R_C, params

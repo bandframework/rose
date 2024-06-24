@@ -6,19 +6,27 @@ from .njit_solver_utils import potential
 import numpy as np
 import jitr
 
+
 class LagrangeRmatrix(SchroedingerEquation):
     r"""Implements a ROSE HF solver for an interaction with defined energy and l using jitr."""
 
     def __init__(
         self,
         interaction: Interaction,
+        s_0,
         Nbasis: int,
     ):
-        assert sys.nchannels == 1
+        self.s_0 = s_0
+        self.domain = [0, s_0]
         self.interaction = interaction
+
+        mu = self.interaction.mu
+        if mu is None:
+            mu = 0.0
+
         self.sys = jitr.ProjectileTargetSystem(
-            np.array([interaction.mu]),
-            np.array([interaction.s_0]),
+            np.array([mu]),
+            np.array([s_0]),
             np.array([interaction.ell]),
             interaction.Z_1,
             interaction.Z_2,
@@ -33,21 +41,13 @@ class LagrangeRmatrix(SchroedingerEquation):
             asym=jitr.CoulombAsymptotics,
         )
 
-        self.domain = [0, self.sys.channel_radii[0]]
-        self.s_0 = self.domain[1]
-        self.param_mask = np.ones(self.interaction.n_theta, dtype=bool)
-        if self.interaction.energy is None:
-            self.param_mask[0] = False
-        if self.interaction.mu is None:
-            self.param_mask[1] = False
-
-
     def clone_for_new_interaction(self, interaction: Interaction):
-        return LagrangeRmatrix(interaction, self.sys, self.solver.kernel.nbasis)
+        return LagrangeRmatrix(interaction, self.s_0, self.solver.kernel.nbasis)
 
     def get_channel_info(self, alpha):
         ch = jitr.ChannelData(
             self.interaction.ell,
+            self.interaction.reduced_mass(alpha),
             self.s_0,
             self.interaction.E(alpha),
             self.interaction.momentum(alpha),
@@ -56,7 +56,14 @@ class LagrangeRmatrix(SchroedingerEquation):
 
         im = jitr.InteractionMatrix(1)
         im.set_local_interaction(potential)
-        im.local_args[0, 0] = self.interaction.bundle_gcoeff_args(alpha)
+        im.local_args[0, 0] = (
+            alpha,
+            self.interaction.Z_1 * self.interaction.Z_2,
+            self.interaction.coulomb_cutoff(alpha),
+            self.interaction.v_r,
+            self.interaction.spin_orbit_term.v_so,
+            self.interaction.spin_orbit_term.l_dot_s,
+        )
 
         return [ch], im
 
@@ -90,7 +97,7 @@ class LagrangeRmatrix(SchroedingerEquation):
         **kwargs,
     ):
         ch, im = self.get_channel_info(alpha)
-        R, S, uext_prime_boundary = self.solver.solve(im, [ch])
+        R, S, uext_prime_boundary = self.solver.solve(im, ch)
         return S[0, 0]
 
     def rmatrix(
@@ -99,5 +106,5 @@ class LagrangeRmatrix(SchroedingerEquation):
         **kwargs,
     ):
         ch, im = self.get_channel_info(alpha)
-        R, S, uext_prime_boundary = self.solver.solve(im, [ch])
+        R, S, uext_prime_boundary = self.solver.solve(im, ch)
         return R[0, 0]

@@ -49,9 +49,8 @@ def xs_calc_neutral(
         b += (Sminus[l] - Splus[l]) * P_1_l_theta[l, :] / (2j * k)
 
         # cross sections
-        xsrxn += (
-            (l + 1) * (1 - np.absolute(Splus[l]))
-            + l * (1 - np.absolute(Sminus[l]))
+        xsrxn += (l + 1) * (1 - np.absolute(Splus[l])) + l * (
+            1 - np.absolute(Sminus[l])
         )
         xst += (l + 1) * (1 - np.real(Splus[l])) + l * (1 - np.real(Sminus[l]))
 
@@ -88,13 +87,13 @@ def xs_calc_coulomb(
             / (2j * k)
         )
         b += (
-            (Sminus[l] - Splus[l]) * P_1_l_theta[l, :]
+            (Sminus[l] - Splus[l])
+            * P_1_l_theta[l, :]
             * np.exp(2j * sigma_l[l])
             / (2j * k)
         )
-        xsrxn += (
-            (l + 1) * (1 - np.absolute(Splus[l]))
-            + l * (1 - np.absolute(Sminus[l]))
+        xsrxn += (l + 1) * (1 - np.absolute(Splus[l])) + l * (
+            1 - np.absolute(Sminus[l])
         )
 
     dsdo = np.real(a * np.conj(a) + b * np.conj(b)) * 10
@@ -349,7 +348,10 @@ class ScatteringAmplitudeEmulator:
             self.f_c = (
                 -self.eta
                 / (2 * k * sin2)
-                * np.exp(2j * self.sigma_l[0] - 2j * self.eta * np.log(np.sin(self.angles / 2)))
+                * np.exp(
+                    2j * self.sigma_l[0]
+                    - 2j * self.eta * np.log(np.sin(self.angles / 2))
+                )
             )
             self.rutherford = (
                 10 * self.eta**2 / (4 * k**2 * np.sin(self.angles / 2) ** 4)

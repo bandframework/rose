@@ -105,9 +105,7 @@ class Interaction:
             u_tilde (float | complex): value of scaled interaction
 
         """
-        vr = self.v_r(s / self.k, alpha) + self.spin_orbit_term.v_so(
-            s / self.k, alpha
-        )
+        vr = self.v_r(s / self.k, alpha) + self.spin_orbit_term.v_so(s / self.k, alpha)
         return 1.0 / self.energy * vr
 
     def basis_functions(self, rho_mesh: np.array):
@@ -181,6 +179,18 @@ class Interaction:
             k (float): center-of-mass, scattering momentum
         """
         return self.k
+
+    def reduced_mass(self, alpha: np.array):
+        r"""Mu. Implemented as a function to support energy emulation (where mu could be a
+        part of the parameter vector, `alpha`).
+
+        Parameters:
+            alpha (ndarray): parameter vector
+
+        Returns:
+            Mu (float): in [MeV/c^2]
+        """
+        return self.mu
 
     def coulomb_cutoff(self, alpha: np.array):
         r"""Coulomb cutoff. Implemented as a function to support energy emulation

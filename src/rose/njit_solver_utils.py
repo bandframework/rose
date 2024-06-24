@@ -6,11 +6,42 @@ from collections.abc import Callable
 import numpy as np
 from numba import njit
 
+from .constants import ALPHA, HBARC
 from .interaction import Interaction
 from .utility import regular_inverse_s
 
+
 @njit
 def potential(
+    r: np.double,
+    alpha: np.array,
+    ZZ: np.double,
+    R_C: np.double,
+    v_r,
+    v_so,
+    l_dot_s: np.int32,
+):
+    r"""Returns the local radial potential
+
+    Parameters:
+        r (double) : scaled radial coordinate s = k * r
+        alpha (ndarray)
+        ZZ (double),
+        R_C (double)
+        v_r (callable)
+        v_so (callable)
+        l_dot_s (int)
+    """
+    fine_structure = ALPHA * HBARC
+    return (
+        v_r(r, alpha)
+        + v_so(r, alpha, l_dot_s)
+        + ZZ * fine_structure * regular_inverse_r(r, R_C)
+    )
+
+
+@njit
+def potential_scaled(
     s: np.double,
     alpha: np.array,
     k: np.double,
@@ -36,12 +67,9 @@ def potential(
         v_so (callable)
         l_dot_s (int)
     """
-    if v_so is None:
-        vso = 0
-    else:
-        vso = v_so(s / k, alpha, l_dot_s)
-
-    return (v_r(s / k, alpha) + vso) / E + 2 * eta * regular_inverse_s(s, S_C)
+    return (v_r(s / k, alpha) + v_so(s / k, alpha)) / E + 2 * eta * regular_inverse_s(
+        s, S_C
+    )
 
 
 @njit
@@ -76,13 +104,9 @@ def g_coeff(
         v_so (callable)
         l_dot_s (int)
     """
-    if v_so is None:
-        vso = 0
-    else:
-        vso = v_so(s / k, alpha, l_dot_s)
 
     return -1 * (
-        potential(s, alpha, k, S_C, E, eta, l, v_r, v_so, l_dot_s)
+        potential_scaled(s, alpha, k, S_C, E, eta, l, v_r, v_so, l_dot_s)
         + l * (l + 1) / s**2
         - 1.0
     )

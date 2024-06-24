@@ -63,7 +63,6 @@ class Interaction:
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
         self.ell = ell
-        self.R_C = R_C
         self.is_complex = is_complex
         self.spin_orbit_term = spin_orbit_term
 
@@ -76,6 +75,7 @@ class Interaction:
         self.k = k
         self.mu = mu
         self.energy = energy
+        self.R_C = R_C
         self.sommerfeld = 0.0
 
         if mu is not None:

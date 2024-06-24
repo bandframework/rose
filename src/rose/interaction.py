@@ -68,6 +68,7 @@ class Interaction:
         self.spin_orbit_term = spin_orbit_term
 
         if spin_orbit_term is None:
+            self.spin_orbit_term = SpinOrbitTerm()
             self.include_spin_orbit = False
         else:
             self.include_spin_orbit = True
@@ -104,7 +105,7 @@ class Interaction:
             u_tilde (float | complex): value of scaled interaction
 
         """
-        vr = self.v_r(s / self.k, alpha) + self.spin_orbit_term.spin_orbit_potential(
+        vr = self.v_r(s / self.k, alpha) + self.spin_orbit_term.v_so(
             s / self.k, alpha
         )
         return 1.0 / self.energy * vr
@@ -209,12 +210,8 @@ class Interaction:
         eta = self.eta(alpha)
         l = self.ell
         v_r = self.v_r
-        if self.include_spin_orbit:
-            l_dot_s = self.spin_orbit_term.l_dot_s
-            v_so = self.spin_orbit_term.v_so
-        else:
-            l_dot_s = 0
-            v_so = None
+        l_dot_s = self.spin_orbit_term.l_dot_s
+        v_so = self.spin_orbit_term.v_so
 
         return (alpha, k, S_C, E, eta, l, v_r, v_so, l_dot_s)
 

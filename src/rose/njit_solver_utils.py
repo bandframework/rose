@@ -9,6 +9,40 @@ from numba import njit
 from .interaction import Interaction
 from .utility import regular_inverse_s
 
+@njit
+def potential(
+    s: np.double,
+    alpha: np.array,
+    k: np.double,
+    S_C: np.double,
+    E: np.double,
+    eta: np.double,
+    l: np.int32,
+    v_r,
+    v_so,
+    l_dot_s: np.int32,
+):
+    r"""Returns the  scaled, reduced, radial local potential
+
+    Parameters:
+        s (double) : scaled radial coordinate s = k * r
+        alpha (ndarray)
+        k (double)
+        S_C (double)
+        E (double)
+        eta (double)
+        l (int)
+        v_r (callable)
+        v_so (callable)
+        l_dot_s (int)
+    """
+    if v_so is None:
+        vso = 0
+    else:
+        vso = v_so(s / k, alpha, l_dot_s)
+
+    return (v_r(s / k, alpha) + vso) / E + 2 * eta * regular_inverse_s(s, S_C)
+
 
 @njit
 def g_coeff(
@@ -48,8 +82,7 @@ def g_coeff(
         vso = v_so(s / k, alpha, l_dot_s)
 
     return -1 * (
-        (v_r(s / k, alpha) + vso) / E
-        + 2 * eta * regular_inverse_s(s, S_C)
+        potential(s, alpha, k, S_C, E, eta, l, v_r, v_so, l_dot_s)
         + l * (l + 1) / s**2
         - 1.0
     )

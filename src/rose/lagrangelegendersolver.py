@@ -1,10 +1,10 @@
 from .schroedinger import SchroedingerEquation
 from .interaction import Interaction
 from .constants import HBARC
+from .njit_solver_utils import potential
 
 import numpy as np
 import jitr
-
 
 class LagrangeRmatrix(SchroedingerEquation):
     r"""Implements a ROSE HF solver for an interaction with defined energy and l using jitr."""
@@ -25,13 +25,11 @@ class LagrangeRmatrix(SchroedingerEquation):
             1,
         )
 
-        self.ch = self.sys.build_channels(interaction.energy)
         self.solver = jitr.LagrangeRMatrixSolver(
             Nbasis,
             1,
             self.sys,
             ecom=interaction.energy,
-            channel_matrix=self.ch,
             asym=jitr.CoulombAsymptotics,
         )
 
@@ -43,16 +41,11 @@ class LagrangeRmatrix(SchroedingerEquation):
         if self.interaction.mu is None:
             self.param_mask[1] = False
 
+
     def clone_for_new_interaction(self, interaction: Interaction):
         return LagrangeRmatrix(interaction, self.sys, self.solver.kernel.nbasis)
 
-    def phi(
-        self,
-        alpha: np.array,
-        s_mesh: np.array,
-        **kwargs,
-    ):
-
+    def get_channel_info(self, alpha):
         ch = jitr.ChannelData(
             self.interaction.ell,
             self.s_0,
@@ -63,16 +56,22 @@ class LagrangeRmatrix(SchroedingerEquation):
 
         im = jitr.InteractionMatrix(1)
         im.set_local_interaction(potential)
-        im.local_args[0, 0] = (
-            self.interaction.ell,
-            self.interaction.spin_orbit_term.l_dot_s,
-            alpha,
-            self.interaction.v_r,
-            self.interaction.spin_orbit_term.v_so,
-        )
+        im.local_args[0, 0] = self.interaction.bundle_gcoeff_args(alpha)
+
+        return [ch], im
+
+    def phi(
+        self,
+        alpha: np.array,
+        s_mesh: np.array,
+        **kwargs,
+    ):
+        assert s_mesh[-1] <= self.s_0
+
+        ch, im = self.get_channel_info(alpha)
         R, S, x, uext_prime_boundary = self.solver.solve(
             im,
-            [ch],
+            ch,
             wavefunction=True,
         )
         return jitr.Wavefunctions(
@@ -88,78 +87,17 @@ class LagrangeRmatrix(SchroedingerEquation):
     def smatrix(
         self,
         alpha: np.array,
-        s_0: float = None,
         **kwargs,
     ):
-        r"""
-        Ignores s_0
-        """
-        if not self.param_mask[1]:
-            mu = alpha[1]
-        else:
-            mu = self.sys.reduced_mass[0]
-        if not self.param_mask[0]:
-            energy = alpha[0]
-            self.solver.set_energy(energy)
-        else:
-            energy = self.ch.E
-
-        ch = jitr.ChannelData(
-            self.interaction.ell,
-            mu,
-            self.s_0,
-            energy,
-            np.sqrt(2 * energy * mu) / HBARC,
-            0.0,
-            self.domain,
-        )
-        im = jitr.InteractionMatrix(1)
-        im.set_local_interaction(self.potential)
-        im.local_args[0, 0] = (
-            self.interaction.ell,
-            self.interaction.spin_orbit_term.l_dot_s,
-            alpha,
-            self.interaction.v_r,
-            self.interaction.spin_orbit_term.v_so,
-        )
+        ch, im = self.get_channel_info(alpha)
         R, S, uext_prime_boundary = self.solver.solve(im, [ch])
         return S[0, 0]
 
     def rmatrix(
         self,
         alpha: np.array,
-        s_0: float = None,
         **kwargs,
     ):
-        r"""
-        Ignores s_0
-        """
-        if not self.param_mask[1]:
-            mu = alpha[1]
-        else:
-            mu = sys.reduced_mass[0]
-        if not self.param_mask[0]:
-            energy = alpha[0]
-        else:
-            energy = self.ch.E
-
-        ch = jitr.ChannelData(
-            self.interaction.ell,
-            mu,
-            self.s_0,
-            energy,
-            np.sqrt(2 * energy * mu) / HBARC,
-            0.0,
-            self.domain,
-        )
-        im = jitr.InteractionMatrix(1)
-        im.set_local_interaction(potential)
-        im.local_args[0, 0] = (
-            self.interaction.ell,
-            self.interaction.spin_orbit_term.l_dot_s,
-            alpha,
-            self.interaction.v_r,
-            self.interaction.spin_orbit_term.v_so,
-        )
+        ch, im = self.get_channel_info(alpha)
         R, S, uext_prime_boundary = self.solver.solve(im, [ch])
         return R[0, 0]

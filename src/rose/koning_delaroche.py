@@ -187,7 +187,6 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIMSpace):
     def __init__(
         self,
         training_info: np.array,
-        mu: float = None,
         l_max=20,
         n_basis: int = 8,
         explicit_training: bool = False,
@@ -226,15 +225,12 @@ class EnergizedKoningDelaroche(EnergizedInteractionEIMSpace):
         Returns:
             instance (EnergizedKoningDelaroche): instance of the class
         """
-        n_params = NUM_PARAMS + 1  # include energy
-        if mu is None:
-            n_params = NUM_PARAMS + 2  # include mu and energy
+        n_params = NUM_PARAMS + 3  # include mu, k, and energy
 
         super().__init__(
             l_max=l_max,
             coordinate_space_potential=KD_simple,
             n_theta=n_params,
-            mu=mu,
             training_info=training_info,
             Z_1=0,
             Z_2=0,
@@ -406,23 +402,11 @@ class KDGlobal:
                 self.Ef_0 = -8.4075
                 self.Ef_A = 1.01378
 
-
-    def get_params(self, A, Z, E_lab=None, E_com=None):
+    def get_params(self, A, Z, mu, E_com, k):
         """
         Calculates Koning-Delaroche global neutron-nucleus OMP parameters for given A, Z,
         and COM-frame energy, returns params in form useable by EnergizedKoningDelaroche
         """
-
-        if self.projectile == Projectile.neutron:
-            projectile = (1, 0)
-        elif self.projectile == Projectile.proton:
-            projectile = (1, 1)
-
-        mu, E_com, k = kinematics((A, Z), projectile, E_lab=E_lab, E_com=E_com)
-        eta = 0
-        if self.projectile == Projectile.proton:
-            k_c = ALPHA * Z * mu
-            eta = k_c / k
 
         N = A - Z
         delta = (N - Z) / A
@@ -513,7 +497,4 @@ class KDGlobal:
             ]
         )
 
-        return (
-            (mu, E_com, k, eta, R_C),
-            params,
-        )
+        return R_C, params

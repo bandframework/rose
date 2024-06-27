@@ -36,20 +36,21 @@ def xs_calc_neutral(
 ):
     xst = 0.0
     xsrxn = 0.0
-    a = np.zeros_like(angles, dtype=np.cdouble)
-    b = np.zeros_like(angles, dtype=np.cdouble)
-    lmax = Splus.shape[0]
+    a = np.zeros_like(angles, dtype=np.complex128)
+    b = np.zeros_like(angles, dtype=np.complex128)
 
-    for l in range(lmax):
+    for l in range(Splus.shape[0]):
         # scattering amplitudes
-        a += (((l + 1) * (Splus[l] - 1) + l * (Sminus[l] - 1)) * P_l_theta[l, :]) / (
-            2j * k
+        a += (
+            (2 * l + 1 - (l + 1) * Splus[l] - l * Sminus[l])
+            * P_l_theta[l, :]
+            / (2j * k)
         )
-        b += ((Splus[l] - Sminus[l]) * P_1_l_theta[l, :]) / (2j * k)
+        b += (Sminus[l] - Splus[l]) * P_1_l_theta[l, :] / (2j * k)
 
         # cross sections
-        xsrxn += (l + 1) * (1 - np.real(Splus[l] * np.conj(Splus[l]))) + l * (
-            1 - np.real(Sminus[l] * np.conj(Sminus[l]))
+        xsrxn += (l + 1) * (1 - np.absolute(Splus[l])) + l * (
+            1 - np.absolute(Sminus[l])
         )
         xst += (l + 1) * (1 - np.real(Splus[l])) + l * (1 - np.real(Sminus[l]))
 
@@ -73,27 +74,35 @@ def xs_calc_coulomb(
     sigma_l: np.array,
     rutherford: np.array,
 ):
-    a = np.zeros_like(angles, dtype=np.cdouble) + f_c
-    b = np.zeros_like(angles, dtype=np.cdouble)
-    lmax = Splus.shape[0]
+    a = np.zeros_like(angles, dtype=np.complex128) + f_c
+    b = np.zeros_like(angles, dtype=np.complex128)
+    xsrxn = 0.0
 
-    for l in range(lmax):
+    for l in range(Splus.shape[0]):
         # scattering amplitudes
         a += (
-            np.exp(2j * sigma_l[l])
-            * ((l + 1) * (Splus[l] - 1) + l * (Sminus[l] - 1))
+            (2 * l + 1 - (l + 1) * Splus[l] - l * Sminus[l])
             * P_l_theta[l, :]
-        ) / (2j * k)
-        b += (np.exp(2j * sigma_l[l]) * (Splus[l] - Sminus[l]) * P_1_l_theta[l, :]) / (
-            2j * k
+            * np.exp(2j * sigma_l[l])
+            / (2j * k)
+        )
+        b += (
+            (Sminus[l] - Splus[l])
+            * P_1_l_theta[l, :]
+            * np.exp(2j * sigma_l[l])
+            / (2j * k)
+        )
+        xsrxn += (l + 1) * (1 - np.absolute(Splus[l])) + l * (
+            1 - np.absolute(Sminus[l])
         )
 
     dsdo = np.real(a * np.conj(a) + b * np.conj(b)) * 10
     Ay = np.real(a * np.conj(b) + b * np.conj(a)) * 10 / dsdo
+    xsrxn *= 10 * np.pi / k**2
 
     dsdo = dsdo / rutherford
 
-    return dsdo, Ay, None, None
+    return dsdo, Ay, None, xsrxn
 
 
 class ScatteringAmplitudeEmulator:
@@ -120,7 +129,7 @@ class ScatteringAmplitudeEmulator:
         l_max: int = None,
         angles: np.array = DEFAULT_ANGLE_MESH,
         verbose: bool = True,
-        Sl_cutoff: float = 1.0e-4,
+        Smatrix_abs_tol: float = 1.0e-6,
         s_mesh=None,
     ):
         r"""Sets up a ScatteringAmplitudeEmulator without any emulation capabilities, for use purely
@@ -138,7 +147,7 @@ class ScatteringAmplitudeEmulator:
                 emulate the cross section.
             s_0 (float): $s$ point where the phase shift is extracted
             verbose (bool): Do you want the class to print out warnings?
-            Sl_cutoff : absolute tolerance for deviation of real part of S-matrix amplitudes
+            Smatrix_abs_tol : absolute tolerance for deviation of real part of S-matrix amplitudes
                 from 1, used as criteria to stop calculation ig higher partial waves are negligble
             s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
 
@@ -176,7 +185,7 @@ class ScatteringAmplitudeEmulator:
             angles,
             s_0=base_solver.s_0,
             verbose=verbose,
-            Sl_cutoff=Sl_cutoff,
+            Smatrix_abs_tol=Smatrix_abs_tol,
             initialize_emulator=False,
         )
 
@@ -190,7 +199,7 @@ class ScatteringAmplitudeEmulator:
         angles: np.array = DEFAULT_ANGLE_MESH,
         n_basis: int = 4,
         use_svd: bool = True,
-        Sl_cutoff: float = 1.0e-4,
+        Smatrix_abs_tol: float = 1.0e-6,
         s_mesh: np.array = None,
         **basis_kwargs,
     ):
@@ -202,8 +211,6 @@ class ScatteringAmplitudeEmulator:
             base_solver : the solver used for training the emulator, and for calculations of exact
                 observables. Must be an instance of SchroedingerEquation or a derived class of it.
                 The solvers for each `interaction` in `interaction_space` will be constructed using
-                `base_solver.clone_for_new_interaction`. Defaults to the base class using Runge-Kutta;
-                `SchroedingerEquation`
             l_max (int): maximum angular momentum to include in the sum approximating the cross section
             angles (ndarray): Differential cross sections are functions of the
                 angles. These are the specific values at which the user wants to
@@ -212,7 +219,7 @@ class ScatteringAmplitudeEmulator:
             use_svd (bool): Use principal components of training wave functions?
             s_mesh (ndarray): $s$ (or $\rho$) grid on which wave functions are evaluated
             s_0 (float): $s$ point where the phase shift is extracted
-            Sl_cutoff : absolute tolerance for deviation of real part of S-matrix amplitudes
+            Smatrix_abs_tol : absolute tolerance for deviation of real part of S-matrix amplitudes
                 from 1, used as criteria to stop calculation ig higher partial waves are negligble
 
         Returns:
@@ -254,7 +261,7 @@ class ScatteringAmplitudeEmulator:
             l_max,
             angles=angles,
             s_0=base_solver.s_0,
-            Sl_cutoff=Sl_cutoff,
+            Smatrix_abs_tol=Smatrix_abs_tol,
         )
 
     def __init__(
@@ -265,7 +272,7 @@ class ScatteringAmplitudeEmulator:
         angles: np.array = DEFAULT_ANGLE_MESH,
         s_0: float = 6 * np.pi,
         verbose: bool = True,
-        Sl_cutoff=1.0e-4,
+        Smatrix_abs_tol=1.0e-6,
         initialize_emulator=True,
     ):
         r"""Trains a reduced-basis emulator that computes differential and total cross sections
@@ -280,7 +287,7 @@ class ScatteringAmplitudeEmulator:
                 emulate the cross section.
             s_0 (float): $s$ point where the phase shift is extracted
             verbose (bool): Do you want the class to print out warnings?
-            Sl_cutoff : absolute tolerance for deviation of real part of S-matrix amplitudes
+            Smatrix_abs_tol : absolute tolerance for deviation of real part of S-matrix amplitudes
                 from 1, used as criteria to stop calculation ig higher partial waves are negligble
             initialize_emulator : build the low-order emulator (True required for emulation)
 
@@ -303,7 +310,7 @@ class ScatteringAmplitudeEmulator:
         if l_max is None:
             l_max = interaction_space.l_max
         self.l_max = l_max
-        self.Sl_cutoff = Sl_cutoff
+        self.Smatrix_abs_tol = Smatrix_abs_tol
 
         # construct bases
         self.rbes = []
@@ -341,7 +348,10 @@ class ScatteringAmplitudeEmulator:
             self.f_c = (
                 -self.eta
                 / (2 * k * sin2)
-                * np.exp(-1j * self.eta * np.log(sin2) + 2j * self.sigma_l[0])
+                * np.exp(
+                    2j * self.sigma_l[0]
+                    - 2j * self.eta * np.log(np.sin(self.angles / 2))
+                )
             )
             self.rutherford = (
                 10 * self.eta**2 / (4 * k**2 * np.sin(self.angles / 2) ** 4)
@@ -560,23 +570,24 @@ class ScatteringAmplitudeEmulator:
     def exact_smatrix_elements(self, alpha):
         r"""Returns:
         Sl_plus (ndarray) : l-s aligned S-matrix elements for partial waves up to where
-            Splus.real - 1 < Sl_cutoff
+            Splus.real - 1 < Smatrix_abs_tol
         Sl_minus (ndarray) : same as Splus, but l-s anti-aligned
         """
-        Splus = np.array(
-            [
-                rbe_list[0].basis.solver.smatrix(alpha)
-                for rbe_list in self.rbes[: self.l_max]
-            ]
-        )
-        Sminus = np.array(
-            [Splus[0]]
-            + [
-                rbe_list[1].basis.solver.smatrix(alpha)
-                for rbe_list in self.rbes[1 : self.l_max]
-            ]
-        )
-        return Splus, Sminus
+
+        Splus = np.zeros(self.l_max, dtype=np.complex128)
+        Sminus = np.zeros(self.l_max, dtype=np.complex128)
+        Splus[0] = self.rbes[0][0].basis.solver.smatrix(alpha)
+        Sminus[0] = Splus[0]
+        for l in range(1, self.l_max):
+            Splus[l] = self.rbes[l][0].basis.solver.smatrix(alpha)
+            Sminus[l] = self.rbes[l][1].basis.solver.smatrix(alpha)
+            if (
+                np.absolute(Splus[l]) < self.Smatrix_abs_tol
+                and np.absolute(Sminus[l]) < self.Smatrix_abs_tol
+            ):
+                break
+
+        return Splus[:l], Sminus[:l]
 
     def exact_rmatrix_elements(self, alpha):
         r"""Returns:
@@ -600,7 +611,7 @@ class ScatteringAmplitudeEmulator:
 
     def emulate_rmatrix_elements(self, alpha):
         r"""Returns:
-        Rl_plus (ndarray) : l-s aligned R-matrix elements for partial waves up to where
+        Rl_plus (ndarray) : l-s aligned R-matrix elements for partial waves
         Rl_minus (ndarray) : same as Splus, but l-s anti-aligned
         """
         Rplus = np.array(
@@ -621,23 +632,23 @@ class ScatteringAmplitudeEmulator:
     def emulate_smatrix_elements(self, alpha):
         r"""Returns:
         Sl_plus (ndarray) : l-s aligned S-matrix elements for partial waves up to where
-            Splus.real - 1 < Sl_cutoff
+            Splus < Smatrix_abs_tol
         Sl_minus (ndarray) : same as Splus, but l-s anti-aligned
         """
-        Splus = np.array(
-            [
-                rbe_list[0].S_matrix_element(alpha)
-                for rbe_list in self.rbes[: self.l_max]
-            ]
-        )
-        Sminus = np.array(
-            [Splus[0]]
-            + [
-                rbe_list[1].S_matrix_element(alpha)
-                for rbe_list in self.rbes[1 : self.l_max]
-            ]
-        )
-        return Splus, Sminus
+        Splus = np.zeros(self.l_max, dtype=np.complex128)
+        Sminus = np.zeros(self.l_max, dtype=np.complex128)
+        Splus[0] = self.rbes[0][0].S_matrix_element(alpha)
+        Sminus[0] = Splus[0]
+        for l in range(1, self.l_max):
+            Splus[l] = self.rbes[l][0].S_matrix_element(alpha)
+            Sminus[l] = self.rbes[l][1].S_matrix_element(alpha)
+            if (
+                np.absolute(Splus[l]) < self.Smatrix_abs_tol
+                and np.absolute(Sminus[l]) < self.Smatrix_abs_tol
+            ):
+                break
+
+        return Splus[:l], Sminus[:l]
 
     def total_cross_section(self, Splus: np.array, Sminus: np.array):
         r"""Gives the "total" (angle-integrated) cross section in mb. If the interaction

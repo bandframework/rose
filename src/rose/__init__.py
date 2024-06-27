@@ -18,6 +18,10 @@ from . import koning_delaroche
 from . import training
 from .lagrangelegendersolver import LagrangeRmatrix
 from .spin_orbit import SpinOrbitTerm
-from .utility import kinematics, Projectile
+from .utility import kinematics, Projectile, init_AME_db
+
+# read AME mass table into memory for fast lookup later
+init_AME_db()
+
 
 from .__version__ import __version__

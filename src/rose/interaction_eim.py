@@ -69,7 +69,6 @@ class InteractionEIM(Interaction):
                 matched to the true potential
             match_points (ndarray): points in $\rho$ mesh that are matched to
                 the true potential
-            r_i (ndarray): copy of `match_points` (???)
             Ainv (ndarray): inverse of A matrix (Ax = b)
         """
         assert training_info is not None

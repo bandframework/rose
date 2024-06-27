@@ -6,8 +6,70 @@ from collections.abc import Callable
 import numpy as np
 from numba import njit
 
+from .constants import ALPHA, HBARC
 from .interaction import Interaction
-from .utility import regular_inverse_s
+from .utility import regular_inverse_s, regular_inverse_r
+
+
+@njit
+def potential(
+    r: np.double,
+    alpha: np.array,
+    ZZ: np.double,
+    R_C: np.double,
+    v_r,
+    v_so,
+    l_dot_s: np.int32,
+):
+    r"""Returns the local radial potential
+
+    Parameters:
+        r (double) : scaled radial coordinate s = k * r
+        alpha (ndarray)
+        ZZ (double),
+        R_C (double)
+        v_r (callable)
+        v_so (callable)
+        l_dot_s (int)
+    """
+    fine_structure = ALPHA * HBARC
+    return (
+        v_r(r, alpha)
+        + v_so(r, alpha, l_dot_s)
+        + ZZ * fine_structure * regular_inverse_r(r, R_C)
+    )
+
+
+@njit
+def potential_scaled(
+    s: np.double,
+    alpha: np.array,
+    k: np.double,
+    S_C: np.double,
+    E: np.double,
+    eta: np.double,
+    l: np.int32,
+    v_r,
+    v_so,
+    l_dot_s: np.int32,
+):
+    r"""Returns the  scaled, reduced, radial local potential
+
+    Parameters:
+        s (double) : scaled radial coordinate s = k * r
+        alpha (ndarray)
+        k (double)
+        S_C (double)
+        E (double)
+        eta (double)
+        l (int)
+        v_r (callable)
+        v_so (callable)
+        l_dot_s (int)
+    """
+    return (
+        v_r(s / k, alpha) + v_so(s / k, alpha, l_dot_s)
+    ) / E + 2 * eta * regular_inverse_s(s, S_C)
 
 
 @njit
@@ -44,8 +106,7 @@ def g_coeff(
     """
 
     return -1 * (
-        (v_r(s / k, alpha) + v_so(s / k, alpha, l_dot_s)) / E
-        + 2 * eta * regular_inverse_s(s, S_C)
+        potential_scaled(s, alpha, k, S_C, E, eta, l, v_r, v_so, l_dot_s)
         + l * (l + 1) / s**2
         - 1.0
     )

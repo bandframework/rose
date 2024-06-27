@@ -520,7 +520,9 @@ def compare_phase_shifts(data_sets: list, labels: list, fig, ax1, ax2, xlabel=Tr
 
     for i, (deltas, label) in enumerate(zip(data_sets, labels)):
         # plot each one with small shift for overlap
-        styles, c = plot_phase_shifts(fig, ax1, ax2, deltas, shift=i * 0.03, xlabel=xlabel)
+        styles, c = plot_phase_shifts(
+            fig, ax1, ax2, deltas, shift=i * 0.03, xlabel=xlabel
+        )
         color_legend.append(
             Line2D([0], [0], color=c, linestyle="-", label=label),
         )

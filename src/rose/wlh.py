@@ -71,7 +71,6 @@ class EnergizedWLH(EnergizedInteractionEIMSpace):
     def __init__(
         self,
         training_info: np.array,
-        mu: float = None,
         l_max=20,
         n_basis: int = 8,
         explicit_training: bool = False,
@@ -109,15 +108,12 @@ class EnergizedWLH(EnergizedInteractionEIMSpace):
         Returns:
             instance (EnergizedWLH): instance of the class
         """
-        n_params = NUM_PARAMS + 1  # include energy
-        if mu is None:
-            n_params = NUM_PARAMS + 2  # include mu and energy
+        n_params = NUM_PARAMS + 3  # include mu, k and energy
 
         super().__init__(
             l_max=l_max,
             coordinate_space_potential=WLH,
             n_theta=n_params,
-            mu=mu,
             training_info=training_info,
             Z_1=0,
             Z_2=0,
@@ -209,7 +205,7 @@ class WLHGlobal:
                 self.rso1 = data["WLHRealSpinOrbit"]["r1" + tag]
                 self.aso0 = data["WLHRealSpinOrbit"]["a0" + tag]
                 self.aso1 = data["WLHRealSpinOrbit"]["a1" + tag]
-            elif ["WLHRealSpinOrbit_a1"] in data:
+            elif f"WLHRealSpinOrbit_a1{tag}" in data:
                 self.uv0 = data["WLHReal_V0" + tag]
                 self.uv1 = data["WLHReal_V1" + tag]
                 self.uv2 = data["WLHReal_V2" + tag]
@@ -259,22 +255,11 @@ class WLHGlobal:
             else:
                 raise ValueError("Unrecognized parameter file format for WLH!")
 
-    def get_params(self, A, Z, E_lab=None, E_com=None):
+    def get_params(self, A, Z, mu, E_com, k):
         """
         Calculates Koning-Delaroche global neutron-nucleus OMP parameters for given A, Z,
         and COM-frame energy, returns params in form useable by EnergizedKoningDelaroche
         """
-
-        if self.projectile == Projectile.neutron:
-            projectile = (1, 0)
-        elif self.projectile == Projectile.proton:
-            projectile = (1, 1)
-
-        mu, E_com, k = kinematics((A, Z), projectile, E_lab=E_lab, E_com=E_com)
-        eta = 0
-        if self.projectile == Projectile.proton:
-            k_c = ALPHA * Z * mu
-            eta = k_c / k
 
         N = A - Z
         delta = (N - Z) / A
@@ -344,7 +329,4 @@ class WLHGlobal:
             ]
         )
         R_C = rv
-        return (
-            (mu, E_com, k, eta, R_C),
-            params,
-        )
+        return R_C, params

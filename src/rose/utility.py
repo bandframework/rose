@@ -15,9 +15,16 @@ from scipy.misc import derivative
 from scipy.special import eval_legendre
 from scipy.stats import qmc
 
-from .constants import MASS_N, MASS_P, HBARC, AMU
+from .constants import MASS_N, MASS_P, HBARC, ALPHA
 
 MAX_ARG = np.log(1 / 1e-16)
+
+# AME mass table DB initialized at import
+__AME_DB__ = None
+__AME_PATH__ = (
+    Path(__file__).parent.resolve() / Path("../../data/mass_1.mas20.txt")
+).resolve()
+
 
 class Projectile(Enum):
     neutron = 0
@@ -205,14 +212,26 @@ def eval_assoc_legendre(n, x):
         )
 
 
+def init_AME_db():
+    r"""
+    Should be called once during import to load the AME mass table into memory
+    """
+    global __AME_PATH__
+    global __AME_DB__
+    if __AME_PATH__ is None:
+        __AME_PATH__ = (
+            Path(__file__).parent.resolve() / Path("../../data/mass_1.mas20.txt")
+        ).resolve()
+        assert __AME_PATH__.is_file()
+    if __AME_DB__ is None:
+        __AME_DB__ = pd.read_csv(__AME_PATH__, sep="\s+")
+
+
 def get_AME_binding_energy(A, Z):
     r"""Calculates binding in MeV/c^2 given mass number, A, proton number, Z, by AME2020 lookup"""
     # look up nuclide in AME2020 table
-    ame_table_fpath = Path(__file__).parent.resolve() / Path(
-        "../../data/mass_1.mas20.txt"
-    )
-    assert ame_table_fpath.is_file()
-    df = pd.read_csv(ame_table_fpath, sep='\s+')
+    global __AME_DB__
+    df = __AME_DB__
     mask = (df["A"] == A) & (df["Z"] == Z)
     if mask.any():
         # use AME if data exists
@@ -306,8 +325,10 @@ def kinematics(
         / HBARC
     )
     mu = k**2 * Ep / (Ep**2 - m_p * m_p) * HBARC**2
+    k_C = ALPHA * projectile[1] * target[1] * mu
+    eta = k_C / k
 
-    return mu, E_com, k
+    return mu, E_com, k, eta
 
 
 @njit
@@ -366,10 +387,13 @@ def thomas_safe(r, R, a):
     x = (r - R) / a
     y = 1.0 / r
     if isinstance(x, float):
-        return y *  -1 / a * np.exp(x) / (1 + np.exp(x)) ** 2 if x < MAX_ARG else 0
+        return y * -1 / a * np.exp(x) / (1 + np.exp(x)) ** 2 if x < MAX_ARG else 0
     else:
         ii = np.where(x <= MAX_ARG)[0]
         jj = np.where(x > MAX_ARG)[0]
         return np.hstack(
-            (y[ii] *-1 / a * np.exp(x[ii]) / (1 + np.exp(x[ii])) ** 2, np.zeros(jj.size))
+            (
+                y[ii] * -1 / a * np.exp(x[ii]) / (1 + np.exp(x[ii])) ** 2,
+                np.zeros(jj.size),
+            )
         )

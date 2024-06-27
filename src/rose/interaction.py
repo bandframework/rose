@@ -7,7 +7,7 @@ import numpy as np
 from numba import njit
 
 from .constants import HBARC, ALPHA
-from .spin_orbit import SpinOrbitTerm, null
+from .spin_orbit import SpinOrbitTerm
 
 
 class Interaction:
@@ -21,6 +21,7 @@ class Interaction:
         n_theta: int = None,
         mu: float = None,
         energy: float = None,
+        k: float = None,
         Z_1: int = 0,
         Z_2: int = 0,
         R_C: float = 0.0,
@@ -62,17 +63,21 @@ class Interaction:
         self.v_r = coordinate_space_potential
         self.n_theta = n_theta
         self.ell = ell
-        self.R_C = R_C
         self.is_complex = is_complex
         self.spin_orbit_term = spin_orbit_term
 
         if spin_orbit_term is None:
-            self.include_spin_orbit = False
             self.spin_orbit_term = SpinOrbitTerm()
+            self.include_spin_orbit = False
         else:
             self.include_spin_orbit = True
 
+        self.k = k
         self.mu = mu
+        self.energy = energy
+        self.R_C = R_C
+        self.sommerfeld = 0.0
+
         if mu is not None:
             self.k_c = ALPHA * Z_1 * Z_2 * self.mu / HBARC
         else:
@@ -82,16 +87,9 @@ class Interaction:
         if energy is not None:
             # If the energy is specified (not None as it is when subclass
             # EnergizedInteraction instantiates), set up associated attributes.
-            self.energy = energy
-            if mu is not None:
+            if mu is not None and k is None:
                 self.k = np.sqrt(2 * self.mu * self.energy) / HBARC
-                self.sommerfeld = self.k_c / self.k
-        else:
-            # If the energy is not specified, these will be set up when the
-            # methods are called.
-            self.energy = None
-            self.k = None
-            self.sommerfeld = 0.0
+            self.sommerfeld = self.k_c / self.k
 
     def tilde(self, s: float, alpha: np.array):
         r"""Scaled potential, $\tilde{U}(s, \alpha, E)$.
@@ -107,9 +105,7 @@ class Interaction:
             u_tilde (float | complex): value of scaled interaction
 
         """
-        vr = self.v_r(s / self.k, alpha) + self.spin_orbit_term.spin_orbit_potential(
-            s / self.k, alpha
-        )
+        vr = self.v_r(s / self.k, alpha) + self.spin_orbit_term.v_so(s / self.k, alpha)
         return 1.0 / self.energy * vr
 
     def basis_functions(self, rho_mesh: np.array):
@@ -184,6 +180,18 @@ class Interaction:
         """
         return self.k
 
+    def reduced_mass(self, alpha: np.array):
+        r"""Mu. Implemented as a function to support energy emulation (where mu could be a
+        part of the parameter vector, `alpha`).
+
+        Parameters:
+            alpha (ndarray): parameter vector
+
+        Returns:
+            Mu (float): in [MeV/c^2]
+        """
+        return self.mu
+
     def coulomb_cutoff(self, alpha: np.array):
         r"""Coulomb cutoff. Implemented as a function to support energy emulation
         (where the energy/momentum could be a part of the parameter vector,
@@ -212,12 +220,8 @@ class Interaction:
         eta = self.eta(alpha)
         l = self.ell
         v_r = self.v_r
-        if self.include_spin_orbit:
-            l_dot_s = self.spin_orbit_term.l_dot_s
-            v_so = self.spin_orbit_term.v_so
-        else:
-            l_dot_s = 0
-            v_so = null
+        l_dot_s = self.spin_orbit_term.l_dot_s
+        v_so = self.spin_orbit_term.v_so
 
         return (alpha, k, S_C, E, eta, l, v_r, v_so, l_dot_s)
 

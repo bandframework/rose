@@ -59,6 +59,12 @@ def Wso(E, wso1, wso2, E_f):
 
 
 @njit
+def delta_VC(E, Vcbar, v1, v2, v3, v4, Ef):
+    """ energy dependent Coulomb correction term, Eq. 23 """
+    return v1 * Vcbar * (v2 - 2 * v3 * (E - Ef) + 3 * v4 * (E-Ef)**2)
+
+
+@njit
 def KD(r, E, v1, v2, v3, v4, w1, w2, d1, d2, d3, Ef, Rv, av, Rd, ad):
     """Koning-Delaroche without the spin-orbit terms - Eq. (1)"""
     return (
@@ -400,7 +406,7 @@ class KDGlobal:
                 self.Ef_A = 0.02646
             else:
                 self.Ef_0 = -8.4075
-                self.Ef_A = 1.01378
+                self.Ef_A = 0.01378
 
     def get_params(self, A, Z, mu, E_com, k):
         """
@@ -469,12 +475,18 @@ class KDGlobal:
         # Coulomb radius
         R_C = 0
         if self.projectile == Projectile.proton:
+            # Coulomb radius
             rc0 = (
                 self.rc_0
                 + self.rc_A * A ** (-2.0 / 3.0)
                 + self.rc_A2 * A ** (-5.0 / 3.0)
             )
             R_C = rc0 * A ** (1.0 / 3.0)
+
+            # Coulomb correction
+            Vcbar = 1.73 / rc0 * Z * A ** (-1.0/3.0)
+            delta_VC = self.delta_VC(E_com, Vcbar, v1, v2, v3, v4, Ef)
+            vv += delta_VC
 
         # 15 params total
         params = np.array(

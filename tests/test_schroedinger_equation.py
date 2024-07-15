@@ -41,29 +41,39 @@ class TestSchrEq(unittest.TestCase):
 
         @njit
         def potential(r, theta):
-            return theta[0] * rose.koning_delaroche.woods_saxon(r, theta[1], theta[2])
+            return theta[0] * rose.utility.woods_saxon_safe(r, theta[1], theta[2])
 
-        interaction = rose.Interaction(potential, 3, mu, energy, z, z)
+        interaction = rose.Interaction(
+            coordinate_space_potential=potential,
+            n_theta=3,
+            mu=mu,
+            energy=energy,
+            Z_1=z,
+            Z_2=z,
+        )
         se1 = rose.SchroedingerEquation(interaction)
 
         theta1 = np.array([-10.0, 3.0, 1.0])
-        theta2 = np.hstack((energy, theta1))
+        theta2 = np.hstack((energy, mu, interaction.k, theta1))
 
         train = np.array([[49.0, 51.0], [-15.0, -5.0], [2.0, 4.0], [0.8, 1.2]])
         energized_interaction = rose.EnergizedInteractionEIM(
-            potential, 3, mu, ell, train, Z_1=z, Z_2=z, n_train=20
+            coordinate_space_potential=potential,
+            n_theta=3,
+            mu=mu,
+            ell=ell,
+            training_info=train,
+            Z_1=z,
+            Z_2=z,
+            n_train=20,
         )
         se2 = rose.SchroedingerEquation(energized_interaction)
 
-        phi1 = se1.phi(theta1, rho, ell)
-        phi2 = se2.phi(theta2, rho, ell)
+        phi1 = se1.phi(theta1, rho)
+        phi2 = se2.phi(theta2, rho)
         norm_diff = np.linalg.norm(phi1 - phi2)
 
-        self.assertTrue(
-            norm_diff < 1e-16,
-            msg=f'norm(difference) = {norm_diff:.2e}'
-        )
-
+        self.assertTrue(norm_diff < 1e-16, msg=f"norm(difference) = {norm_diff:.2e}")
 
     def test_emulation(self):
         AMU = 931.5
@@ -96,14 +106,14 @@ class TestSchrEq(unittest.TestCase):
 
         ell = 3
         interaction = rose.InteractionEIM(
-            rose.koning_delaroche.KD_simple,
-            ntheta,
-            mu,
-            energy,
-            ell,
-            train,
-            is_complex=True,
+            coordinate_space_potential=rose.koning_delaroche.KD_simple,
             spin_orbit_term=rose.SpinOrbitTerm(rose.koning_delaroche.KD_simple_so, ell),
+            n_theta=ntheta,
+            mu=mu,
+            energy=energy,
+            ell=ell,
+            is_complex=True,
+            training_info=train,
             n_basis=ntheta + 16,
             explicit_training=True,
         )
@@ -114,5 +124,6 @@ class TestSchrEq(unittest.TestCase):
         norm_diff = np.linalg.norm(y - yp)
         self.assertTrue(norm_diff < 1e-4, msg=f"norm(difference) = {norm_diff:.2e}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

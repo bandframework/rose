@@ -162,15 +162,10 @@ class EnergizedInteractionEIM(InteractionEIM):
         eta = self.eta(alpha)
         l = self.ell
         v_r = self.v_r
-        if self.include_spin_orbit:
-            l_dot_s = self.spin_orbit_term.l_dot_s
-            v_so = self.spin_orbit_term.v_so
-        else:
-            l_dot_s = 0
-            v_so = null
+        l_dot_s = self.spin_orbit_term.l_dot_s
 
         # remove the energy term for alpha, so we return just the parameters that plug into v_r
-        return (alpha[3:], k, S_C, E, eta, l, v_r, v_so, l_dot_s)
+        return (alpha[3:], k, S_C, E, eta, l, v_r, self.spin_orbit_term.v_so, l_dot_s)
 
 
 class EnergizedInteractionEIMSpace(InteractionEIMSpace):

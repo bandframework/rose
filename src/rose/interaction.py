@@ -105,7 +105,7 @@ class Interaction:
             u_tilde (float | complex): value of scaled interaction
 
         """
-        vr = self.v_r(s / self.k, alpha) + self.spin_orbit_term.v_so(s / self.k, alpha)
+        vr = self.v_r(s / self.k, alpha) + self.spin_orbit_term.spin_orbit_potential(s / self.k, alpha)
         return 1.0 / self.energy * vr
 
     def basis_functions(self, rho_mesh: np.array):

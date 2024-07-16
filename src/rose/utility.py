@@ -307,10 +307,12 @@ def kinematics(
     m_p = mass(*projectile, Eb_projectile)
 
     if E_lab is None:
+        return_Elab = True
         assert E_com is not None
         E_com = np.fabs(E_com)
         E_lab = (m_t + m_p) / m_t * E_com
     else:
+        return_Elab = False
         assert E_com is None
         E_lab = np.fabs(E_lab)
         E_com = m_t / (m_t + m_p) * E_lab
@@ -328,7 +330,10 @@ def kinematics(
     k_C = ALPHA * projectile[1] * target[1] * mu
     eta = k_C / k
 
-    return mu, E_com, k, eta
+    if return_Elab:
+        return mu, E_lab, k, eta
+    else:
+        return mu, E_com, k, eta
 
 
 @njit

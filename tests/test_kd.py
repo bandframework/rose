@@ -52,7 +52,7 @@ class TestKDNeutron(unittest.TestCase):
         lds = 1
         self.assertAlmostEqual(
             rose.koning_delaroche.KD_simple_so(r, params, lds),
-            -0.17166788460689075 + 1j * 2.84973416044525998E-003,
+            -0.17166788460689075 + 1j * 2.84973416044525998e-003,
             places=3,
         )
 
@@ -103,7 +103,7 @@ class TestKDProton(unittest.TestCase):
         lds = 1
         self.assertAlmostEqual(
             rose.koning_delaroche.KD_simple_so(r, params, lds),
-            -0.16823013082309032 + 1j * 3.94009208348830662E-003,
+            -0.16823013082309032 + 1j * 3.94009208348830662e-003,
             places=3,
         )
         self.assertAlmostEqual(

@@ -60,8 +60,8 @@ def Wso(E, wso1, wso2, Ef):
 
 @njit
 def delta_VC(E, Vcbar, v1, v2, v3, v4, Ef):
-    """ energy dependent Coulomb correction term, Eq. 23 """
-    return v1 * Vcbar * (v2 - 2 * v3 * (E - Ef) + 3 * v4 * (E-Ef)**2)
+    """energy dependent Coulomb correction term, Eq. 23"""
+    return v1 * Vcbar * (v2 - 2 * v3 * (E - Ef) + 3 * v4 * (E - Ef) ** 2)
 
 
 @njit
@@ -484,7 +484,7 @@ class KDGlobal:
             R_C = rc0 * A ** (1.0 / 3.0)
 
             # Coulomb correction
-            Vcbar = 1.73 / rc0 * Z * A ** (-1.0/3.0)
+            Vcbar = 1.73 / rc0 * Z * A ** (-1.0 / 3.0)
             Vc = delta_VC(E_com, Vcbar, v1, v2, v3, v4, Ef)
             vv += Vc
 

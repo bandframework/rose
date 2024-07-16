@@ -15,6 +15,28 @@ from .utility import regular_inverse_s, regular_inverse_r
 def potential(
     r: np.double,
     alpha: np.array,
+    v_r,
+    v_so,
+    l_dot_s: np.int32,
+):
+    r"""Returns the local radial potential
+
+    Parameters:
+        r (double) : scaled radial coordinate s = k * r
+        alpha (ndarray)
+        ZZ (double),
+        R_C (double)
+        v_r (callable)
+        v_so (callable)
+        l_dot_s (int)
+    """
+    return v_r(r, alpha) + v_so(r, alpha, l_dot_s)
+
+
+@njit
+def potential_plus_coulomb(
+    r: np.double,
+    alpha: np.array,
     ZZ: np.double,
     R_C: np.double,
     v_r,

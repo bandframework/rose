@@ -76,6 +76,8 @@ class Interaction:
         self.mu = mu
         self.energy = energy
         self.R_C = R_C
+        if R_C <= 0.0:
+            R_C = 1e-9
         self.sommerfeld = 0.0
 
         if mu is not None:

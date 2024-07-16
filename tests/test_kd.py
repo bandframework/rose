@@ -34,7 +34,7 @@ class TestKDNeutron(unittest.TestCase):
             5.4300256835300234,
             3.6610296110056351,
             0.58999997377395630,
-            -9.0139921732509662E-02,
+            -9.0139921732509662e-02,
             3.6610296110056351,
             0.58999997377395630,
         )
@@ -42,6 +42,19 @@ class TestKDNeutron(unittest.TestCase):
             self.assertAlmostEqual(params[i], expected_params[i], places=4)
             for i in range(len(params))
         ]
+
+        r = 0.5
+        self.assertAlmostEqual(
+            rose.koning_delaroche.KD_simple(r, params),
+            -45.171005786503798 - 1j * 1.4818793948938964,
+            places=4,
+        )
+        lds = 1
+        self.assertAlmostEqual(
+            rose.koning_delaroche.KD_simple_so(r, params, lds),
+            -0.17166788460689075 + 1j * 2.84973416044525998E-003,
+            places=3,
+        )
 
 
 class TestKDProton(unittest.TestCase):
@@ -78,6 +91,29 @@ class TestKDProton(unittest.TestCase):
             self.assertAlmostEqual(params[i], expected_params[i], places=4)
             for i in range(len(params))
         ]
+
+        Zz = Ca48[1]
+
+        r = 0.5
+        self.assertAlmostEqual(
+            rose.koning_delaroche.KD_simple(r, params),
+            -50.795865090152176 - 1j * 2.3062550528188286,
+            places=4,
+        )
+        lds = 1
+        self.assertAlmostEqual(
+            rose.koning_delaroche.KD_simple_so(r, params, lds),
+            -0.16823013082309032 + 1j * 3.94009208348830662E-003,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            Zz
+            * rose.constants.ALPHA
+            * rose.constants.HBARC
+            * rose.utility.regular_inverse_r(r, R_C),
+            9.3137422616617105,
+            places=4,
+        )
 
 
 if __name__ == "__main__":

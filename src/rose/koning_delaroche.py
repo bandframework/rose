@@ -485,8 +485,8 @@ class KDGlobal:
 
             # Coulomb correction
             Vcbar = 1.73 / rc0 * Z * A ** (-1.0/3.0)
-            delta_VC = self.delta_VC(E_com, Vcbar, v1, v2, v3, v4, Ef)
-            vv += delta_VC
+            Vc = delta_VC(E_com, Vcbar, v1, v2, v3, v4, Ef)
+            vv += Vc
 
         # 15 params total
         params = np.array(

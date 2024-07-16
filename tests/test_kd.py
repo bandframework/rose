@@ -11,6 +11,39 @@ def relative_difference(a, b):
     return np.abs((a - b) / b)
 
 
+class TestKDNeutron(unittest.TestCase):
+    def test_kd_params_default(self):
+        potential = rose.koning_delaroche.KDGlobal(rose.Projectile.neutron)
+        Sc48 = (48, 21)
+        E_lab = 17.677562500000001
+        mu, E_com, k, eta = rose.utility.kinematics(
+            target=Sc48, projectile=(1, 1), E_lab=E_lab
+        )
+        R_C, params = potential.get_params(*Sc48, mu, E_lab, k)
+
+        expected_params = (
+            45.319795995543529,
+            4.3332872219656791,
+            0.67066239984706044,
+            1.4756965267922542,
+            4.3332872219656791,
+            0.67066239984706044,
+            6.5289602674606506,
+            4.6692632103376672,
+            0.53665121016092598,
+            5.4300256835300234,
+            3.6610296110056351,
+            0.58999997377395630,
+            -9.0139921732509662E-02,
+            3.6610296110056351,
+            0.58999997377395630,
+        )
+        [
+            self.assertAlmostEqual(params[i], expected_params[i], places=4)
+            for i in range(len(params))
+        ]
+
+
 class TestKDProton(unittest.TestCase):
     def test_kd_params_default(self):
         potential = rose.koning_delaroche.KDGlobal(rose.Projectile.proton)
@@ -19,9 +52,7 @@ class TestKDProton(unittest.TestCase):
         mu, E_com, k, eta = rose.utility.kinematics(
             target=Ca48, projectile=(1, 1), E_lab=E_lab
         )
-        # use 24.9999 because CHEX does not a kinematic correction
-        E_com = 24.999999999999996
-        R_C, params = potential.get_params(*Ca48, mu, E_com, k)
+        R_C, params = potential.get_params(*Ca48, mu, E_lab, k)
 
         expected_params = (
             50.963183201704517,

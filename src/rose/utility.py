@@ -1,6 +1,7 @@
 """
 Useful utility functions that I don't want to clutter up other modules with.
 """
+
 from enum import Enum
 from collections.abc import Callable
 

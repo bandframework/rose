@@ -6,6 +6,7 @@ See the [Koning-Delaroche
 paper](https://www.sciencedirect.com/science/article/pii/S0375947402013210) for
 details. Equation references are with respect to (w.r.t.) this paper.
 """
+
 from pathlib import Path
 
 import json

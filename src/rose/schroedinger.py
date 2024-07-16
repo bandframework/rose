@@ -6,6 +6,7 @@ For details about providing your own solutions, see [Basis
 documentation](basis.md).
 
 """
+
 import numpy as np
 from scipy.integrate import solve_ivp
 

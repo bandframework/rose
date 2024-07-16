@@ -1,5 +1,6 @@
 """Defines a class to package the spin-orbit term.
 """
+
 from numba import njit
 from typing import Callable
 import numpy as np

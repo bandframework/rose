@@ -1,6 +1,7 @@
 r"""
 Utilities for just-in-time (JIT) compilation of solvers of the radial Schrödinger equation
 """
+
 from collections.abc import Callable
 
 import numpy as np
@@ -9,6 +10,27 @@ from numba import njit
 from .constants import ALPHA, HBARC
 from .interaction import Interaction
 from .utility import regular_inverse_s, regular_inverse_r
+
+
+@njit
+def coulomb_charged_sphere(
+    r: np.double,
+    R_C: np.double,
+    ZZ: np.double,
+):
+    r"""Returns the local radial potential
+
+    Parameters:
+        r (double) : scaled radial coordinate s = k * r
+        alpha (ndarray)
+        ZZ (double),
+        R_C (double)
+        v_r (callable)
+        v_so (callable)
+        l_dot_s (int)
+    """
+    fine_structure = ALPHA * HBARC
+    return ZZ * fine_structure * regular_inverse_r(r, R_C)
 
 
 @njit
@@ -24,8 +46,6 @@ def potential(
     Parameters:
         r (double) : scaled radial coordinate s = k * r
         alpha (ndarray)
-        ZZ (double),
-        R_C (double)
         v_r (callable)
         v_so (callable)
         l_dot_s (int)
@@ -54,12 +74,7 @@ def potential_plus_coulomb(
         v_so (callable)
         l_dot_s (int)
     """
-    fine_structure = ALPHA * HBARC
-    return (
-        v_r(r, alpha)
-        + v_so(r, alpha, l_dot_s)
-        + ZZ * fine_structure * regular_inverse_r(r, R_C)
-    )
+    return potential(r, alpha, v_r, v_so, l_dot_s) + coulomb_charged_sphere(r, R_C, ZZ)
 
 
 @njit

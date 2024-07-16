@@ -1,6 +1,7 @@
 r"""
 Some helpful utilities for training an emulator and visualizing performance
 """
+
 from dataclasses import dataclass
 from collections.abc import Callable
 

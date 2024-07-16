@@ -4,6 +4,7 @@ scattering.
 See the [paper](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.127.182502) for
 details. Equation references are with respect to (w.r.t.) this paper.
 """
+
 from pathlib import Path
 
 import json

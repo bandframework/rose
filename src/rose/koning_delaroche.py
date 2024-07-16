@@ -408,7 +408,7 @@ class KDGlobal:
                 self.Ef_0 = -8.4075
                 self.Ef_A = 0.01378
 
-    def get_params(self, A, Z, mu, E_com, k):
+    def get_params(self, A, Z, mu, E_lab, k):
         """
         Calculates Koning-Delaroche global neutron-nucleus OMP parameters for given A, Z,
         and COM-frame energy, returns params in form useable by EnergizedKoningDelaroche
@@ -429,7 +429,7 @@ class KDGlobal:
         v2 = self.v2_0 - self.v2_A * A * factor
         v3 = self.v3_0 - self.v3_A * A * factor
         v4 = self.v4_0
-        vv = Vv(E_com, v1, v2, v3, v4, Ef)
+        vv = Vv(E_lab, v1, v2, v3, v4, Ef)
 
         # real central form
         rv = self.rv_0 - self.rv_A * A ** (-1.0 / 3.0)
@@ -438,7 +438,7 @@ class KDGlobal:
         # imag volume depth
         w1 = self.w1_0 + self.w1_A * A
         w2 = self.w2_0 + self.w2_A * A
-        wv = Wv(E_com, w1, w2, Ef)
+        wv = Wv(E_lab, w1, w2, Ef)
 
         # imag volume form
         rwv = rv
@@ -448,7 +448,7 @@ class KDGlobal:
         d1 = self.d1_0 - self.d1_asymm * delta
         d2 = self.d2_0 + self.d2_A / (1 + np.exp((A - self.d2_A3) / self.d2_A2))
         d3 = self.d3_0
-        wd = Wd(E_com, d1, d2, d3, Ef)
+        wd = Wd(E_lab, d1, d2, d3, Ef)
 
         # imag surface form
         rd = self.rd_0 - self.rd_A * A ** (1.0 / 3.0)
@@ -457,7 +457,7 @@ class KDGlobal:
         # real spin orbit depth
         vso1 = self.Vso1_0 + self.Vso1_A * A
         vso2 = self.Vso2_0
-        vso = Vso(E_com, vso1, vso2, Ef)
+        vso = Vso(E_lab, vso1, vso2, Ef)
 
         # real spin orbit form
         rso = self.rso_0 - self.rso_A * A ** (-1.0 / 3.0)
@@ -466,7 +466,7 @@ class KDGlobal:
         # imag spin orbit form
         wso1 = self.Wso1_0
         wso2 = self.Wso2_0
-        wso = Wso(E_com, wso1, wso2, Ef)
+        wso = Wso(E_lab, wso1, wso2, Ef)
 
         # imag spin orbit form
         rwso = rso
@@ -485,7 +485,7 @@ class KDGlobal:
 
             # Coulomb correction
             Vcbar = 1.73 / rc0 * Z * A ** (-1.0 / 3.0)
-            Vc = delta_VC(E_com, Vcbar, v1, v2, v3, v4, Ef)
+            Vc = delta_VC(E_lab, Vcbar, v1, v2, v3, v4, Ef)
             vv += Vc
 
         # 15 params total

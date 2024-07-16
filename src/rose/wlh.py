@@ -255,7 +255,7 @@ class WLHGlobal:
             else:
                 raise ValueError("Unrecognized parameter file format for WLH!")
 
-    def get_params(self, A, Z, mu, E_com, k):
+    def get_params(self, A, Z, mu, E_lab, k):
         """
         Calculates Koning-Delaroche global neutron-nucleus OMP parameters for given A, Z,
         and COM-frame energy, returns params in form useable by EnergizedKoningDelaroche
@@ -269,43 +269,43 @@ class WLHGlobal:
 
         uv = (
             self.uv0
-            - self.uv1 * E_com
-            + self.uv2 * E_com**2
-            + self.uv3 * E_com**3
-            + factor * (self.uv4 - self.uv5 * E_com + self.uv6 * E_com**2) * delta
+            - self.uv1 * E_lab
+            + self.uv2 * E_lab**2
+            + self.uv3 * E_lab**3
+            + factor * (self.uv4 - self.uv5 * E_lab + self.uv6 * E_lab**2) * delta
         )
         rv = (
             self.rv0
-            - self.rv1 * E_com
-            + self.rv2 * E_com**2
+            - self.rv1 * E_lab
+            + self.rv2 * E_lab**2
             - self.rv3 * A ** (-1.0 / 3)
         )
         av = (
             self.av0
-            - factor * self.av1 * E_com
-            - self.av2 * E_com**2
+            - factor * self.av1 * E_lab
+            - self.av2 * E_lab**2
             - (self.av3 - self.av4 * delta) * delta
         )
 
         uw = (
             self.uw0
-            + self.uw1 * E_com
-            - self.uw2 * E_com**2
-            + (factor * self.uw3 - self.uw4 * E_com) * delta
+            + self.uw1 * E_lab
+            - self.uw2 * E_lab**2
+            + (factor * self.uw3 - self.uw4 * E_lab) * delta
         )
         rw = (
             self.rw0
-            + (self.rw1 + self.rw2 * A) / (self.rw3 + A + self.rw4 * E_com)
-            + self.rw5 * E_com**2
+            + (self.rw1 + self.rw2 * A) / (self.rw3 + A + self.rw4 * E_lab)
+            + self.rw5 * E_lab**2
         )
         aw = (
             self.aw0
-            - (self.aw1 * E_com) / (-self.aw2 - E_com)
-            + (self.aw3 - self.aw4 * E_com) * delta
+            - (self.aw1 * E_lab) / (-self.aw2 - E_lab)
+            + (self.aw3 - self.aw4 * E_lab) * delta
         )
 
-        ud = self.ud0 - self.ud1 * E_com - (self.ud3 - self.ud4 * E_com) * delta
-        rd = self.rd0 - self.rd2 * E_com - self.rd1 * A ** (-1.0 / 3)
+        ud = self.ud0 - self.ud1 * E_lab - (self.ud3 - self.ud4 * E_lab) * delta
+        rd = self.rd0 - self.rd2 * E_lab - self.rd1 * A ** (-1.0 / 3)
         ad = self.ad0
 
         uso = self.uso0 - self.uso1 * A

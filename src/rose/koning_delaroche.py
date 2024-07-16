@@ -47,15 +47,15 @@ def Wd(E, d1, d2, d3, Ef):
 
 
 @njit
-def Vso(E, vso1, vso2, E_f):
+def Vso(E, vso1, vso2, Ef):
     """energy-dependent, spin-orbit strength --- real term, Eq. (7)"""
-    return vso1 * np.exp(-vso2 * (E - E_f))
+    return vso1 * np.exp(-vso2 * (E - Ef))
 
 
 @njit
-def Wso(E, wso1, wso2, E_f):
+def Wso(E, wso1, wso2, Ef):
     """energy-dependent, spin-orbit strength --- imaginary term, Eq. (7)"""
-    return wso1 * (E - E_f) ** 2 / ((E - E_f) ** 2 + wso2**2)
+    return wso1 * (E - Ef) ** 2 / ((E - Ef) ** 2 + wso2**2)
 
 
 @njit
@@ -419,7 +419,7 @@ class KDGlobal:
         factor = 1.0
         if self.projectile == Projectile.proton:
             delta *= -1.0
-            factor *= -1.0
+            factor = -1.0
 
         # fermi energy
         Ef = self.Ef_0 + self.Ef_A * A

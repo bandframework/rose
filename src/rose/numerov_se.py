@@ -7,12 +7,12 @@ from collections.abc import Callable
 import numpy as np
 from scipy.interpolate import splrep, splev
 
-from .njit_solver_utils import (
+from .utility import (
+    regular_inverse_s,
     numerov_kernel_meshless,
     numerov_kernel,
     g_coeff,
 )
-from .utility import regular_inverse_s
 from .interaction import Interaction
 from .schroedinger import SchroedingerEquation
 

@@ -1,7 +1,7 @@
 from .schroedinger import SchroedingerEquation
 from .interaction import Interaction
 from .constants import HBARC
-from .njit_solver_utils import potential, potential_plus_coulomb
+from .utility import potential, potential_plus_coulomb
 
 import numpy as np
 import jitr

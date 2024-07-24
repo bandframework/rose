@@ -6,6 +6,7 @@ Defines a benchmark class that computes:
     * wave functions: u(s)
     * mesh: s
 """
+
 import numpy as np
 import numpy.typing as npt
 from scipy.special import eval_legendre

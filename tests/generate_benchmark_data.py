@@ -41,17 +41,23 @@ se = rose.SchroedingerEquation(rose.MN_Potential)
 # In[5]:
 
 
-energy = 50 # MeV
-k = np.sqrt(2*rose.MN_Potential.mu*energy/rose.constants.HBARC)
+energy = 50  # MeV
+k = np.sqrt(2 * rose.MN_Potential.mu * energy / rose.constants.HBARC)
 r0s = np.linspace(10.0, 20.0, 11)
 
 phase_shifts = np.array(
-    [[se.delta(energy, theta, np.array([k*1e-6, k*30]), 0, s_0=k*r0) for r0 in r0s] for theta in parameter_samples]
+    [
+        [
+            se.delta(energy, theta, np.array([k * 1e-6, k * 30]), 0, s_0=k * r0)
+            for r0 in r0s
+        ]
+        for theta in parameter_samples
+    ]
 )
 
 sigma = np.std(phase_shifts, axis=1)
 mu = np.median(phase_shifts, axis=1)
-spread = np.max(np.abs(sigma/mu))
+spread = np.max(np.abs(sigma / mu))
 print(spread)
 
 
@@ -64,15 +70,15 @@ benchmark_data = [BenchmarkData(se, energy, theta) for theta in parameter_sample
 # In[7]:
 
 
-filename = f'benchmark_data_MN_Potential_E_{energy:.2f}_MeV.pkl'
-with open(filename, 'wb') as f:
+filename = f"benchmark_data_MN_Potential_E_{energy:.2f}_MeV.pkl"
+with open(filename, "wb") as f:
     pickle.dump(benchmark_data, f, pickle.HIGHEST_PROTOCOL)
 
 
 # In[8]:
 
 
-with open(filename, 'rb') as f:
+with open(filename, "rb") as f:
     bd = pickle.load(f)
 
 
@@ -92,31 +98,27 @@ bd[0].s.shape
 
 
 fig, ax = plt.subplots(dpi=150)
-fig.patch.set_facecolor('white')
+fig.patch.set_facecolor("white")
 
 for d in bd:
     ax.plot(d.s, d.phi)
 
-ax.set_xlabel(r'$s$')
-ax.set_ylabel(r'$\phi(s)$');
+ax.set_xlabel(r"$s$")
+ax.set_ylabel(r"$\phi(s)$")
 
 
 # In[12]:
 
 
 fig, ax = plt.subplots(dpi=150)
-fig.patch.set_facecolor('white')
+fig.patch.set_facecolor("white")
 
 for d in bd:
     f = d.scattering_amplitude
-    ax.plot(np.arccos(d.costheta), np.real(f*np.conj(f)))
+    ax.plot(np.arccos(d.costheta), np.real(f * np.conj(f)))
 
-ax.set_xlabel(r'$\theta$')
-ax.set_ylabel(r'$|f(\theta)|^2$');
+ax.set_xlabel(r"$\theta$")
+ax.set_ylabel(r"$|f(\theta)|^2$")
 
 
 # In[ ]:
-
-
-
-

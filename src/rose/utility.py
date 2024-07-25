@@ -278,34 +278,16 @@ def mass(A, Z, Eb):
     return Z * MASS_P + N * MASS_N - Eb
 
 
-def kinematics(
-    target: tuple,
-    projectile: tuple,
+def kinematics_known_mass(
+    m_target: float,
+    m_projectile: float,
+    Q: float = 0,
     E_lab: float = None,
     E_com: float = None,
-    binding_model: Callable[[int, int], float] = get_binding_energy,
+    ZZ: float = 0,
 ):
-    r"""Calculates the reduced mass, COM frame kinetic energy and wavenumber for a projectile (A,Z)
-    scattering on a target nuclide (A,Z), with binding energies from binding_model, which defaults
-    to lookup in AME2020 mass table. Uses relatavistic approximation of Ingemarsson, 1974:
-    https://doi.org/10.1088/0031-8949/9/3/004
-    Parameters:
-        t : target (A,Z)
-        p : projectile (A,Z)
-        E_lab: bombarding energy in the lab frame [MeV]. Either E_lab or E_com must be provided, not both.
-        E_com: bombarding energy in the com frame [MeV]. Either E_lab or E_com must be provided, not both.
-        binding_model : optional callable taking in (A,Z) and returning binding energy in [MeV/c^2],
-                        defaults to lookup in AME2020, and semi-empirical mass formula if not available
-                        there
-    Returns:
-        mu (float) : reduced mass in MeV/c^2
-        E_com (float) : center-of-mass frame energy in MeV
-        k (float) : center-of-mass frame wavenumber in fm^-1
-    """
-    Eb_target = binding_model(*target)
-    Eb_projectile = binding_model(*projectile)
-    m_t = mass(*target, Eb_target)
-    m_p = mass(*projectile, Eb_projectile)
+    m_t = m_target
+    m_p = m_projectile
 
     if E_lab is None:
         return_Elab = True
@@ -316,7 +298,7 @@ def kinematics(
         return_Elab = False
         assert E_com is None
         E_lab = np.fabs(E_lab)
-        E_com = m_t / (m_t + m_p) * E_lab
+        E_com = m_t / (m_t + m_p) * E_lab + Q
 
     Ep = E_com + m_p
 
@@ -328,13 +310,51 @@ def kinematics(
         / HBARC
     )
     mu = k**2 * Ep / (Ep**2 - m_p * m_p) * HBARC**2
-    k_C = ALPHA * projectile[1] * target[1] * mu
+    k_C = ALPHA * ZZ * mu
     eta = k_C / k
 
     if return_Elab:
         return mu, E_lab, k, eta
     else:
         return mu, E_com, k, eta
+
+
+def kinematics(
+    target: tuple,
+    projectile: tuple,
+    Q: float = 0,
+    E_lab: float = None,
+    E_com: float = None,
+    binding_model: Callable[[int, int], float] = get_binding_energy,
+):
+    r"""Calculates the reduced mass, COM frame kinetic energy and wavenumber for a projectile (A,Z)
+    scattering on a target nuclide (A,Z), with binding energies from binding_model, which defaults
+    to lookup in AME2020 mass table. Uses relatavistic approximation of Ingemarsson, 1974:
+    https://doi.org/10.1088/0031-8949/9/3/004
+    Parameters:
+        t : target (A,Z)
+        p : projectile (A,Z)
+        Q : Q-value [MeV]. Initial Mass - Final Mass
+        E_lab: bombarding energy in the lab frame [MeV]. Either E_lab or E_com must be provided, not
+        both.
+        E_com: bombarding energy in the com frame [MeV]. Either E_lab or E_com must be provided, not
+        both.
+        binding_model : optional callable taking in (A,Z) and returning binding energy in [MeV/c^2],
+                        defaults to lookup in AME2020, and semi-empirical mass formula if not
+                        available there
+    Returns:
+        mu (float) : reduced mass in MeV/c^2
+        E_com (float) : center-of-mass frame energy in MeV
+        k (float) : center-of-mass frame wavenumber in fm^-1
+    """
+    Eb_target = binding_model(*target)
+    Eb_projectile = binding_model(*projectile)
+    m_t = mass(*target, Eb_target)
+    m_p = mass(*projectile, Eb_projectile)
+    ZZ = projectile[1] * target[1]
+    return kinematics_known_mass(
+        m_t, m_p, Q=Q, E_lab=E_lab, E_com=E_com, ZZ=ZZ
+    )
 
 
 @njit

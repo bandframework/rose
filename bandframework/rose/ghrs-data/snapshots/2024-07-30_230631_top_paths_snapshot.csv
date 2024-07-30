@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose/tree/main/src/rose,39,3
+/bandframework/rose/blob/main/src/rose/interaction.py,21,3
+/bandframework/rose/blob/main/src/rose/interaction_eim.py,21,1
+/bandframework/rose,19,6
+/bandframework/rose/blob/main/src/rose/mn_potential.py,18,2
+/bandframework/rose/blob/main/tests/test_schroedinger_equation.py,15,1
+/bandframework/rose/tree/main/tests,14,1
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_1_building_an_emulator.ipynb,11,2
+/bandframework/rose/blob/main/tests/benchmark.py,11,1
+/bandframework/rose/blob/main/src/rose/reduced_basis_emulator.py,10,1

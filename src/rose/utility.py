@@ -411,7 +411,7 @@ def coulomb_charged_sphere(
     R_C: np.double,
     ZZ: np.double,
 ):
-    r"""Returns the local radial potential
+    r"""Returns the coulomb potential
 
     Parameters:
         r (double) : scaled radial coordinate s = k * r
@@ -456,7 +456,7 @@ def potential_plus_coulomb(
     v_so,
     l_dot_s: np.int32,
 ):
-    r"""Returns the local radial potential
+    r"""Returns the local radial potential + coulomb
 
     Parameters:
         r (double) : scaled radial coordinate s = k * r

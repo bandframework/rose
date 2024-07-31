@@ -78,7 +78,7 @@ def build_sae_config_set(
     build a list of `ScatteringAmplitudeEmulator`s to the specification of `sae_configs`
     Parameters:
         base_interaction (InteractionSpace): the space of Interactions to replicate for each config
-    """
+    """JITR
 
     # first build the largest one, which has all the bases we need
     imax = np.argmax([conf[0] for conf in sae_configs])
@@ -94,6 +94,12 @@ def build_sae_config_set(
 
     if "base_solver" in SAE_kwargs:
         SAE_kwargs.pop("base_solver")
+    if "s_mesh" in SAE_kwargs:
+        SAE_kwargs.pop("s_mesh")
+    if "scale" in SAE_kwargs:
+        SAE_kwargs.pop("scale")
+    if "use_svd" in SAE_kwargs:
+        SAE_kwargs.pop("use_svd")
 
     # get the largest set of bases (for each partial wave)
     bases = [[rbe.basis for rbe in rbe_list] for rbe_list in biggest_sae.rbes]

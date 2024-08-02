@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose/blob/main/src/rose/mn_potential.py,22,2
+/bandframework/rose,20,5
+/bandframework/rose/tree/main/src/rose,15,3
+/bandframework/rose/blob/main/tests/test_schroedinger_equation.py,15,1
+/bandframework/rose/tree/main/tests,14,1
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_1_building_an_emulator.ipynb,13,2
+/bandframework/rose/blob/main/tests/benchmark.py,11,1
+/bandframework/rose/blob/main/README.md,10,3
+/bandframework/rose/blob/main/src/rose/reduced_basis_emulator.py,10,2
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_2_optical_potential_surmise_UQ.ipynb,10,1

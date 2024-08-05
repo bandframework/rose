@@ -78,7 +78,7 @@ def build_sae_config_set(
     build a list of `ScatteringAmplitudeEmulator`s to the specification of `sae_configs`
     Parameters:
         base_interaction (InteractionSpace): the space of Interactions to replicate for each config
-    """JITR
+    """
 
     # first build the largest one, which has all the bases we need
     imax = np.argmax([conf[0] for conf in sae_configs])

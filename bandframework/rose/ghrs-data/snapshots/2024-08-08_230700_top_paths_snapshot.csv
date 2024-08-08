@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose,12,6
+/bandframework/rose/tree/main/src/rose,12,2
+/bandframework/rose/blob/main/src/rose/mn_potential.py,12,1
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_2_optical_potential_surmise_UQ.ipynb,10,1
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_1_building_an_emulator.ipynb,8,3
+/bandframework/rose/blob/main/src/rose/scattering_amplitude_emulator.py,7,2
+/bandframework/rose/blob/main/README.md,6,3
+/bandframework/rose/blob/main/src/rose/reduced_basis_emulator.py,6,3
+/bandframework/rose/blob/main/src/rose/utility.py,4,2
+/bandframework/rose/tree/main/docs/tutorials,3,1

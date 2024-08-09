@@ -94,6 +94,12 @@ def build_sae_config_set(
 
     if "base_solver" in SAE_kwargs:
         SAE_kwargs.pop("base_solver")
+    if "s_mesh" in SAE_kwargs:
+        SAE_kwargs.pop("s_mesh")
+    if "scale" in SAE_kwargs:
+        SAE_kwargs.pop("scale")
+    if "use_svd" in SAE_kwargs:
+        SAE_kwargs.pop("use_svd")
 
     # get the largest set of bases (for each partial wave)
     bases = [[rbe.basis for rbe in rbe_list] for rbe_list in biggest_sae.rbes]

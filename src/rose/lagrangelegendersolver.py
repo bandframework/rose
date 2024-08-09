@@ -2,6 +2,7 @@ from .schroedinger import SchroedingerEquation
 from .interaction import Interaction
 from .constants import HBARC
 from .utility import potential, potential_plus_coulomb
+from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
 
 import numpy as np
 import jitr
@@ -14,38 +15,50 @@ class LagrangeRmatrix(SchroedingerEquation):
         self,
         interaction: Interaction,
         s_0,
-        Nbasis: int,
+        solver: jitr.RMatrixSolver,
     ):
+        l = np.array([interaction.ell])
+        a = np.array([s_0])
         self.s_0 = s_0
         self.domain = [0, s_0]
         self.interaction = interaction
+        self.solver = solver
 
-        mu = self.interaction.mu
-        if mu is None:
-            mu = 0.0
+        if self.interaction is not None:
+            if self.interaction.k_c == 0:
+                self.eta = 0
+            else:
+                # There is Coulomb, but we haven't (yet) worked out how to emulate
+                # across energies, so we can precompute H+ and H- stuff.
+                self.eta = self.interaction.eta(None)
 
-        self.sys = jitr.ProjectileTargetSystem(
-            np.array([mu]),
-            np.array([s_0]),
-            np.array([interaction.ell]),
-            interaction.Z_1,
-            interaction.Z_2,
-            1,
-        )
-        if self.sys.Zproj * self.sys.Ztarget > 0:
+        self.Hm = H_minus(self.s_0, self.interaction.ell, self.eta)
+        self.Hp = H_plus(self.s_0, self.interaction.ell, self.eta)
+        self.Hmp = H_minus_prime(self.s_0, self.interaction.ell, self.eta)
+        self.Hpp = H_plus_prime(self.s_0, self.interaction.ell, self.eta)
+        self.channels = np.zeros(1, dtype=jitr.channel_dtype)
+        self.channels["weight"] = np.ones(1)
+        self.channels["l"] = l
+        self.channels["a"] = a
+        self.channels["eta"] = self.eta
+        self.channels["Hp"] = np.array([self.Hp])
+        self.channels["Hm"] = np.array([self.Hm])
+        self.channels["Hpp"] = np.array([self.Hpp])
+        self.channels["Hmp"] = np.array([self.Hmp])
+
+        if self.interaction.Z_1 * self.interaction.Z_2 > 0:
             self.potential = potential_plus_coulomb
             self.get_args = self.get_args_coulomb
         else:
             self.potential = potential
             self.get_args = self.get_args_neutral
 
-        self.solver = jitr.LagrangeRMatrixSolver(
-            Nbasis,
-            1,
-            self.sys,
-            ecom=interaction.energy,
-            asym=jitr.CoulombAsymptotics,
-        )
+        self.im = jitr.InteractionMatrix(1)
+        self.im.set_local_interaction(self.potential)
+
+        # these are always parameter independent - we can precompute them
+        self.basis_boundary = self.solver.precompute_boundaries(a)
+        self.free_matrix = self.solver.free_matrix(a, l)
 
     def get_args_neutral(self, alpha):
         return (
@@ -66,22 +79,15 @@ class LagrangeRmatrix(SchroedingerEquation):
         )
 
     def clone_for_new_interaction(self, interaction: Interaction):
-        return LagrangeRmatrix(interaction, self.s_0, self.solver.kernel.nbasis)
+        return LagrangeRmatrix(interaction, self.s_0, self.solver)
 
     def get_channel_info(self, alpha):
-        ch = jitr.ChannelData(
-            self.interaction.ell,
-            self.interaction.reduced_mass(alpha),
-            self.s_0,
-            self.interaction.E(alpha),
-            self.interaction.momentum(alpha),
-            self.interaction.eta(alpha),
-        )
+        self.im.local_args[0, 0] = self.get_args(alpha)
+        self.channels["E"] = self.interaction.E(alpha)
+        self.channels["mu"] = self.interaction.reduced_mass(alpha)
+        self.channels["k"] = self.interaction.momentum(alpha)
 
-        im = jitr.InteractionMatrix(1)
-        im.set_local_interaction(self.potential, args=self.get_args(alpha))
-
-        return [ch], im
+        return self.channels, self.im
 
     def phi(
         self,
@@ -95,6 +101,8 @@ class LagrangeRmatrix(SchroedingerEquation):
         R, S, x, uext_prime_boundary = self.solver.solve(
             im,
             ch,
+            free_matrix=self.free_matrix,
+            basis_boundary=self.basis_boundary,
             wavefunction=True,
         )
         return jitr.Wavefunctions(
@@ -102,9 +110,8 @@ class LagrangeRmatrix(SchroedingerEquation):
             x,
             S,
             uext_prime_boundary,
-            self.sys.incoming_weights,
-            [ch],
-            self.solver.asym,
+            self.channels["weight"],
+            jitr.make_channel_data(ch),
         ).uint()[0](s_mesh)
 
     def smatrix(
@@ -113,7 +120,12 @@ class LagrangeRmatrix(SchroedingerEquation):
         **kwargs,
     ):
         ch, im = self.get_channel_info(alpha)
-        R, S, uext_prime_boundary = self.solver.solve(im, ch)
+        R, S, uext_prime_boundary = self.solver.solve(
+            im,
+            ch,
+            free_matrix=self.free_matrix,
+            basis_boundary=self.basis_boundary,
+        )
         return S[0, 0]
 
     def rmatrix(
@@ -122,5 +134,10 @@ class LagrangeRmatrix(SchroedingerEquation):
         **kwargs,
     ):
         ch, im = self.get_channel_info(alpha)
-        R, S, uext_prime_boundary = self.solver.solve(im, ch)
+        R, S, uext_prime_boundary = self.solver.solve(
+            im,
+            ch,
+            free_matrix=self.free_matrix,
+            basis_boundary=self.basis_boundary,
+        )
         return R[0, 0]

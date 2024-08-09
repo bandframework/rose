@@ -327,36 +327,6 @@ class ScatteringAmplitudeEmulator:
         Splus, Sminus = self.exact_smatrix_elements(alpha)
         return self.dsdo(alpha, Splus, Sminus)
 
-    def emulate_total_cross_section(self, alpha: np.array):
-        r"""Gives the "total" (angle-integrated) cross section in mb. If the interaction
-            is complex, also returns the reaction cross section. See Eq. (63) in Carlson's
-            notes.
-
-        Parameters:
-            alpha (ndarray): parameter-space vector
-
-        Returns:
-            total cross section (float): emulated total cross section
-            reaction cross section (float): emulated reaction cross section
-
-        """
-        Splus, Sminus = self.emulate_smatrix_elements(alpha)
-        return self.total_cross_section(Splus, Sminus)
-
-    def exact_total_cross_section(self, alpha: np.array):
-        r"""Gives the "total" (angle-integrated) cross section in mb.  See Eq. (63)
-            in Carlson's notes.
-
-        Parameters:
-            alpha (ndarray): parameter-space vector
-
-        Returns:
-            cross_section (ndarray): emulated total cross section
-
-        """
-        Splus, Sminus = self.exact_smatrix_elements(alpha)
-        return self.total_cross_section(Splus, Sminus)
-
     def emulate_xs(self, alpha: np.array, angles: np.array = None):
         r"""Emulates the:
             - differential cross section in mb/Sr (as a ratio to a Rutherford xs if provided)
@@ -556,42 +526,6 @@ class ScatteringAmplitudeEmulator:
 
         return Splus[:l], Sminus[:l]
 
-    def total_cross_section(self, Splus: np.array, Sminus: np.array):
-        r"""Gives the "total" (angle-integrated) cross section in mb. If the interaction
-            is complex, alsom returns the reaction cross section. See Eq. (63) in Carlson's
-            notes.
-
-        Parameters:
-            Splus (ndarray) : spin-up phase shifs
-            Sminus (ndarray) : spin-down phase shifts
-
-        Returns:
-            total cross section (float): emulated total cross section
-            reaction cross section (float): emulated reaction cross section
-
-        """
-        if self.k_c > 0:
-            raise Exception(
-                "The total cross section is infinite in the presence of Coulomb."
-            )
-
-        k = self.rbes[0][0].interaction.momentum(alpha)
-        l = self.ls[: Splus.shape[0]]
-
-        xst = np.sum(np.pi / k**2 * (2 * l + 2) * (1 - Splus.real))
-        xst += np.sum(np.pi / k**2 * (2 * l - 2) * (1 - Sminus.real))
-
-        if self.rbes[0][0].interaction.is_complex:
-            xsrxn = np.sum(
-                np.pi / k**2 * (2 * l + 2) * (1 - np.real(Splus * Splus.conj()))
-            )
-            xsrxn += np.sum(
-                np.pi / k**2 * (2 * l - 2) * (1 - np.real(Sminus * Sminus.conj()))
-            )
-            return 10 * xst, 10 * xsrxn
-
-        return 10 * xst
-
     def calculate_xs(
         self,
         Splus: np.array,
@@ -627,10 +561,10 @@ class ScatteringAmplitudeEmulator:
         else:
             assert np.max(angles) <= np.pi and np.min(angles) >= 0
             P_l_costheta = np.array(
-                [eval_legendre(l, np.cos(angles)) for l in range(lmax)]
+                [eval_legendre(l, np.cos(angles)) for l in range(self.lmax)]
             )
             P_1_l_costheta = np.array(
-                [eval_assoc_legendre(l, np.cos(angles)) for l in range(lmax)]
+                [eval_assoc_legendre(l, np.cos(angles)) for l in range(self.lmax)]
             )
             sin2 = np.sin(angles / 2) ** 2
             rutherford = 10 * self.eta**2 / (4 * k**2 * sin2**2)

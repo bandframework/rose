@@ -4,6 +4,7 @@ Useful utility functions that I don't want to clutter up other modules with.
 
 from enum import Enum
 from collections.abc import Callable
+from dataclasses import dataclass
 
 import numpy as np
 import numpy.typing as npt
@@ -30,6 +31,98 @@ __AME_PATH__ = (
 class Projectile(Enum):
     neutron = 0
     proton = 1
+
+
+@dataclass
+class NucleonNucleusXS:
+    r"""
+    Holds differential cross section, analyzing power, total cross section and reaction cross secton,
+    all at a given energy
+    """
+    dsdo: np.array
+    Ay: np.array
+    t: float
+    rxn: float
+
+
+@njit
+def xs_calc_neutral(
+    k: float,
+    angles: np.array,
+    Splus: np.array,
+    Sminus: np.array,
+    P_l_theta: np.array,
+    P_1_l_theta: np.array,
+):
+    xst = 0.0
+    xsrxn = 0.0
+    a = np.zeros_like(angles, dtype=np.complex128)
+    b = np.zeros_like(angles, dtype=np.complex128)
+
+    for l in range(Splus.shape[0]):
+        # scattering amplitudes
+        a += (
+            (2 * l + 1 - (l + 1) * Splus[l] - l * Sminus[l])
+            * P_l_theta[l, :]
+            / (2j * k)
+        )
+        b += (Sminus[l] - Splus[l]) * P_1_l_theta[l, :] / (2j * k)
+
+        # cross sections
+        xsrxn += (l + 1) * (1 - np.absolute(Splus[l])) + l * (
+            1 - np.absolute(Sminus[l])
+        )
+        xst += (l + 1) * (1 - np.real(Splus[l])) + l * (1 - np.real(Sminus[l]))
+
+    dsdo = np.real(a * np.conj(a) + b * np.conj(b)) * 10
+    Ay = np.real(a * np.conj(b) + b * np.conj(a)) * 10 / dsdo
+    xst *= 10 * 2 * np.pi / k**2
+    xsrxn *= 10 * np.pi / k**2
+
+    return dsdo, Ay, xst, xsrxn
+
+
+@njit
+def xs_calc_coulomb(
+    k: float,
+    angles: np.array,
+    Splus: np.array,
+    Sminus: np.array,
+    P_l_theta: np.array,
+    P_1_l_theta: np.array,
+    f_c: np.array,
+    sigma_l: np.array,
+    rutherford: np.array,
+):
+    a = np.zeros_like(angles, dtype=np.complex128) + f_c
+    b = np.zeros_like(angles, dtype=np.complex128)
+    xsrxn = 0.0
+
+    for l in range(Splus.shape[0]):
+        # scattering amplitudes
+        a += (
+            (2 * l + 1 - (l + 1) * Splus[l] - l * Sminus[l])
+            * P_l_theta[l, :]
+            * np.exp(2j * sigma_l[l])
+            / (2j * k)
+        )
+        b += (
+            (Sminus[l] - Splus[l])
+            * P_1_l_theta[l, :]
+            * np.exp(2j * sigma_l[l])
+            / (2j * k)
+        )
+        xsrxn += (l + 1) * (1 - np.absolute(Splus[l])) + l * (
+            1 - np.absolute(Sminus[l])
+        )
+
+    dsdo = np.real(a * np.conj(a) + b * np.conj(b)) * 10
+    Ay = np.real(a * np.conj(b) + b * np.conj(a)) * 10 / dsdo
+    xsrxn *= 10 * np.pi / k**2
+
+    dsdo = dsdo / rutherford
+
+    return dsdo, Ay, None, xsrxn
 
 
 def max_vol(basis, indxGuess):

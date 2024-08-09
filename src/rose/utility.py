@@ -39,6 +39,7 @@ class NucleonNucleusXS:
     Holds differential cross section, analyzing power, total cross section and reaction cross secton,
     all at a given energy
     """
+
     dsdo: np.array
     Ay: np.array
     t: float

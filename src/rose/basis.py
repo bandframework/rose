@@ -288,7 +288,10 @@ class CustomBasis(Basis):
         """
         x -= self.phi_0
         x /= np.trapz(np.absolute(x), self.rho_mesh)
-        return [np.trapz(self.vectors[:, i].conj() * x, self.rho_mesh) for i in range(self.n_basis)]
+        return [
+            np.trapz(self.vectors[:, i].conj() * x, self.rho_mesh)
+            for i in range(self.n_basis)
+        ]
 
     def percent_explained_variance(self):
         r"""

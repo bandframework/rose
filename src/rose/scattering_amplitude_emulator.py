@@ -9,7 +9,13 @@ from .reduced_basis_emulator import ReducedBasisEmulator
 from .constants import DEFAULT_RHO_MESH, DEFAULT_ANGLE_MESH
 from .schroedinger import SchroedingerEquation
 from .basis import RelativeBasis, CustomBasis, Basis
-from .utility import eval_assoc_legendre, xs_calc_neutral, xs_calc_coulomb, NucleonNucleusXS
+from .utility import (
+    eval_assoc_legendre,
+    xs_calc_neutral,
+    xs_calc_coulomb,
+    NucleonNucleusXS,
+)
+
 
 class ScatteringAmplitudeEmulator:
     @classmethod
@@ -459,7 +465,7 @@ class ScatteringAmplitudeEmulator:
             Sminus[l] = self.rbes[l][1].basis.solver.smatrix(alpha)
             if (
                 np.absolute(Splus[l] - 1) < self.Smatrix_abs_tol
-                and np.absolute(Sminus[l] -1) < self.Smatrix_abs_tol
+                and np.absolute(Sminus[l] - 1) < self.Smatrix_abs_tol
             ):
                 break
 

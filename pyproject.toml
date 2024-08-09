@@ -27,3 +27,6 @@ dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools_scm]
 write_to = "src/rose/__version__.py"
+
+[tool.setuptools.package-data]
+mypkg = ["*.txt", "*.json"]

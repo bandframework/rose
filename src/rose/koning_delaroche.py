@@ -265,7 +265,7 @@ class KDGlobal:
         """
         if param_fpath is None:
             param_fpath = Path(__file__).parent.resolve() / Path(
-                "../../data/KD_default.json"
+                "../data/KD_default.json"
             )
 
         if projectile == Projectile.neutron:

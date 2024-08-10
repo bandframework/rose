@@ -141,7 +141,7 @@ class WLHGlobal:
         """
         if param_fpath is None:
             param_fpath = Path(__file__).parent.resolve() / Path(
-                "../../data/WLH_mean.json"
+                "../data/WLH_mean.json"
             )
 
         if projectile == Projectile.neutron:

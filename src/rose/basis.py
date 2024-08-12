@@ -98,6 +98,7 @@ class RelativeBasis(Basis):
         theta_train: np.array,
         rho_mesh: np.array,
         n_basis: int,
+        expl_var_ratio_cutoff: float = None,
         phi_0_energy: float = None,
         use_svd: bool = True,
         center: bool = None,
@@ -161,6 +162,14 @@ class RelativeBasis(Basis):
         self.pillars, self.singular_values, self.phi_0 = pre_process_solutions(
             self.solutions, self.phi_0, self.rho_mesh, center, scale, use_svd
         )
+
+        # keeping at min n_basis PC's, find cutoff
+        if expl_var_ratio_cutoff is not None:
+            expl_var = self.singular_values**2 / np.sum(self.singular_values**2)
+            n_basis_svs = np.sum(expl_var > expl_var_ratio_cutoff)
+            self.n_basis = max(n_basis_svs, self.n_basis)
+        else:
+            self.n_basis = n_basis
 
         self.vectors = self.pillars[:, : self.n_basis].copy()
 
@@ -322,11 +331,7 @@ def pre_process_solutions(
     subtract_phi0=True,
 ):
     s = rho_mesh
-    if center or scale or subtract_phi0:
-        A = solutions.copy()
-        phi_0 = phi_0.copy()
-    else:
-        A = solutions
+    A = solutions
 
     if scale:
         phi_0 /= np.trapz(np.absolute(phi_0), s)

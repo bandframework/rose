@@ -68,7 +68,7 @@ class LagrangeRmatrix(SchroedingerEquation):
 
     def get_args_neutral(self, alpha):
         return (
-            alpha[self.param_offset:],
+            alpha[self.param_offset :],
             self.interaction.v_r,
             self.interaction.spin_orbit_term.v_so,
             self.interaction.spin_orbit_term.l_dot_s,
@@ -76,7 +76,7 @@ class LagrangeRmatrix(SchroedingerEquation):
 
     def get_args_coulomb(self, alpha):
         return (
-            alpha[self.param_offset:],
+            alpha[self.param_offset :],
             self.interaction.Z_1 * self.interaction.Z_2,
             self.interaction.coulomb_cutoff(alpha),
             self.interaction.v_r,

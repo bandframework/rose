@@ -331,11 +331,7 @@ def pre_process_solutions(
     subtract_phi0=True,
 ):
     s = rho_mesh
-    if center or scale or subtract_phi0:
-        A = solutions.copy()
-        phi_0 = phi_0.copy()
-    else:
-        A = solutions
+    A = solutions
 
     if scale:
         phi_0 /= np.trapz(np.absolute(phi_0), s)

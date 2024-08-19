@@ -422,7 +422,7 @@ def kinematics(
         / HBARC
     )
     mu = k**2 * Ep / (Ep**2 - m_p * m_p) * HBARC**2
-    k_C = ALPHA * projectile[1] * target[1] * mu
+    k_C = ALPHA * projectile[1] * target[1] * mu / HBARC
     eta = k_C / k
 
     if return_Elab:

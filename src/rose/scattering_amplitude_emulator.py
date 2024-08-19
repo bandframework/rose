@@ -567,10 +567,10 @@ class ScatteringAmplitudeEmulator:
         else:
             assert np.max(angles) <= np.pi and np.min(angles) >= 0
             P_l_costheta = np.array(
-                [eval_legendre(l, np.cos(angles)) for l in range(self.lmax)]
+                [eval_legendre(l, np.cos(angles)) for l in range(self.l_max)]
             )
             P_1_l_costheta = np.array(
-                [eval_assoc_legendre(l, np.cos(angles)) for l in range(self.lmax)]
+                [eval_assoc_legendre(l, np.cos(angles)) for l in range(self.l_max)]
             )
             sin2 = np.sin(angles / 2) ** 2
             rutherford = 10 * self.eta**2 / (4 * k**2 * sin2**2)

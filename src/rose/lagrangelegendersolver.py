@@ -1,6 +1,6 @@
 from .schroedinger import SchroedingerEquation
 from .interaction import Interaction
-from .constants import HBARC
+from .energized_interaction_eim import EnergizedInteractionEIM
 from .utility import potential, potential_plus_coulomb
 from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
 
@@ -46,6 +46,12 @@ class LagrangeRmatrix(SchroedingerEquation):
         self.channels["Hpp"] = np.array([self.Hpp])
         self.channels["Hmp"] = np.array([self.Hmp])
 
+        # for Energized EIM interactions, E, mu k take up the first 3 spots
+        # in the parameter vector, so we offset to account for that
+        self.param_offset = 0
+        if isinstance(self.interaction, EnergizedInteractionEIM):
+            self.param_offset = 3
+
         if self.interaction.Z_1 * self.interaction.Z_2 > 0:
             self.potential = potential_plus_coulomb
             self.get_args = self.get_args_coulomb
@@ -62,7 +68,7 @@ class LagrangeRmatrix(SchroedingerEquation):
 
     def get_args_neutral(self, alpha):
         return (
-            alpha,
+            alpha[self.param_offset :],
             self.interaction.v_r,
             self.interaction.spin_orbit_term.v_so,
             self.interaction.spin_orbit_term.l_dot_s,
@@ -70,7 +76,7 @@ class LagrangeRmatrix(SchroedingerEquation):
 
     def get_args_coulomb(self, alpha):
         return (
-            alpha,
+            alpha[self.param_offset :],
             self.interaction.Z_1 * self.interaction.Z_2,
             self.interaction.coulomb_cutoff(alpha),
             self.interaction.v_r,

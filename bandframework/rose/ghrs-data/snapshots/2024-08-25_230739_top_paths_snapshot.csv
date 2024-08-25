@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose,22,12
+/bandframework/rose/tree/main/docs,11,2
+/bandframework/rose/tree/develop,8,2
+/bandframework/rose/tree/main/src,8,2
+/bandframework/rose/blob/main/src/rose/reduced_basis_emulator.py,8,1
+/bandframework/rose/tree/develop/docs,8,1
+/bandframework/rose/tree/main/src/rose,6,3
+/bandframework/rose/blob/develop/src/rose/reduced_basis_emulator.py,4,1
+/bandframework/rose/blob/main/.github/workflows/docs-publish.yml,4,1
+/bandframework/rose/blob/main/src/rose/scattering_amplitude_emulator.py,4,1

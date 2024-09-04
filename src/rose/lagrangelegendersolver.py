@@ -5,7 +5,7 @@ from .utility import potential, potential_plus_coulomb
 from .free_solutions import H_minus, H_plus, H_minus_prime, H_plus_prime
 
 import numpy as np
-import jitr
+from jitr import rmatrix, reactions
 
 
 class LagrangeRmatrix(SchroedingerEquation):
@@ -15,7 +15,7 @@ class LagrangeRmatrix(SchroedingerEquation):
         self,
         interaction: Interaction,
         s_0,
-        solver: jitr.RMatrixSolver,
+        solver: rmatrix.Solver
     ):
         l = np.array([interaction.ell])
         a = np.array([s_0])
@@ -36,7 +36,7 @@ class LagrangeRmatrix(SchroedingerEquation):
         self.Hp = H_plus(self.s_0, self.interaction.ell, self.eta)
         self.Hmp = H_minus_prime(self.s_0, self.interaction.ell, self.eta)
         self.Hpp = H_plus_prime(self.s_0, self.interaction.ell, self.eta)
-        self.channels = np.zeros(1, dtype=jitr.channel_dtype)
+        self.channels = np.zeros(1, dtype=reactions.channel_dtype)
         self.channels["weight"] = np.ones(1)
         self.channels["l"] = l
         self.channels["a"] = a
@@ -59,7 +59,7 @@ class LagrangeRmatrix(SchroedingerEquation):
             self.potential = potential
             self.get_args = self.get_args_neutral
 
-        self.im = jitr.InteractionMatrix(1)
+        self.im = reactions.InteractionMatrix(1)
         self.im.set_local_interaction(self.potential)
 
         # these are always parameter independent - we can precompute them
@@ -111,13 +111,13 @@ class LagrangeRmatrix(SchroedingerEquation):
             basis_boundary=self.basis_boundary,
             wavefunction=True,
         )
-        return jitr.Wavefunctions(
+        return reactions.Wavefunctions(
             self.solver,
             x,
             S,
             uext_prime_boundary,
             self.channels["weight"],
-            jitr.make_channel_data(ch),
+            reactions.make_channel_data(ch),
         ).uint()[0](s_mesh)
 
     def smatrix(

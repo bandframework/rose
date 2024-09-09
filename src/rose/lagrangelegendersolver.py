@@ -17,8 +17,9 @@ class LagrangeRmatrix(SchroedingerEquation):
         s_0,
         solver: rmatrix.Solver
     ):
-        l = np.array([interaction.ell])
-        a = np.array([s_0])
+        self.weight = np.array([1], dtype=np.float64)
+        self.l = np.array([interaction.ell])
+        self.a = np.array([s_0])
         self.s_0 = s_0
         self.domain = [0, s_0]
         self.interaction = interaction
@@ -36,15 +37,12 @@ class LagrangeRmatrix(SchroedingerEquation):
         self.Hp = H_plus(self.s_0, self.interaction.ell, self.eta)
         self.Hmp = H_minus_prime(self.s_0, self.interaction.ell, self.eta)
         self.Hpp = H_plus_prime(self.s_0, self.interaction.ell, self.eta)
-        self.channels = np.zeros(1, dtype=reactions.channel_dtype)
-        self.channels["weight"] = np.ones(1)
-        self.channels["l"] = l
-        self.channels["a"] = a
-        self.channels["eta"] = self.eta
-        self.channels["Hp"] = np.array([self.Hp])
-        self.channels["Hm"] = np.array([self.Hm])
-        self.channels["Hpp"] = np.array([self.Hpp])
-        self.channels["Hmp"] = np.array([self.Hmp])
+        self.asymptotics = reactions.system.Asymptotics(
+            np.array([self.Hp]),
+            np.array([self.Hm]),
+            np.array([self.Hpp]),
+            np.array([self.Hmp]),
+        )
 
         # for Energized EIM interactions, E, mu k take up the first 3 spots
         # in the parameter vector, so we offset to account for that
@@ -59,16 +57,13 @@ class LagrangeRmatrix(SchroedingerEquation):
             self.potential = potential
             self.get_args = self.get_args_neutral
 
-        self.im = reactions.InteractionMatrix(1)
-        self.im.set_local_interaction(self.potential)
-
         # these are always parameter independent - we can precompute them
-        self.basis_boundary = self.solver.precompute_boundaries(a)
-        self.free_matrix = self.solver.free_matrix(a, l)
+        self.basis_boundary = self.solver.precompute_boundaries(self.a)
+        self.free_matrix = self.solver.free_matrix(self.a, self.l)
 
     def get_args_neutral(self, alpha):
         return (
-            alpha[self.param_offset :],
+            alpha[self.param_offset:],
             self.interaction.v_r,
             self.interaction.spin_orbit_term.v_so,
             self.interaction.spin_orbit_term.l_dot_s,
@@ -76,7 +71,7 @@ class LagrangeRmatrix(SchroedingerEquation):
 
     def get_args_coulomb(self, alpha):
         return (
-            alpha[self.param_offset :],
+            alpha[self.param_offset:],
             self.interaction.Z_1 * self.interaction.Z_2,
             self.interaction.coulomb_cutoff(alpha),
             self.interaction.v_r,
@@ -88,12 +83,21 @@ class LagrangeRmatrix(SchroedingerEquation):
         return LagrangeRmatrix(interaction, self.s_0, self.solver)
 
     def get_channel_info(self, alpha):
-        self.im.local_args[0, 0] = self.get_args(alpha)
-        self.channels["E"] = self.interaction.E(alpha)
-        self.channels["mu"] = self.interaction.reduced_mass(alpha)
-        self.channels["k"] = self.interaction.momentum(alpha)
+        E = self.interaction.E(alpha)
+        mu = self.interaction.reduced_mass(alpha)
+        k = self.interaction.momentum(alpha)
+        eta = self.interaction.eta(alpha)
+        ch = reactions.system.Channels(
+            np.array([E]),
+            np.array([k]),
+            np.array([mu]),
+            np.array([eta]),
+            self.a,
+            self.l,
+            self.weight,
+        )
 
-        return self.channels, self.im
+        return ch, self.get_args(alpha)
 
     def phi(
         self,
@@ -103,21 +107,23 @@ class LagrangeRmatrix(SchroedingerEquation):
     ):
         assert s_mesh[-1] <= self.s_0
 
-        ch, im = self.get_channel_info(alpha)
+        ch, args = self.get_channel_info(alpha)
         R, S, x, uext_prime_boundary = self.solver.solve(
-            im,
             ch,
+            self.asymptotics,
+            local_interaction=self.potential,
+            local_args=args,
             free_matrix=self.free_matrix,
             basis_boundary=self.basis_boundary,
             wavefunction=True,
         )
-        return reactions.Wavefunctions(
+        return reactions.wavefunction.Wavefunctions(
             self.solver,
             x,
             S,
             uext_prime_boundary,
-            self.channels["weight"],
-            reactions.make_channel_data(ch),
+            self.weight,
+            ch,
         ).uint()[0](s_mesh)
 
     def smatrix(
@@ -125,10 +131,12 @@ class LagrangeRmatrix(SchroedingerEquation):
         alpha: np.array,
         **kwargs,
     ):
-        ch, im = self.get_channel_info(alpha)
+        ch, args = self.get_channel_info(alpha)
         R, S, uext_prime_boundary = self.solver.solve(
-            im,
             ch,
+            self.asymptotics,
+            local_interaction=self.potential,
+            local_args=args,
             free_matrix=self.free_matrix,
             basis_boundary=self.basis_boundary,
         )
@@ -139,10 +147,12 @@ class LagrangeRmatrix(SchroedingerEquation):
         alpha: np.array,
         **kwargs,
     ):
-        ch, im = self.get_channel_info(alpha)
+        ch, args = self.get_channel_info(alpha)
         R, S, uext_prime_boundary = self.solver.solve(
-            im,
             ch,
+            self.asymptotics,
+            local_interaction=self.potential,
+            local_args=args,
             free_matrix=self.free_matrix,
             basis_boundary=self.basis_boundary,
         )

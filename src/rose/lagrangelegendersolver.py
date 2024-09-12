@@ -17,9 +17,8 @@ class LagrangeRmatrix(SchroedingerEquation):
         s_0,
         solver: rmatrix.Solver
     ):
-        self.weight = np.array([1], dtype=np.float64)
         self.l = np.array([interaction.ell])
-        self.a = np.array([s_0])
+        self.a = s_0
         self.s_0 = s_0
         self.domain = [0, s_0]
         self.interaction = interaction
@@ -94,7 +93,7 @@ class LagrangeRmatrix(SchroedingerEquation):
             np.array([eta]),
             self.a,
             self.l,
-            self.weight,
+            np.array([[1]]),
         )
 
         return ch, self.get_args(alpha)
@@ -122,7 +121,6 @@ class LagrangeRmatrix(SchroedingerEquation):
             x,
             S,
             uext_prime_boundary,
-            self.weight,
             ch,
         ).uint()[0](s_mesh)
 

@@ -101,20 +101,21 @@ def xs_calc_coulomb(
 
     for l in range(Splus.shape[0]):
         # scattering amplitudes
-        a += (
-            (2 * l + 1 - (l + 1) * Splus[l] - l * Sminus[l])
-            * P_l_theta[l, :]
-            * np.exp(2j * sigma_l[l])
-            / (2j * k)
-        )
-        b += (
-            (Sminus[l] - Splus[l])
-            * P_1_l_theta[l, :]
-            * np.exp(2j * sigma_l[l])
-            / (2j * k)
-        )
-        xsrxn += (l + 1) * (1 - np.absolute(Splus[l])) + l * (
-            1 - np.absolute(Sminus[l])
+        a += 1j * (
+             (2*l + 1 - (l + 1) * Splus[l] - l * Sminus[l])
+             * P_l_theta[l, :]
+             * np.exp(2j * sigma_l[l])
+             / (2 * k)
+         )
+        b += 1j * (
+             (Sminus[l] - Splus[l])
+             * P_1_l_theta[l, :]
+             * np.exp(2j * sigma_l[l])
+             / (2 * k)
+         )
+
+        xsrxn += (l + 1) * (1 - np.absolute(Splus[l])**2) + l * (
+            1 - np.absolute(Sminus[l])**2
         )
 
     dsdo = np.real(a * np.conj(a) + b * np.conj(b)) * 10

@@ -70,8 +70,8 @@ def xs_calc_neutral(
         b += (Sminus[l] - Splus[l]) * P_1_l_theta[l, :] / (2j * k)
 
         # cross sections
-        xsrxn += (l + 1) * (1 - np.absolute(Splus[l])) + l * (
-            1 - np.absolute(Sminus[l])
+        xsrxn += (l + 1) * (1 - np.absolute(Splus[l])**2) + l * (
+            1 - np.absolute(Sminus[l])**2
         )
         xst += (l + 1) * (1 - np.real(Splus[l])) + l * (1 - np.real(Sminus[l]))
 

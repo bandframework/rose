@@ -515,16 +515,15 @@ class ScatteringAmplitudeEmulator:
             Splus < Smatrix_abs_tol
         Sl_minus (ndarray) : same as Splus, but l-s anti-aligned
         """
-        Splus = np.zeros(self.l_max, dtype=np.complex128)
-        Sminus = np.zeros(self.l_max, dtype=np.complex128)
+        Splus = np.zeros(self.l_max + 1, dtype=np.complex128)
+        Sminus = np.zeros(self.l_max + 1, dtype=np.complex128)
         Splus[0] = self.rbes[0][0].S_matrix_element(alpha)
-        for l in range(1, self.l_max):
+        for l in range(1, self.l_max + 1):
             Splus[l] = self.rbes[l][0].S_matrix_element(alpha)
             Sminus[l] = self.rbes[l][1].S_matrix_element(alpha)
-            if (
-                np.absolute(Splus[l]) < self.Smatrix_abs_tol
-                and np.absolute(Sminus[l]) < self.Smatrix_abs_tol
-            ):
+            if (1.0 - np.absolute(Splus[l])) < self.Smatrix_abs_tol and (
+                1.0 - np.absolute(Sminus[l])
+            ) < self.Smatrix_abs_tol:
                 break
 
         return Splus[:l], Sminus[:l]

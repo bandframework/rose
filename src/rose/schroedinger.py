@@ -71,7 +71,7 @@ class SchroedingerEquation:
             s_0 = domain[1] - np.pi
             assert s_0 > 0
 
-        if domain[1] > s_0:
+        if domain[1] < s_0:
             domain[1] += np.pi
 
         self.s_0 = s_0

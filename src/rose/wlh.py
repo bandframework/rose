@@ -277,9 +277,9 @@ class WLHGlobal:
         )
         rv = (
             self.rv0
-            - self.rv1 * E_lab
-            + self.rv2 * E_lab**2
-            - self.rv3 * A ** (-1.0 / 3)
+            - self.rv1 * A ** (-1.0 / 3)
+            - self.rv2 * E_lab
+            + self.rv3 * E_lab**2
         )
         av = (
             self.av0
@@ -305,7 +305,13 @@ class WLHGlobal:
             + (self.aw3 - self.aw4 * E_lab) * delta
         )
 
-        ud = self.ud0 - self.ud1 * E_lab - (self.ud3 - self.ud4 * E_lab) * delta
+        if (self.projectile == Projectile.neutron and E_lab < 40) or (
+            self.projectile == Projectile.proton and E_lab < 20 and A > 100
+        ):
+            ud = self.ud0 - self.ud1 * E_lab - (self.ud3 - self.ud4 * E_lab) * delta
+        else:
+            ud = 0
+
         rd = self.rd0 - self.rd2 * E_lab - self.rd1 * A ** (-1.0 / 3)
         ad = self.ad0
 

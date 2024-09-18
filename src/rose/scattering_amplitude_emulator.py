@@ -462,9 +462,10 @@ class ScatteringAmplitudeEmulator:
         for l in range(1, self.l_max + 1):
             Splus[l] = self.rbes[l][0].basis.solver.smatrix(alpha)
             Sminus[l] = self.rbes[l][1].basis.solver.smatrix(alpha)
-            if (1.0 - np.absolute(Splus[l])) < self.Smatrix_abs_tol and (
-                1.0 - np.absolute(Sminus[l])
-            ) < self.Smatrix_abs_tol:
+            if (
+                np.absolute(1 - Splus[l]) < self.Smatrix_abs_tol
+                and np.absolute(1 - Sminus[l]) < self.Smatrix_abs_tol
+            ):
                 break
 
         return Splus[:l], Sminus[:l]
@@ -521,9 +522,10 @@ class ScatteringAmplitudeEmulator:
         for l in range(1, self.l_max + 1):
             Splus[l] = self.rbes[l][0].S_matrix_element(alpha)
             Sminus[l] = self.rbes[l][1].S_matrix_element(alpha)
-            if (1.0 - np.absolute(Splus[l])) < self.Smatrix_abs_tol and (
-                1.0 - np.absolute(Sminus[l])
-            ) < self.Smatrix_abs_tol:
+            if (
+                np.absolute(1 - Splus[l]) < self.Smatrix_abs_tol
+                and np.absolute(1 - Sminus[l]) < self.Smatrix_abs_tol
+            ):
                 break
 
         return Splus[:l], Sminus[:l]

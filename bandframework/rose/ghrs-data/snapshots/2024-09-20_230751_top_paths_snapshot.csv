@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose,17,8
+/bandframework/rose/tree/cd96112920d4caf3aefedcdfd47f5b75c5f2554a/docs/tutorials,9,4
+/bandframework/rose/tree/main/docs,9,3
+/bandframework/rose/blob/cd96112920d4caf3aefedcdfd47f5b75c5f2554a/rosebandsdk.md,9,2
+/bandframework/rose/blob/main/src/rose/scattering_amplitude_emulator.py,9,2
+/bandframework/rose/tree/main/docs/tutorials,7,2
+/bandframework/rose/tree/main/src/rose,6,2
+/bandframework/rose/blob/main/rosebandsdk.md,6,1
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_0_quickstart.ipynb,4,2
+/bandframework/rose/blob/main/src/rose/reduced_basis_emulator.py,4,2

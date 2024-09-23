@@ -65,13 +65,11 @@ def xs_calc_neutral(
         a += 1j * (
              (2*l + 1 - (l + 1) * Splus[l] - l * Sminus[l])
              * P_l_theta[l, :]
-             * np.exp(2j * sigma_l[l])
              / (2 * k)
          )
         b += 1j * (
              (Sminus[l] - Splus[l])
              * P_1_l_theta[l, :]
-             * np.exp(2j * sigma_l[l])
              / (2 * k)
          )
 

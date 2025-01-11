@@ -13,7 +13,6 @@ from pathlib import Path
 from numba import njit
 
 from scipy.sparse import diags, lil_matrix
-from scipy.misc import derivative
 from scipy.special import eval_legendre
 from scipy.stats import qmc
 
@@ -197,11 +196,9 @@ def finite_difference_first_derivative(s_mesh: npt.ArrayLike, sparse: bool = Fal
     derivative.
     """
     dx = s_mesh[1] - s_mesh[0]
-    assert np.all(
-        np.abs(s_mesh[1:] - s_mesh[:-1] - dx) < 1e-14
-    ), """
-Spacing must be consistent throughout the entire mesh.
-    """
+    assert np.all(np.abs(s_mesh[1:] - s_mesh[:-1] - dx) < 1e-14)
+
+    # Spacing must be consistent throughout the entire mesh.
     n = s_mesh.size
     coefficients = np.array([1, -8, 8, -1]) / (12 * dx)
     if sparse:
@@ -226,11 +223,9 @@ def finite_difference_second_derivative(s_mesh: npt.ArrayLike, sparse: bool = Fa
     (w.r.t. s or rho) operator in coordinate space.
     """
     dx = s_mesh[1] - s_mesh[0]
-    assert np.all(
-        np.abs(s_mesh[1:] - s_mesh[:-1] - dx) < 1e-14
-    ), """
-Spacing must be consistent throughout the entire mesh.
-    """
+    assert np.all(np.abs(s_mesh[1:] - s_mesh[:-1] - dx) < 1e-14)
+
+    # Spacing must be consistent throughout the entire mesh.
     n = s_mesh.size
     coefficients = np.array([-1, 16, -30, 16, -1]) / (12 * dx**2)
     if sparse:
@@ -296,15 +291,6 @@ def Gamow_factor(l, eta):
         return np.sqrt(2 * np.pi * eta / (np.exp(2 * np.pi * eta) - 1))
     else:
         return np.sqrt(l**2 + eta**2) / (l * (2 * l + 1)) * Gamow_factor(l - 1, eta)
-
-
-def eval_assoc_legendre(n, x):
-    if n == 0:
-        return np.zeros(x.size)
-    else:
-        return -((1 - x**2) ** (1 / 2)) * derivative(
-            lambda z: eval_legendre(n, z), x, dx=1e-9
-        )
 
 
 def init_AME_db():

@@ -1,6 +1,6 @@
 import pickle
 import numpy as np
-from scipy.special import eval_legendre, gamma
+from scipy.special import eval_legendre, lpmv, gamma
 from tqdm import tqdm
 from numba import njit
 
@@ -10,7 +10,6 @@ from .constants import DEFAULT_RHO_MESH, DEFAULT_ANGLE_MESH
 from .schroedinger import SchroedingerEquation
 from .basis import RelativeBasis, CustomBasis, Basis
 from .utility import (
-    eval_assoc_legendre,
     xs_calc_neutral,
     xs_calc_coulomb,
     NucleonNucleusXS,
@@ -243,9 +242,7 @@ class ScatteringAmplitudeEmulator:
         self.angles = angles.copy()
         self.ls = np.arange(self.l_max + 1)[:, np.newaxis]
         self.P_l_costheta = eval_legendre(self.ls, np.cos(self.angles))
-        self.P_1_l_costheta = np.array(
-            [eval_assoc_legendre(l, np.cos(self.angles)) for l in self.ls]
-        )
+        self.P_1_l_costheta = lpmv(1, self.ls, np.cos(self.angles))
 
         # Coulomb scattering amplitude
         if (
@@ -566,12 +563,9 @@ class ScatteringAmplitudeEmulator:
             f_c = self.f_c
         else:
             assert np.max(angles) <= np.pi and np.min(angles) >= 0
-            P_l_costheta = np.array(
-                [eval_legendre(l, np.cos(angles)) for l in range(self.l_max)]
-            )
-            P_1_l_costheta = np.array(
-                [eval_assoc_legendre(l, np.cos(angles)) for l in range(self.l_max)]
-            )
+            P_l_costheta = eval_legendre(self.ls, np.cos(angles))
+            P_1_l_costheta = lpmv(1, self.ls, np.cos(angles))
+
             sin2 = np.sin(angles / 2) ** 2
             rutherford = 10 * self.eta**2 / (4 * k**2 * sin2**2)
             f_c = (

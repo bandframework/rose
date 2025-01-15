@@ -39,13 +39,13 @@ class LagrangeRmatrix(SchroedingerEquation):
         self.l = np.array([interaction.ell])
         self.a = s_0
         self.eta = np.array([eta])
-        self.couplings = np.array([[0.]])
+        self.couplings = np.array([[0.0]])
 
         self.asym = jitr.reactions.Asymptotics(
             np.array([self.Hp]),
             np.array([self.Hm]),
             np.array([self.Hpp]),
-            np.array([self.Hmp])
+            np.array([self.Hmp]),
         )
 
         # for Energized EIM interactions, E, mu k take up the first 3 spots

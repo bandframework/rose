@@ -1,6 +1,6 @@
 import pickle
 import numpy as np
-from scipy.special import eval_legendre, gamma
+from scipy.special import eval_legendre, lpmv, gamma
 from tqdm import tqdm
 from numba import njit
 
@@ -10,7 +10,6 @@ from .constants import DEFAULT_RHO_MESH, DEFAULT_ANGLE_MESH
 from .schroedinger import SchroedingerEquation
 from .basis import RelativeBasis, CustomBasis, Basis
 from .utility import (
-    eval_assoc_legendre,
     xs_calc_neutral,
     xs_calc_coulomb,
     NucleonNucleusXS,
@@ -243,9 +242,7 @@ class ScatteringAmplitudeEmulator:
         self.angles = angles.copy()
         self.ls = np.arange(self.l_max + 1)[:, np.newaxis]
         self.P_l_costheta = eval_legendre(self.ls, np.cos(self.angles))
-        self.P_1_l_costheta = np.array(
-            [eval_assoc_legendre(l, np.cos(self.angles)) for l in self.ls]
-        )
+        self.P_1_l_costheta = lpmv(1, self.ls, np.cos(self.angles))
 
         # Coulomb scattering amplitude
         if (
@@ -459,13 +456,12 @@ class ScatteringAmplitudeEmulator:
         Splus = np.zeros(self.l_max, dtype=np.complex128)
         Sminus = np.zeros(self.l_max, dtype=np.complex128)
         Splus[0] = self.rbes[0][0].basis.solver.smatrix(alpha)
-        Sminus[0] = Splus[0]
         for l in range(1, self.l_max):
             Splus[l] = self.rbes[l][0].basis.solver.smatrix(alpha)
             Sminus[l] = self.rbes[l][1].basis.solver.smatrix(alpha)
             if (
-                np.absolute(Splus[l] - 1) < self.Smatrix_abs_tol
-                and np.absolute(Sminus[l] - 1) < self.Smatrix_abs_tol
+                np.absolute(1 - Splus[l]) < self.Smatrix_abs_tol
+                and np.absolute(1 - Sminus[l]) < self.Smatrix_abs_tol
             ):
                 break
 
@@ -566,12 +562,9 @@ class ScatteringAmplitudeEmulator:
             f_c = self.f_c
         else:
             assert np.max(angles) <= np.pi and np.min(angles) >= 0
-            P_l_costheta = np.array(
-                [eval_legendre(l, np.cos(angles)) for l in range(self.l_max)]
-            )
-            P_1_l_costheta = np.array(
-                [eval_assoc_legendre(l, np.cos(angles)) for l in range(self.l_max)]
-            )
+            P_l_costheta = eval_legendre(self.ls, np.cos(angles))
+            P_1_l_costheta = lpmv(1, self.ls, np.cos(angles))
+
             sin2 = np.sin(angles / 2) ** 2
             rutherford = 10 * self.eta**2 / (4 * k**2 * sin2**2)
             f_c = (

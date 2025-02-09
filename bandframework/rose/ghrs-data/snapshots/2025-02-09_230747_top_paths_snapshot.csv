@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose,9,7
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_2_optical_potential_surmise_UQ.ipynb,5,3
+/bandframework/rose/tree/main/docs,3,2
+/bandframework/rose/tree/main/docs/tutorials,3,2
+/bandframework/rose/tree/main/src/rose,3,2
+/bandframework/rose/tree/main/src,2,2
+/bandframework/rose/blob/main/src/rose/interaction_eim.py,2,1
+/bandframework/rose/blob/main/src/rose/interaction.py,2,1
+/bandframework/rose/blob/main/rosebandsdk.md,1,1
+/bandframework/rose/blob/main/src/rose/elastic_emulator.py,1,1

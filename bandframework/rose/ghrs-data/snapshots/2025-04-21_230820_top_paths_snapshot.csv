@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose,6,6
+/bandframework/rose/tree/main/docs/tutorials,5,2
+/bandframework/rose/tree/main/src,4,3
+/bandframework/rose/tree/main/src/rose,4,3
+/bandframework/rose/blob/main/src/rose/schroedinger.py,3,2
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_1_building_an_emulator.ipynb,3,1
+/bandframework/rose/tree/main,3,1
+/bandframework/rose/blob/main/src/rose/utility.py,2,2
+/bandframework/rose/blob/main/docs/tutorials/ROSE_Add_your_own_HF_solver.ipynb,2,1
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_0_quickstart.ipynb,2,1

@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose,11,10
+/bandframework/rose/blob/main/src/rose/schroedinger.py,6,2
+/bandframework/rose/tree/main/docs,4,3
+/bandframework/rose/tree/main/docs/tutorials,4,3
+/bandframework/rose/tree/main/src,4,3
+/bandframework/rose/tree/main/src/rose,4,3
+/bandframework/rose/blob/main/src/rose/utility.py,3,2
+/bandframework/rose/blob/bc9e9caac25506944c9b5888e88882ca54809f66/src/rose/scattering_amplitude_emulator.py,3,1
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_2_optical_potential_surmise_UQ.ipynb,3,1
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_0_quickstart.ipynb,2,2

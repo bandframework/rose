@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose,6,3
+/bandframework/rose/tree/main/docs/tutorials,5,2
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_2_optical_potential_surmise_UQ.ipynb,4,2
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_1_building_an_emulator.ipynb,3,1
+/bandframework/rose/tree/main/src,2,2
+/bandframework/rose/tree/main/src/rose,2,2
+/bandframework/rose/blob/main/docs/tutorials/ROSE_Add_your_own_HF_solver.ipynb,2,1
+/bandframework/rose/tree/main/docs,2,1
+/bandframework/rose/blob/main/docs/hifi_solver.md,1,1
+/bandframework/rose/blob/main/src/rose/schroedinger.py,1,1

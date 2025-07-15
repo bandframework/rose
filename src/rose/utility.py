@@ -116,7 +116,7 @@ def xs_calc_coulomb(
         )
 
     dsdo = (np.absolute(a) ** 2 + np.absolute(b) ** 2) * 10
-    Ay = 2*np.imag(a.conj() * b) * 10 / dsdo
+    Ay = 2 * np.imag(a.conj() * b) * 10 / dsdo
     xsrxn *= 10 * np.pi / k**2
 
     dsdo = dsdo / rutherford

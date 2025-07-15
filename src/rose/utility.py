@@ -74,7 +74,7 @@ def xs_calc_neutral(
         xst += (l + 1) * (1 - np.real(splus[l])) + l * (1 - np.real(sminus[l]))
 
     dsdo = (np.absolute(a) ** 2 + np.absolute(b) ** 2) * 10
-    Ay = np.imag(a.conj() * b) * 10 / dsdo
+    Ay = 2 * np.imag(a.conj() * b) * 10 / dsdo
     xsrxn *= 10 * np.pi / k**2
     xst *= 10 * 2 * np.pi / k**2
 

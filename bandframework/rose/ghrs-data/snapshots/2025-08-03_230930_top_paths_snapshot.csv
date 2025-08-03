@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/bandframework/rose,5,4
+/bandframework/rose/tree/main/docs/tutorials,4,2
+/bandframework/rose/tree/main/docs,3,2
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_2_optical_potential_surmise_UQ.ipynb,2,2
+/bandframework/rose/tree/main/tests,2,1
+/bandframework/rose/blob/7e8e081453a6924472025b53d521e76380d6880e/_build/doctrees/README.doctree,1,1
+/bandframework/rose/blob/main/docs/tutorials/cat_rbm_rm_rk.pdf,1,1
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_0_quickstart.ipynb,1,1
+/bandframework/rose/blob/main/docs/tutorials/ROSE_tutorial_1_building_an_emulator.ipynb,1,1
+/bandframework/rose/blob/main/tests/test_schroedinger_equation.py,1,1

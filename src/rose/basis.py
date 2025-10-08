@@ -334,14 +334,15 @@ def pre_process_solutions(
     A = solutions
 
     if scale:
-        phi_0 /= np.trapz(np.absolute(phi_0), s)
+        phi_0 /= np.trapz(np.absolute(phi_0) ** 2, s)
         row_norms = np.array(
-            [np.trapz(np.absolute(A[:, i]), rho_mesh) for i in range(A.shape[1])]
+            [np.trapz(np.absolute(A[:, i]) ** 2, rho_mesh) for i in range(A.shape[1])]
         )
         A /= row_norms
 
     if center:
         mean = np.mean(A, axis=1)
+        A -= mean[:, np.newaxis]
         phi_0 += mean
 
     if subtract_phi0:

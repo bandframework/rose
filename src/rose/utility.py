@@ -49,35 +49,34 @@ class NucleonNucleusXS:
 def xs_calc_neutral(
     k: float,
     angles: np.array,
-    Splus: np.array,
-    Sminus: np.array,
-    P_l_theta: np.array,
-    P_1_l_theta: np.array,
+    splus: np.array,
+    sminus: np.array,
+    P_l_costheta: np.array,
+    P_1_l_costheta: np.array,
 ):
     xst = 0.0
     xsrxn = 0.0
     a = np.zeros_like(angles, dtype=np.complex128)
     b = np.zeros_like(angles, dtype=np.complex128)
 
-    for l in range(Splus.shape[0]):
-        # scattering amplitudes
+    for l in range(splus.shape[0]):
         a += (
-            (2 * l + 1 - (l + 1) * Splus[l] - l * Sminus[l])
-            * P_l_theta[l, :]
+            P_l_costheta[l, :]
             / (2j * k)
+            * ((l + 1) * (splus[l] - 1) + l * (sminus[l] - 1))
         )
-        b += (Sminus[l] - Splus[l]) * P_1_l_theta[l, :] / (2j * k)
+        b += P_1_l_costheta[l, :] / (2j * k) * (splus[l] - sminus[l])
 
         # cross sections
-        xsrxn += (l + 1) * (1 - np.absolute(Splus[l])) + l * (
-            1 - np.absolute(Sminus[l])
+        xsrxn += (l + 1) * (1 - np.absolute(splus[l]) ** 2) + l * (
+            1 - np.absolute(sminus[l]) ** 2
         )
-        xst += (l + 1) * (1 - np.real(Splus[l])) + l * (1 - np.real(Sminus[l]))
+        xst += (l + 1) * (1 - np.real(splus[l])) + l * (1 - np.real(sminus[l]))
 
-    dsdo = np.real(a * np.conj(a) + b * np.conj(b)) * 10
-    Ay = np.real(a * np.conj(b) + b * np.conj(a)) * 10 / dsdo
-    xst *= 10 * 2 * np.pi / k**2
+    dsdo = (np.absolute(a) ** 2 + np.absolute(b) ** 2) * 10
+    Ay = 2 * np.imag(a.conj() * b) * 10 / dsdo
     xsrxn *= 10 * np.pi / k**2
+    xst *= 10 * 2 * np.pi / k**2
 
     return dsdo, Ay, xst, xsrxn
 
@@ -86,10 +85,10 @@ def xs_calc_neutral(
 def xs_calc_coulomb(
     k: float,
     angles: np.array,
-    Splus: np.array,
-    Sminus: np.array,
-    P_l_theta: np.array,
-    P_1_l_theta: np.array,
+    splus: np.array,
+    sminus: np.array,
+    P_l_costheta: np.array,
+    P_1_l_costheta: np.array,
     f_c: np.array,
     sigma_l: np.array,
     rutherford: np.array,
@@ -98,26 +97,26 @@ def xs_calc_coulomb(
     b = np.zeros_like(angles, dtype=np.complex128)
     xsrxn = 0.0
 
-    for l in range(Splus.shape[0]):
-        # scattering amplitudes
+    for l in range(splus.shape[0]):
         a += (
-            (2 * l + 1 - (l + 1) * Splus[l] - l * Sminus[l])
-            * P_l_theta[l, :]
+            P_l_costheta[l, :]
             * np.exp(2j * sigma_l[l])
             / (2j * k)
+            * ((l + 1) * (splus[l] - 1) + l * (sminus[l] - 1))
         )
         b += (
-            (Sminus[l] - Splus[l])
-            * P_1_l_theta[l, :]
+            P_1_l_costheta[l, :]
             * np.exp(2j * sigma_l[l])
             / (2j * k)
-        )
-        xsrxn += (l + 1) * (1 - np.absolute(Splus[l])) + l * (
-            1 - np.absolute(Sminus[l])
+            * (splus[l] - sminus[l])
         )
 
-    dsdo = np.real(a * np.conj(a) + b * np.conj(b)) * 10
-    Ay = np.real(a * np.conj(b) + b * np.conj(a)) * 10 / dsdo
+        xsrxn += (l + 1) * (1 - np.absolute(splus[l]) ** 2) + l * (
+            1 - np.absolute(sminus[l]) ** 2
+        )
+
+    dsdo = (np.absolute(a) ** 2 + np.absolute(b) ** 2) * 10
+    Ay = 2 * np.imag(a.conj() * b) * 10 / dsdo
     xsrxn *= 10 * np.pi / k**2
 
     dsdo = dsdo / rutherford
@@ -305,7 +304,7 @@ def init_AME_db():
         ).resolve()
         assert __AME_PATH__.is_file()
     if __AME_DB__ is None:
-        __AME_DB__ = pd.read_csv(__AME_PATH__, sep="\s+")
+        __AME_DB__ = pd.read_csv(__AME_PATH__, sep=r"\s+")
 
 
 def get_AME_binding_energy(A, Z):

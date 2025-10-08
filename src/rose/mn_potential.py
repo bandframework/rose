@@ -1,5 +1,4 @@
-"""Minnesota potentials for testing.
-"""
+"""Minnesota potentials for testing."""
 
 import numpy as np
 from .interaction import Interaction

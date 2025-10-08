@@ -18,6 +18,10 @@ To install as a developer, clone the repository and run
 
 from within the project root directory.
 
+## Testing
+
+ROSE uses `pytest` for testing. To run the tests, simply run `pytest` from the project root directory.
+
 ## Usage
 
 To emulate an interaction, you will make an `Interaction` class, or something similar. Then you will typically make a `ScatteringAmplitudeEmulator`, which will train an emulator to emulate elastic cross sections. 

@@ -14,7 +14,7 @@
 | # | Policy                 |Support| Notes                   |
 |---|-----------------------|-------|-------------------------|
 | 1. | Support BAND community GNU Autoconf, CMake, or other build options. |Full| `rose` is a Python package and is built using Python's in-built setup tools. [M1 details](#m1-details)|
-| 2. | Have a README file in the top directory that states a specific set of testing procedures for a user to verify the software was installed and run correctly.| Full| A link is placed to the tutorial section of the documentation which contains executable Jupyter notebooks. |
+| 2. | Have a README file in the top directory that states a specific set of testing procedures for a user to verify the software was installed and run correctly.| Full| A link is placed to the tutorial section of the documentation which contains executable Jupyter notebooks, and instructions on how to run unit tests with `pytest` are also included in the README.md. |
 | 3. | Provide a documented, reliable way to contact the development team. |Full| We mention our full support via Github issues. |
 | 4. | Come with an open-source license |Full| Uses GPLv3.|
 | 5. | Provide a runtime API to return the current version number of the software. |Full| Version can be return via `rose.__version__`. |

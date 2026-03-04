@@ -145,7 +145,7 @@ def build_sae(
             ScatteringAmplitudeEmulator.from_train
     """
 
-    (n_basis, n_EIM) = sae_config
+    n_basis, n_EIM = sae_config
 
     base = base_interaction.interactions[0][0]
 
@@ -398,7 +398,7 @@ def multiple_formatter(denominator=2, number=np.pi, latex="\pi"):
         den = denominator
         num = int(np.rint(den * x / number))
         com = gcd(num, den)
-        (num, den) = (int(num / com), int(den / com))
+        num, den = (int(num / com), int(den / com))
         if den == 1:
             if num == 0:
                 return r"$0$"

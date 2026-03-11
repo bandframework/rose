@@ -6,6 +6,17 @@ ROSE makes it easy to build and train a scattering emulator. ROSE enables aspiri
 
 For any bug reports or feature requests, please make use of the Github issues tab on the repository. We also welcome all pull requests for software, documentation, and user-contributed tutorials! 
 
+## Note:
+
+
+While this project did lead to a successful emulator, it was found that a particular type of high-fidelity solver is actually more useful in a Bayesian calibration context, which lead to the development of BAND software [jitR](https://github.com/beykyle/jitr). Currently, this is what we use for calibration of nuclear reaction models, and is what we recomend. 
+
+This repository and the [associated publication](https://journals.aps.org/prc/abstract/10.1103/PhysRevC.109.044612) may still be of interest, so it will remain available, but we will not be maintaining the software package or adding new features. If you want to use ROSE, please feel free to do so, but be aware that it is no longer being actively developed.
+
+The application of model order reduction and emulation to nuclear reactions is still an exciting area of research, so the tool or technique we recommend for Bayesian calibration of reaction models may change in the future! 
+
+-- ROSE team
+
 ## Installation
 
 ROSE is hosted at [pypi.org/project/nuclear-rose/](https://pypi.org/project/nuclear-rose/). To install as a user, run the following 

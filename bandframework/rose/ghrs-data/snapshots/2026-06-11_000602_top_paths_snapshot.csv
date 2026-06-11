@@ -1,0 +1,10 @@
+url_path,views_total,views_unique
+/bandframework/rose,3,2
+/bandframework/rose/releases/tag/v1.1.7,3,1
+/bandframework/rose/blob/main/README.md,1,1
+/bandframework/rose/blob/main/docs/tutorials/CAT_tutorial.png,1,1
+/bandframework/rose/blob/main/docs/tutorials/ROSE_Add_your_own_HF_solver.ipynb,1,1
+/bandframework/rose/blob/main/src/rose/interaction.py,1,1
+/bandframework/rose/blob/main/src/rose/scattering_amplitude_emulator.py,1,1
+/bandframework/rose/compare/v1.1.6...v1.1.7,1,1
+/bandframework/rose/tree/main/docs/tutorials,1,1

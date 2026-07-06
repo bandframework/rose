@@ -648,7 +648,7 @@ def numerov_kernel(
     # intial conditions
     x0, xf = domain
     xnm = x0
-    (y0, y0_prime) = (initial_conditions[0], initial_conditions[1])
+    y0, y0_prime = (initial_conditions[0], initial_conditions[1])
 
     # number of steps
     N = int(np.ceil((xf - x0) / dx))
@@ -719,7 +719,7 @@ def numerov_kernel_meshless(
     # intial conditions
     x0, xf = domain
     xnm = x0
-    (y0, y0_prime) = (initial_conditions[0], initial_conditions[1])
+    y0, y0_prime = (initial_conditions[0], initial_conditions[1])
 
     # use Taylor expansion for y1
     y0_dbl_prime = -g(x0, *g_args) * y0

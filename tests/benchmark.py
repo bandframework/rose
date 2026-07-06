@@ -13,7 +13,6 @@ from scipy.special import eval_legendre
 
 import rose
 
-
 ANGLES = np.linspace(0, np.pi, 100)
 COSTHETA = np.cos(ANGLES)
 

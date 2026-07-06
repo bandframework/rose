@@ -14,7 +14,6 @@ import rose
 
 from benchmark import BenchmarkData
 
-
 # In[2]:
 
 
@@ -86,7 +85,6 @@ with open(filename, "rb") as f:
 
 
 import matplotlib.pyplot as plt
-
 
 # In[10]:
 

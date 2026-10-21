@@ -1,0 +1,9 @@
+url_path,views_total,views_unique
+/bandframework/rose,9,6
+/bandframework/rose/tree/main,2,1
+/bandframework/rose/blob/02e198e0d64e410353f972bad85858359a19aff7/src/rose/metrics.py,1,1
+/bandframework/rose/blob/main/src/rose/interaction_eim.py,1,1
+/bandframework/rose/blob/main/src/rose/reduced_basis_emulator.py,1,1
+/bandframework/rose/releases/tag/v1.0.0,1,1
+/bandframework/rose/tree/main/docs,1,1
+/bandframework/rose/tree/main/tests,1,1
